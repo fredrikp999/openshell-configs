@@ -142,16 +142,19 @@ Then fill in the values, e.g.:
 OPENROUTER_API_KEY=sk-or-...
 CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-...
 ```
-`openshell provider create --from-existing` reads them from the environment, so they must be *exported*. A plain `source .env` doesn't export lines without `export`. Load the file like this:
+`openshell provider create --from-existing` reads them from the environment, so they must be *exported*. A plain `source .env` doesn't export lines without `export`. Load the file in a subshell, only for the command that needs it:
 ``` shell
-set -a; source .env; set +a
+(set -a; . ./.env; openshell provider create ...)
 ```
+* `set -a` exports the variables, so `openshell` can read them.
+* The parentheses run everything in a subshell. The secrets are gone when it ends, so they don't stay in your terminal's environment, where every program you start later would get them.
+* `.env` should only be readable by you: `chmod 600 .env`
 
 # Agents
 Both agent chapters follow the same steps: profile, provider, image, sandbox.
 
 ## Claude Code with a Claude subscription
-Claude Code runs with a Claude subscription (Pro/Max) via an OAuth token, not an API key. The upstream [claude-code.yaml](https://github.com/NVIDIA/OpenShell/blob/main/providers/claude-code.yaml) profile only supports API keys, so this repo has its own profile: [providers/claude-code-oauth.yaml](providers/claude-code-oauth.yaml). It injects the token as `Authorization: Bearer` only on requests to the endpoints listed in the profile (`api.anthropic.com`, `platform.claude.com` and the telemetry hosts), so the real token never lives inside the sandbox.
+Claude Code runs with a Claude subscription (Pro/Max) via an OAuth token, not an API key. The upstream [claude-code.yaml](https://github.com/NVIDIA/OpenShell/blob/main/providers/claude-code.yaml) profile only supports API keys, so this repo has its own profile: [providers/claude-code-oauth.yaml](providers/claude-code-oauth.yaml). It injects the token as `Authorization: Bearer` only on requests to the endpoints listed in the profile (`api.anthropic.com` and `platform.claude.com`), so the real token never lives inside the sandbox.
 
 ### Create an OAuth token (on the host)
 Run on your own machine. It opens the browser to log in with your Claude account and prints a long-lived (1 year) token:
@@ -179,11 +182,10 @@ openshell provider profile list
   * `--name` is your own name for the provider, used later with `--provider claude`
   * `--type` is the `id` of the profile in [providers/claude-code-oauth.yaml](providers/claude-code-oauth.yaml)
 ``` shell
-set -a; source .env; set +a
-openshell provider create \
+(set -a; . ./.env; openshell provider create \
   --name claude \
   --type claude-code-oauth \
-  --from-existing
+  --from-existing)
 ```
 Expected output: `✓ Created provider claude`
 
@@ -252,11 +254,9 @@ openshell sandbox create \
 * **Don't use `/login` inside the sandbox** - an interactive login would store the OAuth credentials in the sandbox (`~/.claude/.credentials.json`) and needs extra login hosts opened. `setup-token` + provider keeps the token outside.
 * **Token expiry** - the token is valid for a year. Regenerate with `claude setup-token`, put the new token in `.env`, and update the provider:
 ``` shell
-set -a; source .env; set +a
-openshell provider update claude --from-existing
+(set -a; . ./.env; openshell provider update claude --from-existing)
 ```
-* **Hosts left blocked** - Claude Code also tries `raw.githubusercontent.com` (release notes) and `http-intake.logs.us5.datadoghq.com` (telemetry). Neither is needed, so they stay denied. You can [approve them](#network-rules) per sandbox if you want.
-* **Telemetry** - the profile allows `statsig.anthropic.com` and `sentry.io`. Remove them from the profile if you don't want that traffic.
+* **Only Anthropic hosts in the profile** - OpenShell swaps the token placeholder for the real token on requests to *every* host in the profile. Shared third-party services such as `sentry.io` would let a manipulated agent send the token, or your code, to someone else's account, so the profile lists only `api.anthropic.com` and `platform.claude.com`. The image sets `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`, so Claude Code doesn't try to send telemetry, error reports or update checks (`statsig.anthropic.com`, `sentry.io`, Datadog).
 * **The Claude Code VS Code extension** would run its own bundled `claude` binary from `~/.vscode-server/extensions/...`, which isn't in the profile's `binaries` list, so its requests will most likely be denied (not tested). Use the CLI in the terminal instead.
 
 ## OpenCode with OpenRouter
@@ -274,11 +274,10 @@ openshell provider profile import -f providers/openrouter.yaml
 ### Create the provider
 * Put the key in `.env` as `OPENROUTER_API_KEY=sk-or-...`, load it (see [Credentials in .env](#credentials-in-env)) and create the provider:
 ``` shell
-set -a; source .env; set +a
-openshell provider create \
+(set -a; . ./.env; openshell provider create \
   --name openrouter \
   --type openrouter \
-  --from-existing
+  --from-existing)
 ```
 * Verify with `openshell provider list`.
 
@@ -491,7 +490,7 @@ A typical task, with the sandbox `my-task` and the repo `./myrepo`:
 git -C ./myrepo diff main...agent/my-task      # review
 git -C ./myrepo push origin agent/my-task      # then open the MR
 ```
-* **`in`** bundles all branches of the repo and uploads them.
+* **`in`** bundles only the base branch (`main`) and uploads it. Other branches and their history never reach the sandbox.
   * The first time, it creates `/sandbox/<repo-name>` and checks out the work branch from `main`. The branches from your machine are available as `host/*`, e.g. `host/main`, and the agent's git name and email are set.
   * Run it again to bring in newer commits from your machine. They arrive in `host/*` without touching the work branch; ask the agent to merge or rebase `host/main` if needed.
 * **`out`** bundles the work branch's commits that aren't in `host/main`, downloads them and fetches them into your repo as the same branch. It then shows the log and a diff summary.
@@ -751,7 +750,7 @@ Start with `openshell logs <sandbox> | grep DENIED` and `openshell sandbox get <
 | Symptom | Cause | Fix |
 |---|---|---|
 | `provider 'claude' not found and no provider profile named 'claude' is available` | The profile is imported, but the provider was never created | [Create the provider](#create-the-provider), then check `openshell provider list` |
-| `provider create --from-existing` finds no credential | `.env` was loaded without exporting the variables | Load it with `set -a; source .env; set +a` |
+| `provider create --from-existing` finds no credential | `.env` was loaded without exporting the variables | Run the command as `(set -a; . ./.env; openshell provider create ...)` |
 | `custom provider profile '...' already exists` on `lint` or `import` | The profile is already in the gateway | Use `update` instead, see [Update a profile](#update-a-profile) |
 | Claude: `Unable to connect to Anthropic services ... Failed to connect to api.anthropic.com: EACCES` | Claude Code's first-run connectivity check bypasses the proxy and is denied | Start with `claude-start`, not `claude` (see [Build the image](#build-the-image)). Also check the logs for other denied hosts |
 | Log line `transparent TCP mapping is expired` | A connection to `api.anthropic.com` bypassed the proxy and was denied | Harmless on its own. Together with the `EACCES` error, see the row above |

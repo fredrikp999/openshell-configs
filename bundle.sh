@@ -8,9 +8,10 @@
 #   ./bundle.sh in  my-task ./myrepo    # repo into /sandbox/myrepo, branch agent/my-task
 #   ./bundle.sh out my-task ./myrepo    # the agent's commits back as branch agent/my-task
 #
-# in:  bundles all branches of <repo> and uploads them. The first time, the repo
-#      is cloned to /sandbox/<repo-name> and the work branch is created from
-#      <base>. Later runs fetch the new commits into host/* (e.g. host/main)
+# in:  bundles only the <base> branch of <repo> and uploads it, so other
+#      branches never reach the sandbox. The first time, the repo is created
+#      at /sandbox/<repo-name> and the work branch is created from <base>.
+#      Later runs fetch the new commits into host/<base> (e.g. host/main)
 #      without touching the work branch; merge or rebase them inside if needed.
 # out: bundles the commits on the work branch that are not in host/<base>,
 #      downloads them and fetches them into <repo> as the same branch. Review
@@ -60,8 +61,8 @@ case $cmd in
     git -C "$repo" rev-parse --verify --quiet "refs/heads/$base" >/dev/null ||
       { echo "Branch $base doesn't exist in $repo. Use --base." >&2; exit 1; }
     bundle=$name-in.bundle
-    echo "Bundling $repo (all branches)..."
-    git -C "$repo" bundle create "$tmp/$bundle" --branches 2>/dev/null
+    echo "Bundling branch $base of $repo..."
+    git -C "$repo" bundle create "$tmp/$bundle" "refs/heads/$base" 2>/dev/null
     echo "Uploading to $sandbox..."
     quiet openshell sandbox upload "$sandbox" "$tmp/$bundle" /sandbox
     in_sandbox '
@@ -78,7 +79,7 @@ case $cmd in
       else
         cd "$repo"
         git fetch -q "$bundle" "+refs/heads/*:refs/remotes/host/*"
-        echo "Fetched the latest commits into host/* in $repo."
+        echo "Fetched the latest commits of $base into host/$base in $repo."
         echo "Current branch: $(git branch --show-current). Merge or rebase host/$base if needed."
       fi
       rm -f "$bundle"

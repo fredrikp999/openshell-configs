@@ -6,8 +6,12 @@
 #              sent as `Authorization: Bearer <token>` to the endpoints below.
 # Binaries:    adjust to the claude path in your image.
 # Endpoints:   api.anthropic.com for inference; platform.claude.com is
-#              contacted by Claude Code at startup; statsig.anthropic.com and
-#              sentry.io for telemetry/error reporting (drop if unwanted).
+#              contacted by Claude Code at startup. Nothing else: the token
+#              placeholder is resolved for every host listed here, so only
+#              Anthropic's own hosts belong in this list. Telemetry hosts
+#              (statsig.anthropic.com, sentry.io) are left out on purpose, and
+#              the image sets CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 so
+#              Claude Code doesn't try to reach them.
 #
 #   openshell provider profile lint   -f providers/claude-code-oauth.yaml
 #   openshell provider profile import -f providers/claude-code-oauth.yaml
@@ -33,16 +37,6 @@ endpoints:
     access: read-write
     enforcement: enforce
   - host: platform.claude.com
-    port: 443
-    protocol: rest
-    access: read-write
-    enforcement: enforce
-  - host: statsig.anthropic.com
-    port: 443
-    protocol: rest
-    access: read-write
-    enforcement: enforce
-  - host: sentry.io
     port: 443
     protocol: rest
     access: read-write

@@ -12,6 +12,9 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends git ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 RUN npm install -g @anthropic-ai/claude-code
+# No telemetry, error reporting or auto-updates. Their hosts are not in the
+# claude-code-oauth profile, so the requests would only be denied.
+ENV CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
 RUN printf '%s\n' \
       '#!/bin/sh' \
       '# Skip Claude Code onboarding on first start, then run claude with any args.' \
