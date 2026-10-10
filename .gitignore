@@ -1,0 +1,10 @@
+# Secrets: API keys and tokens (see "Credentials in .env" in the README)
+.env
+.env.*
+!.env.example
+
+# Git bundles from moving code in and out of sandboxes
+*.bundle
+
+# macOS
+.DS_Store

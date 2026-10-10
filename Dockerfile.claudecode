@@ -1,0 +1,23 @@
+# Claude Code sandbox image for OpenShell.
+#
+#   podman build -t claude-sandbox:latest -f Dockerfile.claudecode .
+#
+# Start it with `-- claude-start` instead of `-- claude`. On first start,
+# claude-start marks onboarding as completed in $HOME/.claude.json (/sandbox,
+# which starts empty). Onboarding runs a connectivity check that bypasses the
+# OpenShell proxy and is denied, so Claude Code would exit with
+# "Failed to connect to api.anthropic.com: EACCES".
+FROM node:22-slim
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends git ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+RUN npm install -g @anthropic-ai/claude-code
+RUN printf '%s\n' \
+      '#!/bin/sh' \
+      '# Skip Claude Code onboarding on first start, then run claude with any args.' \
+      'if [ ! -f "$HOME/.claude.json" ]; then' \
+      '  echo '"'"'{"hasCompletedOnboarding": true}'"'"' > "$HOME/.claude.json"' \
+      'fi' \
+      'exec claude "$@"' \
+      > /usr/local/bin/claude-start \
+ && chmod 755 /usr/local/bin/claude-start

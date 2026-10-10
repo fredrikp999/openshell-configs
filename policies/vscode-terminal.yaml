@@ -1,0 +1,26 @@
+# Sandbox policy for working in a sandbox with VS Code and an agent (Claude Code, OpenCode, ...).
+#
+# Same as the OpenShell default policy, plus /dev/pts and /dev/ptmx, so
+# programs inside the sandbox can open terminals. Without them, VS Code's
+# integrated terminal fails with "forkpty(3) failed".
+# Network access comes from the attached providers, not from this file.
+#
+#   openshell sandbox create --policy policies/vscode-terminal.yaml ...
+version: 1
+filesystem_policy:
+  include_workdir: true
+  read_only:
+    - /bin
+    - /usr
+    - /lib
+    - /proc
+    - /dev/urandom
+    - /etc
+    - /var/log
+  read_write:
+    - /tmp
+    - /dev/null
+    - /dev/pts
+    - /dev/ptmx
+landlock:
+  compatibility: best_effort

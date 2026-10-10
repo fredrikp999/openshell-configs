@@ -1,0 +1,37 @@
+# OpenRouter provider profile, used by the OpenCode sandboxes.
+# Local copy of the upstream profile:
+#   https://github.com/NVIDIA/OpenShell/blob/main/providers/openrouter.yaml
+#
+# Credential:  OpenRouter API key in OPENROUTER_API_KEY, sent as
+#              `Authorization: Bearer <key>` to the endpoints below.
+# Binaries:    only /usr/local/bin/opencode may use the key. This matches the
+#              opencode path in Dockerfile.opencode (and the official image).
+# Endpoints:   openrouter.ai for inference. OpenCode also tries
+#              models.opencode.ai (model list) and registry.npmjs.org (update
+#              check); they are not needed and are left out.
+#
+#   openshell provider profile lint   -f providers/openrouter.yaml
+#   openshell provider profile import -f providers/openrouter.yaml
+
+id: openrouter
+display_name: OpenRouter
+description: OpenRouter inference API
+category: inference
+inference_capable: true
+credentials:
+  - name: api_key
+    description: OpenRouter API key
+    env_vars: [OPENROUTER_API_KEY]
+    required: true
+    auth_style: bearer
+    header_name: authorization
+discovery:
+  credentials: [api_key]
+endpoints:
+  - host: openrouter.ai
+    port: 443
+    protocol: rest
+    access: read-write
+    enforcement: enforce
+binaries:
+  - /usr/local/bin/opencode

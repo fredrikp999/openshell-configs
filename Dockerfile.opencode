@@ -1,0 +1,14 @@
+# OpenCode sandbox image for OpenShell, for use with VS Code and a terminal.
+#
+#   podman build -t opencode-sandbox:latest -f Dockerfile.opencode .
+#
+# Based on the official OpenCode image (Alpine), so opencode stays at
+# /usr/local/bin/opencode, the path the openrouter profile allows.
+# Adds git (for git bundles), bash (VS Code terminal), script (pty test) and
+# libstdc++ (needed by VS Code Server on Alpine).
+FROM ghcr.io/anomalyco/opencode:latest
+RUN apk add --no-cache git bash libstdc++ util-linux-misc
+# The base image's entrypoint is `opencode`. Clear it so the command after
+# `--` in `openshell sandbox create` (e.g. `sleep infinity`) runs as is.
+ENTRYPOINT []
+CMD ["opencode"]
