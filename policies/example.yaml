@@ -1,0 +1,176 @@
+# Example sandbox policy: filesystem access plus network rules.
+# A starting point to copy and adapt, e.g. to policies/my-task.yaml.
+#
+#   openshell sandbox create --policy policies/example.yaml ...
+#
+# The filesystem part is the same as vscode-terminal.yaml. The network rules
+# come on top of the hosts the attached providers already allow (e.g.
+# api.anthropic.com for the claude provider). Paths are for the claude-sandbox
+# image (Dockerfile.claudecode); check others with `readlink -f` inside the
+# sandbox, and the DENIED lines in `openshell logs <sandbox>`.
+#
+# Network rules can be changed on a running sandbox with
+#   openshell policy set <sandbox> --policy <file> --wait
+# Filesystem changes need a new sandbox.
+version: 1
+
+# Which paths processes in the sandbox may read and write. Everything else is
+# blocked (Landlock).
+filesystem_policy:
+  include_workdir: true        # the workdir (/sandbox, also $HOME) is read-write
+  read_only:
+    - /bin
+    - /usr
+    - /lib
+    - /proc
+    - /dev/urandom
+    - /etc
+    - /var/log
+  read_write:
+    - /tmp
+    - /dev/null
+    - /dev/pts                 # terminals, needed by VS Code's terminal
+    - /dev/ptmx
+landlock:
+  compatibility: best_effort
+
+# Which hosts each binary may reach. Each rule allows every listed binary to
+# reach every listed endpoint. Anything not allowed here or by a provider
+# profile is denied. A rule also covers processes started by its binaries.
+network_policies:
+
+  # 1. Read-only web access for Claude Code, e.g. its WebFetch tool.
+  #    protocol: rest + access: read-only allows GET/HEAD/OPTIONS only, so the
+  #    agent can read the docs but not send data to the site with POST.
+  python_docs:
+    name: python-docs
+    endpoints:
+      - host: docs.python.org
+        port: 443
+        protocol: rest
+        access: read-only
+        enforcement: enforce
+    binaries:
+      - path: /usr/local/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe
+
+  # 2. Package installs with npm. npm is a Node.js script, so the process that
+  #    connects is the node binary, not npm.
+  npm_registry:
+    name: npm-registry
+    endpoints:
+      - host: registry.npmjs.org
+        port: 443
+        protocol: rest
+        access: read-only
+        enforcement: enforce
+    binaries:
+      - path: /usr/local/bin/node
+
+  # 3. git clone/fetch from public GitHub repos, but no push. Git's smart HTTP
+  #    protocol fetches with GET .../info/refs?service=git-upload-pack and
+  #    POST .../git-upload-pack, and pushes with the same requests for
+  #    git-receive-pack. Only the fetch requests are allowed, and the push
+  #    requests are also denied explicitly (deny rules win over allow rules).
+  #    The HTTPS connection is opened by git's helper, git-remote-http
+  #    (git-remote-https is a symlink to it).
+  github_clone:
+    name: github-clone
+    endpoints:
+      - host: github.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow:
+              method: GET
+              path: "/**/info/refs"
+              query:
+                service: git-upload-pack
+          - allow:
+              method: POST
+              path: "/**/git-upload-pack"
+        deny_rules:
+          - method: "*"
+            path: "/**/git-receive-pack"
+          - method: GET
+            path: "/**/info/refs"
+            query:
+              service: git-receive-pack
+    binaries:
+      - path: /usr/lib/git-core/git-remote-http
+
+  # Remote MCP servers (Streamable HTTP). protocol: mcp makes OpenShell read
+  # each MCP request and check the method and, for tools/call, the tool name.
+  # Tool arguments are not checked, so an allowed tool gets any arguments.
+  # Claude Code connects to remote MCP servers itself, so the binary is
+  # claude.exe. Add the server in Claude Code as usual, e.g.
+  #   claude mcp add --transport http context7 https://mcp.context7.com/mcp
+  # Don't put an MCP endpoint on the same host and port as an endpoint with
+  # another protocol; OpenShell rejects that.
+  #
+  # mcp.versions: the MCP revisions the endpoint accepts. The default is only
+  # 2025-11-25. A request without an MCP-Protocol-Version header counts as
+  # 2025-03-26, and clients send `initialize` without it, so list 2025-03-26
+  # too, plus the revisions the client and server negotiate.
+  #
+  # Servers that need a login: put the token in a provider profile with the
+  # server's host as endpoint, like providers/claude-code-oauth.yaml, and
+  # attach the provider. Never put tokens in a policy.
+
+  # 4. MCP, explicit allow list: Context7 (library docs lookup, no login).
+  #    Allows connecting (initialize), listing tools, and calling exactly two
+  #    tools by name. Any other method or tool is denied. Claude Code also
+  #    asks every server for prompts/list and resources/list; those show up as
+  #    DENIED in the logs here, which is harmless. Add allow rules for them, or
+  #    use allow_all_known_mcp_methods as in rule 5, to silence them.
+  context7_mcp:
+    name: context7-mcp
+    endpoints:
+      - host: mcp.context7.com
+        port: 443
+        path: /mcp
+        protocol: mcp
+        enforcement: enforce
+        mcp:
+          versions: ["2025-03-26", "2025-06-18", "2025-11-25"]
+        rules:
+          - allow:
+              method: initialize
+          - allow:
+              method: notifications/initialized
+          - allow:
+              method: tools/list
+          - allow:
+              method: tools/call
+              tool:
+                any: [resolve-library-id, query-docs]
+    binaries:
+      - path: /usr/local/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe
+
+  # 5. MCP, all standard methods plus a tool filter: Hugging Face Hub (no
+  #    login needed for public search). allow_all_known_mcp_methods allows the
+  #    standard MCP methods (initialize, tools/list, resources/read, ...), so
+  #    they don't need to be listed. Tool calls are still limited to the
+  #    allow rules: here every tool matching hub_repo_* (search and details).
+  #    deny_rules win over every allow; here they block the file system tool
+  #    hf_fs explicitly. Other tools, e.g. hf_whoami, are denied because no
+  #    allow rule matches them.
+  huggingface_mcp:
+    name: huggingface-mcp
+    endpoints:
+      - host: huggingface.co
+        port: 443
+        path: /mcp
+        protocol: mcp
+        enforcement: enforce
+        mcp:
+          versions: ["2025-03-26", "2025-06-18", "2025-11-25"]
+          allow_all_known_mcp_methods: true
+        rules:
+          - allow:
+              tool: "hub_repo_*"
+        deny_rules:
+          - method: tools/call
+            tool: hf_fs
+    binaries:
+      - path: /usr/local/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe
