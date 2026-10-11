@@ -1,4 +1,4 @@
-# Secrets: API keys and tokens (see "Credentials in .env" in the README)
+# Secrets: API keys and tokens, if kept in .env (see "Credentials" in docs/setup.md)
 .env
 .env.*
 !.env.example

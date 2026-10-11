@@ -9,7 +9,10 @@ Run on your own machine. It opens the browser to log in with your Claude account
 ```bash
 claude setup-token
 ```
-* Add the token to `.env` as `CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-...`
+* Store the token in the Keychain (it prompts for the value), or see [Credentials](setup.md#credentials) for `.env` and other secrets managers:
+```bash
+security add-generic-password -U -s openshell -a CLAUDE_CODE_OAUTH_TOKEN -w
+```
 
 ### Import the profile
 (Skip this and the next section with `bin/provider.sh claude`, which imports the profile and creates the provider.)
@@ -27,11 +30,12 @@ The profile is only a template. The provider is the instance that holds your tok
 openshell provider profile list
 ```
 
-* Load `.env` (see [Credentials in .env](setup.md#credentials-in-env)) and create the provider:
+* Create the provider. `--from-existing` reads the token from the `CLAUDE_CODE_OAUTH_TOKEN` environment variable, so set it for this one command only (see [Credentials](setup.md#credentials)):
   * `--name` is your own name for the provider, used later with `--provider claude`
   * `--type` is the `id` of the profile in [providers/claude-code-oauth.yaml](../providers/claude-code-oauth.yaml)
 ```bash
-(set -a; . ./.env; openshell provider create \
+(export CLAUDE_CODE_OAUTH_TOKEN="$(security find-generic-password -s openshell -a CLAUDE_CODE_OAUTH_TOKEN -w)"
+ openshell provider create \
   --name claude \
   --type claude-code-oauth \
   --from-existing)
@@ -101,10 +105,11 @@ openshell sandbox create \
 ### Things to watch for
 * **Binary paths** - only the binaries listed in the profile may reach the endpoints and get the token. The profile covers `/usr/bin/claude`, `/usr/local/bin/claude` and the npm install path `/usr/local/lib/node_modules/@anthropic-ai/**`. If requests are denied, check `openshell logs claude-agent1` for the blocked binary path, add it to `binaries` and [update the profile](customizing.md#update-a-profile).
 * **Don't use `/login` inside the sandbox** - an interactive login would store the OAuth credentials in the sandbox (`~/.claude/.credentials.json`) and needs extra login hosts opened. `setup-token` + provider keeps the token outside.
-* **Token expiry** - the token is valid for a year. Regenerate with `claude setup-token`, put the new token in `.env`, and update the provider:
+* **Token expiry** - the token is valid for a year. Regenerate with `claude setup-token`, store the new token (`security add-generic-password -U ...` replaces the old one), and update the provider:
 ```bash
-(set -a; . ./.env; openshell provider update claude --from-existing)
+bin/provider.sh --update claude
 ```
+  To be reminded before it expires, set the expiry on the provider, see [Token expiry](setup.md#token-expiry).
 * **Only Anthropic hosts in the profile** - OpenShell swaps the token placeholder for the real token on requests to *every* host in the profile. Shared third-party services such as `sentry.io` would let a manipulated agent send the token, or your code, to someone else's account, so the profile lists only `api.anthropic.com` and `platform.claude.com`. The image sets `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`, so Claude Code doesn't try to send telemetry, error reports or update checks (`statsig.anthropic.com`, `sentry.io`, Datadog).
 * **The Claude Code VS Code extension** would run its own bundled `claude` binary from `~/.vscode-server/extensions/...`, which isn't in the profile's `binaries` list, so its requests will most likely be denied (not tested). Use the CLI in the terminal instead.
 
@@ -123,9 +128,11 @@ openshell provider profile import -f providers/openrouter.yaml
 * To use the upstream version directly instead: `openshell provider profile import --url https://raw.githubusercontent.com/NVIDIA/OpenShell/main/providers/openrouter.yaml`
 
 ### Create the provider
-* Put the key in `.env` as `OPENROUTER_API_KEY=sk-or-...`, load it (see [Credentials in .env](setup.md#credentials-in-env)) and create the provider:
+* Store the key in the Keychain (it prompts for the value; see [Credentials](setup.md#credentials) for `.env` and other secrets managers) and create the provider:
 ```bash
-(set -a; . ./.env; openshell provider create \
+security add-generic-password -U -s openshell -a OPENROUTER_API_KEY -w
+(export OPENROUTER_API_KEY="$(security find-generic-password -s openshell -a OPENROUTER_API_KEY -w)"
+ openshell provider create \
   --name openrouter \
   --type openrouter \
   --from-existing)
