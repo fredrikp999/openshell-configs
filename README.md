@@ -9,6 +9,7 @@ Configs and notes for running AI coding agents (Claude Code, OpenCode) in [NVIDI
 | [policies/example.yaml](policies/example.yaml) | Example sandbox policy with network rules, to copy and adapt |
 | [Dockerfile.claudecode](Dockerfile.claudecode) | Image `claude-sandbox`: Claude Code, git and the `claude-start` wrapper |
 | [Dockerfile.opencode](Dockerfile.opencode) | Image `opencode-sandbox`: the official OpenCode image plus git, bash and VS Code support |
+| [provider.sh](provider.sh) | Imports a provider profile and creates the provider from `.env` |
 | [sandbox.sh](sandbox.sh) | Starts an agent sandbox, in the terminal or in VS Code |
 | [bundle.sh](bundle.sh) | Moves a git repo into a sandbox and the agent's commits back out, with git bundles |
 | [.env.example](.env.example) | Template for `.env`, which holds your API key and token (ignored by git) |
@@ -27,7 +28,7 @@ OpenShell runs AI coding agents in locked-down sandboxes. Agents get only the ne
 ### Basic steps
 1. [Set up Podman](#podman) and [install OpenShell](#install-openshell).
 2. [Put your key or token in `.env`](#credentials-in-env).
-3. For an agent ([Claude Code](#claude-code-with-a-claude-subscription) or [OpenCode](#opencode-with-openrouter)): import its profile, create a provider, build its image.
+3. For an agent ([Claude Code](#claude-code-with-a-claude-subscription) or [OpenCode](#opencode-with-openrouter)): import its profile, create a provider (`./provider.sh claude` or `./provider.sh opencode` does both), build its image.
 4. [Start and use a sandbox](#start-and-use-a-sandbox), with the agent in your terminal or with VS Code. By hand (for OpenCode: image `opencode-sandbox:latest`, provider `openrouter`, agent `opencode`):
 ``` shell
 # once: create a sandbox that keeps running
@@ -165,6 +166,7 @@ claude setup-token
 * Add the token to `.env` as `CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-...`
 
 ### Import the profile
+(Skip this and the next section with `./provider.sh claude`, which imports the profile and creates the provider.)
 ``` shell
 openshell provider profile lint   -f providers/claude-code-oauth.yaml
 openshell provider profile import -f providers/claude-code-oauth.yaml
@@ -264,6 +266,8 @@ openshell sandbox create \
 OpenCode uses models through the OpenRouter API, with an OpenRouter API key.
 
 ### Import the profile
+(Skip this and the next section with `./provider.sh opencode`, which imports the profile and creates the provider.)
+
 The profile describes the OpenRouter API, not OpenCode: the API key, the host `openrouter.ai`, and which binary may use the key. This repo has a local copy of the upstream profile: [providers/openrouter.yaml](providers/openrouter.yaml). It doesn't change with upstream, and only `/usr/local/bin/opencode` may use the key, the opencode path in the image.
 ``` shell
 openshell provider profile lint   -f providers/openrouter.yaml
