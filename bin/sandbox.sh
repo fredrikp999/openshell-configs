@@ -1,7 +1,8 @@
 #!/bin/sh
 # Start an agent sandbox, either in the terminal or in VS Code.
 #
-#   bin/sandbox.sh <claude|opencode> [name] [--vscode|--acp] [--browser] [--workdir DIR] [-- agent args...]
+#   bin/sandbox.sh <claude|opencode> [name] [--vscode|--acp] [--browser|--hyperframes]
+#                  [--forward PORT] [--workdir DIR] [-- agent args...]
 #
 #   bin/sandbox.sh claude                      # Claude in this terminal, sandbox claude-agent1
 #   bin/sandbox.sh claude my-task --vscode     # open sandbox my-task in VS Code
@@ -9,6 +10,7 @@
 #   bin/sandbox.sh claude my-task -- -p 'reply with OK'   # pass args to the agent
 #   bin/sandbox.sh opencode oc-task --acp      # ACP over stdio, for a UI/client
 #   bin/sandbox.sh claude web-task --browser   # Claude with a headless browser
+#   bin/sandbox.sh claude my-video --hyperframes --forward 3102   # HyperFrames
 #
 # --acp runs the agent's Agent Client Protocol server (JSON-RPC over stdin and
 # stdout) instead of the terminal UI. A client spawns this script as its agent
@@ -20,16 +22,24 @@
 # with policies/browser.yaml, which lists the sites the browser may open. It
 # only matters when the sandbox is created.
 #
+# --hyperframes (Claude only) is the same with the claude-hyperframes image and
+# policies/hyperframes.yaml: HyperFrames, FFmpeg and its skills on top of the
+# browser.
+#
+# --forward PORT forwards 127.0.0.1:PORT on this machine to the same port in
+# the sandbox (in the background, if not already forwarded), so you can open
+# what the agent serves there, e.g. the HyperFrames preview.
+#
 # The sandbox is created on first use, and reused after that. It runs
 # `sleep infinity` as its main process, so it keeps running when you quit the
 # agent or close VS Code, and you can switch between both ways of working.
 # Delete it with `openshell sandbox delete <name>`.
 #
-# Requires the provider and image from docs/agents.md (claude / claude-sandbox
-# or claude-browser, openrouter / opencode-sandbox).
+# Requires the provider and image from docs/agents.md (claude / claude-sandbox,
+# claude-browser or claude-hyperframes, openrouter / opencode-sandbox).
 set -eu
 
-usage() { sed -n "2,29p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n "2,39p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 [ $# -ge 1 ] || usage
 agent=$1; shift
@@ -60,12 +70,16 @@ case ${1:-} in ''|-*) ;; *) name=$1; shift ;; esac
 vscode=false
 acp=false
 browser=false
+hyperframes=false
+forward=
 workdir=/sandbox
 while [ $# -gt 0 ]; do
   case $1 in
     --vscode) vscode=true; shift ;;
     --acp) acp=true; shift ;;
     --browser) browser=true; shift ;;
+    --hyperframes) hyperframes=true; shift ;;
+    --forward) forward=$2; shift 2 ;;
     --workdir|-w) workdir=$2; shift 2 ;;
     --) shift; break ;;
     *) usage ;;
@@ -86,6 +100,16 @@ if $browser; then
   image=claude-browser:latest
   policy=$(dirname "$0")/../policies/browser.yaml
 fi
+if $hyperframes; then
+  [ "$agent" = claude ] || { echo "--hyperframes is only for claude." >&2; exit 1; }
+  $browser && { echo "Use either --browser or --hyperframes, not both." >&2; exit 1; }
+  image=claude-hyperframes:latest
+  policy=$(dirname "$0")/../policies/hyperframes.yaml
+fi
+case $forward in
+  '') ;;
+  *[!0-9]*) echo "--forward needs a port number." >&2; exit 1 ;;
+esac
 
 phase() { openshell sandbox list 2>/dev/null | awk -v n="$1" '$1==n {print $NF}'; }
 
@@ -115,6 +139,19 @@ case $p in
     echo "Delete it with 'openshell sandbox delete $name' and run this again." >&2
     exit 1 ;;
 esac
+
+if [ -n "$forward" ]; then
+  if openshell forward list 2>/dev/null | awk -v n="$name" -v p="$forward" '$2==n && $4==p {f=1} END {exit !f}'; then
+    echo "Port $forward is already forwarded to $name: http://127.0.0.1:$forward/" >&2
+  # Its output is closed so the background forward doesn't hold this script's
+  # stdout open (which matters for --acp, where stdout is the protocol).
+  elif openshell forward start "$forward" "$name" -d </dev/null >/dev/null 2>&1; then
+    echo "Forwarding http://127.0.0.1:$forward/ to port $forward in $name." >&2
+  else
+    echo "Could not forward port $forward; is it in use on this machine? (lsof -i :$forward)" >&2
+    exit 1
+  fi
+fi
 
 if $vscode; then
   exec openshell sandbox connect "$name" --editor vscode

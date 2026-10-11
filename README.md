@@ -6,11 +6,11 @@ Configs and notes for running AI coding agents (Claude Code, OpenCode) in [NVIDI
 |---|---|
 | [docs/](docs) | The full documentation, see [Documentation](#documentation) |
 | [bin/](bin) | Scripts you run: [sandbox.sh](bin/sandbox.sh) starts an agent sandbox, [provider.sh](bin/provider.sh) creates a provider from `.env`, [bundle.sh](bin/bundle.sh) moves a git repo in and the agent's commits out, [watch-denied.sh](bin/watch-denied.sh) shows the denied connections as a live table, [otel-export.py](bin/otel-export.py) exports the logs as OpenTelemetry and [otel-view.py](bin/otel-view.py) shows them in the terminal, [metrics-view.py](bin/metrics-view.py) shows the gateway metrics, [acp_client.py](bin/acp_client.py) chats with an agent over ACP |
-| [images/](images) | One folder per sandbox image, named after the image: [claude-sandbox](images/claude-sandbox) (Claude Code), [claude-browser](images/claude-browser) (Claude Code plus a headless browser), [opencode-sandbox](images/opencode-sandbox) (OpenCode) |
+| [images/](images) | One folder per sandbox image, named after the image: [claude-sandbox](images/claude-sandbox) (Claude Code), [claude-browser](images/claude-browser) (Claude Code plus a headless browser), [claude-hyperframes](images/claude-hyperframes) (that plus HyperFrames, for videos made from HTML), [opencode-sandbox](images/opencode-sandbox) (OpenCode) |
 | [providers/](providers) | Provider profiles: [claude-code-oauth.yaml](providers/claude-code-oauth.yaml) (Claude subscription), [openrouter.yaml](providers/openrouter.yaml) (OpenRouter, for OpenCode) |
-| [policies/](policies) | Sandbox policies: [vscode-terminal.yaml](policies/vscode-terminal.yaml) (the default plus terminals, used everywhere), [browser.yaml](policies/browser.yaml) (for the browser image), [example.yaml](policies/example.yaml) (network rules to copy and adapt) |
+| [policies/](policies) | Sandbox policies: [vscode-terminal.yaml](policies/vscode-terminal.yaml) (the default plus terminals, used everywhere), [browser.yaml](policies/browser.yaml) (for the browser image), [hyperframes.yaml](policies/hyperframes.yaml) (for the HyperFrames image), [example.yaml](policies/example.yaml) (network rules to copy and adapt) |
 | [observability/](observability) | OpenTelemetry Collector configs that send the gateway metrics and the sandbox events to one OTLP backend: [collector.yaml](observability/collector.yaml) (any backend) and [collector-grafana.yaml](observability/collector-grafana.yaml) (a local Grafana) |
-| [tests/](tests) | One folder per test, each run with its `run.sh`: [host-mcp](tests/host-mcp) (an MCP server on the host), [browser](tests/browser) (the headless browser) |
+| [tests/](tests) | One folder per test, each run with its `run.sh`: [host-mcp](tests/host-mcp) (an MCP server on the host), [browser](tests/browser) (the headless browser), [hyperframes](tests/hyperframes) (rendering and the preview) |
 | [Makefile](Makefile) | `make images` builds all images in order, `make test` runs the tests, `make lint` checks the files |
 | [.env.example](.env.example) | Template for `.env`, which holds your API key and token (ignored by git) |
 | [.claude/skills/](.claude/skills/openshell-setup/SKILL.md) | A Claude Code skill that sets all of this up, step by step |
@@ -22,7 +22,7 @@ Configs and notes for running AI coding agents (Claude Code, OpenCode) in [NVIDI
 | [Setup](docs/setup.md) | Podman, installing OpenShell, credentials in `.env` |
 | [Agents](docs/agents.md) | Claude Code with a Claude subscription, OpenCode with OpenRouter: profile, provider, image, sandbox |
 | [Working in sandboxes](docs/working-in-sandboxes.md) | Starting and using a sandbox, VS Code, getting code and files in and out, viewing a web page, many sandboxes |
-| [Extras](docs/extras.md) | MCP servers on the host, ACP, headless browser use |
+| [Extras](docs/extras.md) | MCP servers on the host, ACP, headless browser use, HyperFrames |
 | [Customizing](docs/customizing.md) | Provider profiles, sandbox policies, network rules |
 | [Logging and metrics](docs/logging.md) | Reading the logs, watching denials live, OCSF JSON, exporting to OpenTelemetry and viewing the events, gateway metrics for Prometheus |
 | [Troubleshooting](docs/troubleshooting.md) | Symptoms, causes and fixes |
@@ -95,6 +95,12 @@ Not needed for the basic steps above. Each one gives the agent more reach, so ad
 * **Local pages:** a dev server in the sandbox (`localhost`) works without a rule.
 * **Don't** let the agent use your own Chrome.
 * See [Headless browser use](docs/extras.md#headless-browser-use).
+
+#### HyperFrames (videos from HTML)
+* **What:** Claude Code makes videos with [HyperFrames](https://hyperframes.heygen.com) in the sandbox, with its skills, FFmpeg and headless Chromium, and you watch and edit in HyperFrames Studio in your own browser.
+* **How:** `make claude-hyperframes`, then `bin/sandbox.sh claude my-video --hyperframes --forward 3102`, ask for the preview on port 3102, and open http://127.0.0.1:3102.
+* **What limits it:** [policies/hyperframes.yaml](policies/hyperframes.yaml) allows only read-only access to the script and font CDNs and the HyperFrames registry. The Studio page runs in your browser, outside the sandbox (see below).
+* See [HyperFrames](docs/extras.md#hyperframes).
 
 #### Logs and OpenTelemetry
 * **What:** keep the sandboxes' security events (every allowed and denied connection, HTTP request and SSH session), or send them to a log backend, as OpenTelemetry logs.

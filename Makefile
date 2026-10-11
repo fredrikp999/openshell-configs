@@ -1,7 +1,7 @@
 # Build the images, run the tests and check the files.
 #
-#   make images     build all images (claude-sandbox before claude-browser)
-#   make claude-sandbox | claude-browser | opencode-sandbox   one image
+#   make images     build all images (claude-sandbox, then claude-browser, then claude-hyperframes)
+#   make claude-sandbox | claude-browser | claude-hyperframes | opencode-sandbox   one image
 #   make test       run all tests (needs the images and the claude provider)
 #   make lint       check scripts, JSON, YAML and the provider profiles
 #
@@ -9,10 +9,12 @@
 ENGINE ?= podman
 # shellcheck from PATH, or else from its official container image.
 SHELLCHECK ?= $(shell command -v shellcheck || echo "$(ENGINE) run --rm -v $(CURDIR):/mnt:ro -w /mnt docker.io/koalaman/shellcheck:stable")
-IMAGES := claude-sandbox claude-browser opencode-sandbox
+IMAGES := claude-sandbox claude-browser claude-hyperframes opencode-sandbox
 SCRIPTS := bin/sandbox.sh bin/provider.sh bin/bundle.sh bin/watch-denied.sh tests/*/run.sh \
            images/claude-sandbox/claude-start images/claude-sandbox/claude-acp-start \
-           images/claude-browser/playwright-mcp-start
+           images/claude-browser/playwright-mcp-start \
+           images/claude-hyperframes/hyperframes-init images/claude-hyperframes/claude-start \
+           images/claude-hyperframes/claude-acp-start
 
 .PHONY: images $(IMAGES) test lint
 
@@ -21,8 +23,9 @@ images: $(IMAGES)
 $(IMAGES):
 	$(ENGINE) build -t $@:latest images/$@
 
-# claude-browser is built FROM claude-sandbox.
+# claude-browser is built FROM claude-sandbox, claude-hyperframes FROM claude-browser.
 claude-browser: claude-sandbox
+claude-hyperframes: claude-browser
 
 test:
 	@for t in tests/*/run.sh; do echo "== $$t"; $$t || exit 1; done

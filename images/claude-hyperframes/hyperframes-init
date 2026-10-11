@@ -1,0 +1,22 @@
+#!/bin/sh
+# Prepare a HyperFrames sandbox for the sandbox user ($HOME=/sandbox).
+#
+# 1. Copy the HyperFrames skills to ~/.claude/skills (first start only).
+# 2. Trust the OpenShell CA in Chromium. OpenShell decrypts HTTPS with a CA it
+#    creates for each sandbox, and Chromium only trusts its own NSS database,
+#    so without this every CDN load in a render or check fails with
+#    ERR_CERT_AUTHORITY_INVALID (GSAP never loads). playwright-mcp-start does
+#    the same, but only when Claude Code starts the MCP server.
+# Output goes to stderr, so stdout stays clean for ACP.
+set -e
+{
+  if [ ! -d "$HOME/.claude/skills/hyperframes" ]; then
+    mkdir -p "$HOME/.claude/skills"
+    cp -r /opt/hyperframes-skills/. "$HOME/.claude/skills/"
+  fi
+  db="$HOME/.pki/nssdb"
+  mkdir -p "$db"
+  [ -f "$db/cert9.db" ] || certutil -d "sql:$db" -N --empty-password
+  certutil -d "sql:$db" -D -n openshell 2>/dev/null || true
+  certutil -d "sql:$db" -A -t C,, -n openshell -i /run/openshell-supervisor-ca/material/ca.crt
+} >&2

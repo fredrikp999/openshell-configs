@@ -1,4 +1,4 @@
-# Extras: MCP servers, ACP and a headless browser
+# Extras: MCP servers, ACP, a headless browser and HyperFrames
 Optional additions to the basic setup. Each one gives the agent more reach, so add it when a task needs it.
 
 ## MCP servers in containers on the host
@@ -120,3 +120,60 @@ openshell sandbox exec web-task --workdir /sandbox -- claude-start
 * **Size and memory:** the image is about 1.9 GB, and Chromium needs memory. Give the Podman machine more if you run several (see [Many sandboxes in parallel](working-in-sandboxes.md#many-sandboxes-in-parallel)).
 * **Existing sandboxes** keep their old image. Create a new one after rebuilding.
 * **Test:** [tests/browser/run.sh](../tests/browser/run.sh) creates a sandbox and checks that an allowed site loads, a site not in the list is denied, and a local server on `127.0.0.1` and `localhost` loads. `--claude` also checks it with Claude Code.
+
+## HyperFrames
+[HyperFrames](https://hyperframes.heygen.com) makes videos from HTML: the agent writes a composition (HTML, CSS and GSAP), HyperFrames previews it in a web studio and renders it to MP4 with headless Chrome and FFmpeg. The `claude-hyperframes` image has all of it, plus the HyperFrames skills for Claude Code. You watch and edit in the HyperFrames Studio from your own browser, through a forwarded port.
+
+### Set it up
+1. **Build the image.** It builds on `claude-browser`, which builds on `claude-sandbox`; `make` builds all three in order:
+```bash
+make claude-hyperframes
+# or by hand:
+podman build -t claude-sandbox:latest     images/claude-sandbox
+podman build -t claude-browser:latest     images/claude-browser
+podman build -t claude-hyperframes:latest images/claude-hyperframes
+```
+2. **Create the sandbox and forward the preview port.** `--hyperframes` uses the image and [policies/hyperframes.yaml](../policies/hyperframes.yaml), `--forward` starts the port forward in the background:
+```bash
+bin/sandbox.sh claude my-video --hyperframes --forward 3102
+```
+3. **Ask Claude for a video**, and to serve the preview on that port, e.g. "Make a 10-second launch video for our CLI in /sandbox/launch. When it passes `hyperframes check`, start the preview with `npx hyperframes preview --background --no-open --port 3102`."
+4. **Open http://127.0.0.1:3102** on your machine. This is HyperFrames Studio: play, scrub, edit, and see the agent's changes as it works.
+5. **Get the video out** when it's rendered (`npx hyperframes render`, by default to `renders/` in the project):
+```bash
+openshell sandbox download my-video /sandbox/launch/renders/launch.mp4 .
+```
+
+By hand, without the script:
+```bash
+openshell sandbox create --name my-video --from claude-hyperframes:latest --provider claude \
+  --policy policies/hyperframes.yaml --detach -- sleep infinity
+openshell forward start 3102 my-video -d
+openshell sandbox exec my-video --workdir /sandbox -- claude-start
+```
+
+### What the image adds
+[images/claude-hyperframes](../images/claude-hyperframes) builds on `claude-browser` (Playwright MCP and headless Chromium, see [What the image adds](#what-the-image-adds) above), so Claude can also open the preview itself and take screenshots. On top of that:
+* **The HyperFrames CLI** (npm `hyperframes`, pinned with `ARG HYPERFRAMES_VERSION`), **FFmpeg**, and fonts (Liberation, Noto including CJK and emoji) for rendering.
+* **The HyperFrames skills** of the same release (`hyperframes`, `hyperframes-core`, `hyperframes-cli`, `general-video`, `media-use` and the rest), copied to `~/.claude/skills` on first start. They aren't installed as a plugin, so Claude doesn't try to update them from GitHub.
+* **Rendering with Playwright's headless Chromium** (`HYPERFRAMES_BROWSER_PATH`). HyperFrames normally downloads its own Chrome, which the sandbox can't.
+* **`hyperframes-init`**, run by `claude-start` and `claude-acp-start`: copies the skills, and adds the OpenShell CA to Chromium's certificate store. Without the CA, every CDN load in a render or `check` fails with `ERR_CERT_AUTHORITY_INVALID`, GSAP never loads, and videos come out still.
+* **A patch for one HyperFrames call.** The render worker lowers its own process priority, which OpenShell's syscall filter doesn't allow, so every render failed with `uv_os_setpriority returned EPERM`. The image makes that call best-effort. If a new HyperFrames version changes that code, the build fails at that step, so the patch gets checked.
+* **Quiet by default:** no telemetry (`HYPERFRAMES_NO_TELEMETRY`, `DO_NOT_TRACK`), no update checks, no skill downloads on `init` (`HYPERFRAMES_SKIP_SKILLS`).
+
+### The policy
+[policies/hyperframes.yaml](../policies/hyperframes.yaml) has the browser policy's filesystem rules and allows, read-only (GET):
+* **For Chromium:** `cdn.jsdelivr.net`, `unpkg.com`, `cdnjs.cloudflare.com`, `fonts.googleapis.com`, `fonts.gstatic.com`. Compositions load GSAP and other libraries and fonts from these.
+* **For the CLI (node):** the same font and jsDelivr hosts, `hyperframes.heygen.com` (docs and schemas), and `raw.githubusercontent.com`, but only paths under `/heygen-com/hyperframes/` (the block registry for `hyperframes add` and `catalog`).
+
+The preview on `127.0.0.1` in the sandbox needs no rule. A composition that loads something else (an image from a website, another CDN) shows it as DENIED in `openshell logs my-video`. Add the host and apply it to the running sandbox with `openshell policy set my-video --policy policies/hyperframes.yaml --wait`.
+
+### Things to watch for
+* **Port in use on your machine:** `openshell forward` uses the same port number on both sides, and `--forward` fails if the port is taken (`lsof -i :3102`). HyperFrames' default preview port 3002 is often in use if you also run HyperFrames on the host, so pick another, as above.
+* **The Studio runs the agent's code in your browser**, outside the sandbox. See [Viewing a web page from the sandbox](working-in-sandboxes.md#viewing-a-web-page-from-the-sandbox). Use a private window.
+* **`hyperframes catalog` stalls in the sandbox.** It fetches hundreds of registry files from `raw.githubusercontent.com`. OpenShell maps each allowed host to a short-lived internal address, and Node keeps reusing connections after that mapping expires, so they're denied (`transparent TCP mapping is expired` in `openshell logs`) and the command hangs. While it runs, other HyperFrames commands in the sandbox may hang too, so stop it. `hyperframes add <name>` works, so browse the catalog at [hyperframes.heygen.com](https://hyperframes.heygen.com) and tell the agent which block to add.
+* **Not included:** local transcription (whisper.cpp), local voice (Kokoro) and music (MusicGen) models, and HeyGen's cloud features (avatars, TTS, cloud rendering), which need a HeyGen API key and `api.heygen.com`. `npx hyperframes doctor` lists what's missing; Docker, `/dev/shm` size and these optional models show as failed and don't matter for rendering.
+* **Rendering uses software GL**, so it's slower than on a Mac with a GPU: about 1.5 s of render time per second of video for a simple composition.
+* **`npx` contacts registry.npmjs.org** once, which shows as DENIED. HyperFrames is installed globally, so it works anyway.
+* **Size:** the image adds about 0.5 GB to `claude-browser` (2.3 GB in all).
+* **Test:** [tests/hyperframes/run.sh](../tests/hyperframes/run.sh) creates a sandbox, renders a project, checks that `hyperframes check` loads GSAP without errors, and that the preview is reachable from your machine through a forwarded port. `--claude` also has Claude Code make and render a short video.
