@@ -5,13 +5,13 @@ Configs and notes for running AI coding agents (Claude Code, OpenCode) in [NVIDI
 | Path | What it is |
 |---|---|
 | [docs/](docs) | The full documentation, see [Documentation](#documentation) |
-| [bin/](bin) | Scripts you run: [sandbox.sh](bin/sandbox.sh) starts an agent sandbox, [provider.sh](bin/provider.sh) creates a provider with the key from the Keychain (or `.env`), [bundle.sh](bin/bundle.sh) moves a git repo in and the agent's commits out, [watch-denied.sh](bin/watch-denied.sh) shows the denied connections as a live table, [vm-clock.sh](bin/vm-clock.sh) keeps the Podman machine's clock in step with the Mac's after sleep, [otel-export.py](bin/otel-export.py) exports the logs as OpenTelemetry and [otel-view.py](bin/otel-view.py) shows them in the terminal, [metrics-view.py](bin/metrics-view.py) shows the gateway metrics, [acp_client.py](bin/acp_client.py) chats with an agent over ACP |
+| [bin/](bin) | Scripts you run: [sandbox.sh](bin/sandbox.sh) starts an agent sandbox, [provider.sh](bin/provider.sh) creates a provider with the key from the Keychain (or `.env`), [bundle.sh](bin/bundle.sh) moves a git repo in and the agent's commits out, [watch-denied.sh](bin/watch-denied.sh) shows the denied connections as a live table, [vm-clock.sh](bin/vm-clock.sh) keeps the Podman machine's clock in step with the Mac's after sleep, [doctor.sh](bin/doctor.sh) checks that everything is ready to run sandboxes, [check-links.py](bin/check-links.py) checks the links between the docs, [otel-export.py](bin/otel-export.py) exports the logs as OpenTelemetry and [otel-view.py](bin/otel-view.py) shows them in the terminal, [metrics-view.py](bin/metrics-view.py) shows the gateway metrics, [acp_client.py](bin/acp_client.py) chats with an agent over ACP |
 | [images/](images) | One folder per sandbox image, named after the image: [claude-sandbox](images/claude-sandbox) (Claude Code), [claude-browser](images/claude-browser) (Claude Code plus a headless browser), [claude-hyperframes](images/claude-hyperframes) (that plus HyperFrames, for videos made from HTML), [opencode-sandbox](images/opencode-sandbox) (OpenCode) |
 | [providers/](providers) | Provider profiles: [claude-code-oauth.yaml](providers/claude-code-oauth.yaml) (Claude subscription), [openrouter.yaml](providers/openrouter.yaml) (OpenRouter, for OpenCode) |
 | [policies/](policies) | Sandbox policies: [vscode-terminal.yaml](policies/vscode-terminal.yaml) (the default plus terminals, used everywhere), [browser.yaml](policies/browser.yaml) (for the browser image), [hyperframes.yaml](policies/hyperframes.yaml) (for the HyperFrames image), [example.yaml](policies/example.yaml) (network rules to copy and adapt) |
 | [observability/](observability) | OpenTelemetry Collector configs that send the gateway metrics and the sandbox events to one OTLP backend: [collector.yaml](observability/collector.yaml) (any backend) and [collector-grafana.yaml](observability/collector-grafana.yaml) (a local Grafana) |
 | [tests/](tests) | One folder per test, each run with its `run.sh`: [host-mcp](tests/host-mcp) (an MCP server on the host), [browser](tests/browser) (the headless browser), [hyperframes](tests/hyperframes) (rendering and the preview) |
-| [Makefile](Makefile) | `make images` builds all images in order, `make test` runs the tests, `make lint` checks the files |
+| [Makefile](Makefile) | `make images` builds all images in order, `make test` runs the tests, `make lint` checks the files. See [Makefile](#makefile) |
 | [.env.example](.env.example) | Template for `.env`, the fallback for your API key and token when you don't use the Keychain (ignored by git) |
 | [.claude/skills/](.claude/skills/openshell-setup/SKILL.md) | A Claude Code skill that sets all of this up, step by step |
 | [LICENSE](LICENSE) | MIT |
@@ -138,6 +138,26 @@ openshell forward stop  3000 my-task
 * **So:** only do it when you need to, and open the page in a private window.
 
 If something fails, see [Troubleshooting](docs/troubleshooting.md).
+
+## Makefile
+The [Makefile](Makefile) builds the images, runs the tests and checks the files. Run it from the repo root.
+
+| Target | What it does |
+|---|---|
+| `make images` | Builds all images in order: `claude-sandbox`, then `claude-browser` (built on it), then `claude-hyperframes` (built on that), and `opencode-sandbox` |
+| `make claude-sandbox`, `make claude-browser`, `make claude-hyperframes`, `make opencode-sandbox` | Builds one image, and the images it's built on |
+| `make update` | Rebuilds all images from scratch, to get the latest Claude Code, OpenCode, HyperFrames and so on, and a newer base image (`node:22-slim`, the OpenCode image) if there is one |
+| `make test` | Runs every `tests/*/run.sh`, in turn: the [headless browser](tests/browser), an [MCP server on the host](tests/host-mcp) and [HyperFrames](tests/hyperframes). Stops at the first failure |
+| `make lint` | Checks the shell scripts with shellcheck, the Python and JavaScript files for syntax errors, the JSON and YAML files, and the links between the docs ([bin/check-links.py](bin/check-links.py)). With a gateway running, it also checks the provider profiles with `openshell provider profile lint` |
+| `make doctor` | Checks that this machine is ready to run sandboxes: free disk space, the Podman machine and default connection, the VM's clock and the [clock job](docs/isolation.md#a-podman-machine-with-minimal-host-mounts), the gateway, the providers and the images. Runs [bin/doctor.sh](bin/doctor.sh), which only reads and changes nothing |
+
+* **Container engine:** images are built with Podman. Use Docker with `make images ENGINE=docker`.
+* **Why `make update`:** `make images` reuses the build steps it has already run, so it keeps the agent versions and the base image from the first build. Run `make update` now and then, then `make test`. Sandboxes you already have keep their old image; create them again to use the new one. Old image layers stay on disk until `podman image prune`.
+* **`make test` needs** the images and the `claude` provider. Each test creates its own sandbox and deletes it afterwards. The tests need a running Podman machine and the gateway, so they don't run in CI.
+* **`make lint` needs** `python3`, `node` and `ruby`. It uses `shellcheck` if it's installed (`brew install shellcheck`), or otherwise runs it in its official container image. The scripts are sent to the container on stdin rather than mounted, so this also works on a [Podman machine with minimal host mounts](docs/isolation.md#a-podman-machine-with-minimal-host-mounts).
+* **CI:** [.github/workflows/lint.yml](.github/workflows/lint.yml) runs `make lint` on every push and pull request. There's no gateway there, so the provider profile check is skipped.
+* **When something doesn't work,** run `make doctor` first. Each line starts with `ok`, `warn` or `FAIL`, and says what to do.
+* **New scripts** have to be added to `SCRIPTS` in the Makefile to be linted.
 
 ## References
 ### OpenShell

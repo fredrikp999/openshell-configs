@@ -1,5 +1,5 @@
 # Troubleshooting
-Start with `openshell logs <sandbox> | grep DENIED` and `openshell sandbox get <sandbox>`. To watch denials live while you reproduce a problem, run `bin/watch-denied.sh` (all sandboxes, or `--sandbox <sandbox>` for one; it hides the known harmless denials). See [Logging](logging.md) for reading the log lines.
+Start with `make doctor`, which checks disk space, the Podman machine, the VM's clock, the gateway, the providers and the images. For one sandbox, use `openshell logs <sandbox> | grep DENIED` and `openshell sandbox get <sandbox>`. To watch denials live while you reproduce a problem, run `bin/watch-denied.sh` (all sandboxes, or `--sandbox <sandbox>` for one; it hides the known harmless denials). See [Logging](logging.md) for reading the log lines.
 
 | Symptom | Cause | Fix |
 |---|---|---|
