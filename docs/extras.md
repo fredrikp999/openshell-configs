@@ -43,11 +43,11 @@ openshell sandbox exec my-task -- getent hosts host.containers.internal
 To build a UI that runs on the host and talks to the agent in the sandbox, use [ACP](https://agentclientprotocol.com). ACP is JSON-RPC over the agent's stdin and stdout, so no port is opened in the sandbox: the client starts the agent through the gateway and speaks ACP over the pipes, like the SSH tunnel for VS Code.
 ```bash
 bin/sandbox.sh opencode my-task --acp
-# which runs (plus the model in OPENCODE_CONFIG_CONTENT, see below):
-openshell sandbox exec my-task --no-tty --no-login-shell --workdir /sandbox -- opencode acp
-
 bin/sandbox.sh claude my-task --acp
-# which runs:
+```
+These run the following, respectively (for OpenCode, plus the model in `OPENCODE_CONFIG_CONTENT`, see below):
+```bash
+openshell sandbox exec my-task --no-tty --no-login-shell --workdir /sandbox -- opencode acp
 openshell sandbox exec my-task --no-tty --no-login-shell --workdir /sandbox -- claude-acp-start
 ```
 * **Client side:** spawn the command above as a subprocess and give its stdin/stdout to an ACP client library (e.g. `@agentclientprotocol/sdk` for TypeScript). Flow: `initialize`, `session/new` (with `cwd` as a path *inside* the sandbox), then `session/prompt`. Keep the process running for the whole session. The agent's stderr is log output; show it separately.
@@ -76,8 +76,9 @@ Claude Code can use a headless Chromium that runs **inside the sandbox**, throug
 ### Set it up
 1. **Build the image** on top of `claude-sandbox` (build that one first, see [Build the image](agents.md#build-the-image)):
 ```bash
-podman build -t claude-browser:latest images/claude-browser   # or: make claude-browser (builds both)
+podman build -t claude-browser:latest images/claude-browser
 ```
+   Or `make claude-browser`, which builds both.
 2. **List the sites** the browser may open under `browser_sites` in [policies/browser.yaml](../policies/browser.yaml). It allows only `example.com` as a placeholder:
 ```yaml
   browser_sites:
@@ -128,7 +129,9 @@ openshell sandbox exec web-task --workdir /sandbox -- claude-start
 1. **Build the image.** It builds on `claude-browser`, which builds on `claude-sandbox`; `make` builds all three in order:
 ```bash
 make claude-hyperframes
-# or by hand:
+```
+   Or by hand:
+```bash
 podman build -t claude-sandbox:latest     images/claude-sandbox
 podman build -t claude-browser:latest     images/claude-browser
 podman build -t claude-hyperframes:latest images/claude-hyperframes

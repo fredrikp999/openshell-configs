@@ -54,8 +54,9 @@ claude      claude-code-oauth  1                 0
 ### Build the image
 There is no ready-made image, so build one from [images/claude-sandbox](../images/claude-sandbox/Dockerfile). It is `node:22-slim` with `git`, Claude Code and the ACP adapter `claude-agent-acp` (both installed via npm), plus two wrappers from the same folder that skip Claude Code's first-run onboarding: `claude-start` then starts `claude`, and `claude-acp-start` starts `claude-agent-acp` (for [ACP](extras.md#acp-agent-client-protocol)).
 ```bash
-podman build -t claude-sandbox:latest images/claude-sandbox   # or: make claude-sandbox
+podman build -t claude-sandbox:latest images/claude-sandbox
 ```
+Or the same with `make claude-sandbox`.
 
 Why the wrappers are needed: onboarding runs a connectivity check that connects to `api.anthropic.com` without going through the OpenShell proxy. The sandbox denies that connection, and Claude Code exits with `Failed to connect to api.anthropic.com: EACCES`. On first start, the wrappers copy `/etc/claude-start.json`, which holds `{"hasCompletedOnboarding": true}`, to `~/.claude.json` (`/sandbox/.claude.json`), so the check is skipped. (The [browser image](extras.md#headless-browser-use) replaces that file to also register its MCP server.) All other traffic goes through the proxy and works.
 
@@ -145,8 +146,9 @@ The official image `ghcr.io/anomalyco/opencode:latest` is Alpine-based and has n
 * clears the entrypoint, so the command after `--` (e.g. `sleep infinity`) runs as is
 * keeps `opencode` at `/usr/local/bin/opencode`, the only path the `openrouter` profile lets use the API key
 ```bash
-podman build -t opencode-sandbox:latest images/opencode-sandbox   # or: make opencode-sandbox
+podman build -t opencode-sandbox:latest images/opencode-sandbox
 ```
+Or the same with `make opencode-sandbox`.
 
 ### Create the sandbox
 Quickest: `bin/sandbox.sh opencode [name]` for OpenCode in your terminal, or add `--vscode` for VS Code. See [Start a sandbox](working-in-sandboxes.md#start-and-use-a-sandbox). The sections below show what it does by hand.

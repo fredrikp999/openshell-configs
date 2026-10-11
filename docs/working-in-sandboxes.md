@@ -144,12 +144,12 @@ There are three ways to do it, from safest to most convenient:
 * `--upload` on `sandbox create` can't be combined with a command after `--`. Upload into a running sandbox instead.
 
 ### Single files
-For a file that isn't code in a repo (a spec, a data file, a screenshot or report the agent made), copy it with `upload` and `download`. Give a folder as the destination. The file lands in it under its own name:
+For a file that isn't code in a repo (a spec, a data file, a screenshot or report the agent made), copy it with `upload` and `download`. Give a folder as the destination. The file lands in it under its own name. Into the sandbox, `./spec.md` becomes `/sandbox/spec.md`:
 ```bash
-# into the sandbox: ./spec.md -> /sandbox/spec.md
 openshell sandbox upload my-task ./spec.md /sandbox
-
-# out of the sandbox: /sandbox/myrepo/report.html -> ./report.html
+```
+Out of the sandbox, `/sandbox/myrepo/report.html` becomes `./report.html`:
+```bash
 openshell sandbox download my-task /sandbox/myrepo/report.html .
 ```
 * **Files git ignores aren't uploaded.** Inside a git repo, `upload` applies `.gitignore`, so e.g. a `.env` or a build output is left out. A file outside any repo is uploaded as is (the CLI warns that it uploads "without Git filtering").
@@ -166,13 +166,15 @@ A git bundle is a single file that contains commits, like a portable remote. The
 bin/bundle.sh in  <sandbox> <repo> [--branch NAME] [--base BRANCH]
 bin/bundle.sh out <sandbox> <repo> [--branch NAME] [--base BRANCH] [--force]
 ```
-A typical task, with the sandbox `my-task` and the repo `./myrepo`:
+A typical task, with the sandbox `my-task` and the repo `./myrepo`. First bring the repo in:
 ```bash
 bin/bundle.sh in my-task ./myrepo
-# the agent works in /sandbox/myrepo and commits on branch agent/my-task
+```
+The agent works in `/sandbox/myrepo` and commits on branch `agent/my-task`. Then bring its commits out, review them, push, and open the MR:
+```bash
 bin/bundle.sh out my-task ./myrepo
-git -C ./myrepo diff main...agent/my-task      # review
-git -C ./myrepo push origin agent/my-task      # then open the MR
+git -C ./myrepo diff main...agent/my-task
+git -C ./myrepo push origin agent/my-task
 ```
 * **`in`** bundles only the base branch (`main`) and uploads it. Other branches and their history never reach the sandbox.
   * The first time, it creates `/sandbox/<repo-name>` and checks out the work branch from `main`. The branches from your machine are available as `host/*`, e.g. `host/main`, and the agent's git name and email are set.

@@ -46,38 +46,40 @@ OpenShell runs AI coding agents in locked-down sandboxes. Agents get only the ne
 2. [Store your key or token in the Keychain](docs/setup.md#credentials) (or in `.env`, or another secrets manager).
 3. For an agent ([Claude Code](docs/agents.md#claude-code-with-a-claude-subscription) or [OpenCode](docs/agents.md#opencode-with-openrouter)): import its profile, create a provider (`bin/provider.sh claude` or `bin/provider.sh opencode` does both), build its image (`make images` builds all of them).
 4. [Start and use a sandbox](docs/working-in-sandboxes.md#start-and-use-a-sandbox), with the agent in your terminal or with VS Code. By hand (for OpenCode: image `opencode-sandbox:latest`, provider `openrouter`, agent `opencode`):
+Once, create a sandbox that keeps running:
 ```bash
-# once: create a sandbox that keeps running
 openshell sandbox create --name my-task --from claude-sandbox:latest --provider claude \
   --policy policies/vscode-terminal.yaml --detach -- sleep infinity
-
-# then, as often as you like:
-openshell sandbox exec my-task --workdir /sandbox -- claude-start   # agent in this terminal
-openshell sandbox connect my-task --editor vscode                   # VS Code
 ```
-Or with the script, which creates the sandbox on first use:
+Then, as often as you like, start the agent in this terminal, or open the sandbox in VS Code:
 ```bash
-bin/sandbox.sh claude my-task            # agent in this terminal
-bin/sandbox.sh claude my-task --vscode   # the same sandbox in VS Code
+openshell sandbox exec my-task --workdir /sandbox -- claude-start
+openshell sandbox connect my-task --editor vscode
+```
+Or with the script, which creates the sandbox on first use. The first line starts the agent in this terminal, the second opens the same sandbox in VS Code:
+```bash
+bin/sandbox.sh claude my-task
+bin/sandbox.sh claude my-task --vscode
 ```
 5. In VS Code, start the agent in the integrated terminal (`claude-start` or `opencode`).
 6. Open a shell in the sandbox when you need one, with `sandbox exec` or plain SSH:
 ```bash
 openshell sandbox exec my-task --workdir /sandbox -- bash
-
-# SSH: add the host entry once (already there after a --editor vscode connect)
+```
+   For SSH, add the host entry once (it's already there after a `--editor vscode` connect), then connect:
+```bash
 openshell sandbox ssh-config my-task >> ~/.ssh/config
 ssh openshell-my-task.default
 ```
-7. [Move code in and out](docs/working-in-sandboxes.md#getting-code-in-and-out) with git bundles, then review, push and open the MR from your machine:
+7. [Move code in and out](docs/working-in-sandboxes.md#getting-code-in-and-out) with git bundles, then review, push and open the MR from your machine. `in` puts the repo in `/sandbox/myrepo` on branch `agent/my-task`, and `out` brings the agent's commits back as branch `agent/my-task`:
 ```bash
-bin/bundle.sh in  my-task ./myrepo   # repo into /sandbox/myrepo, on branch agent/my-task
-bin/bundle.sh out my-task ./myrepo   # the agent's commits back as branch agent/my-task
+bin/bundle.sh in  my-task ./myrepo
+bin/bundle.sh out my-task ./myrepo
 ```
-   For single files, use `upload` and `download`. The destination is a folder, and the file keeps its name (see [Single files](docs/working-in-sandboxes.md#single-files)):
+   For single files, use `upload` and `download`. The destination is a folder, and the file keeps its name, here `/sandbox/notes.md` and `./report.html` (see [Single files](docs/working-in-sandboxes.md#single-files)):
 ```bash
-openshell sandbox upload   my-task ./notes.md /sandbox            # -> /sandbox/notes.md
-openshell sandbox download my-task /sandbox/report.html .         # -> ./report.html
+openshell sandbox upload   my-task ./notes.md /sandbox
+openshell sandbox download my-task /sandbox/report.html .
 ```
 8. [Approve or reject network rules](docs/customizing.md#network-rules) when the agent gets blocked. `bin/watch-denied.sh` shows what is being blocked, live, across all sandboxes (see [Watching denials](docs/logging.md#watching-denials)).
 
@@ -108,28 +110,28 @@ Not needed for the basic steps above. Each one gives the agent more reach, so ad
 * **How:** turn on OpenShell's structured log once, then export to a file or push to an OTLP endpoint, and look at the events with the small terminal viewer:
 ```bash
 openshell settings set --global --key ocsf_json_enabled --value true --yes
-bin/otel-export.py --out sandboxes.otlp.jsonl                          # to a file
-bin/otel-export.py --endpoint http://localhost:4318/v1/logs --follow   # live, to a collector
-bin/otel-export.py --out - --follow | bin/otel-view.py                 # live, in the terminal
 ```
+  * To a file: `bin/otel-export.py --out sandboxes.otlp.jsonl`
+  * Live, to a collector: `bin/otel-export.py --endpoint http://localhost:4318/v1/logs --follow`
+  * Live, in the terminal: `bin/otel-export.py --out - --follow | bin/otel-view.py`
 * **Careful where you send them:** the events show what the agent did (hosts, URLs, process names).
 * See [Logging and metrics](docs/logging.md).
 
 #### Gateway metrics
 * **What:** the gateway's own numbers: connected sandboxes, relays into sandboxes (`exec`, `connect`, SSH, port forwards), and API calls with latency and errors. Not what agents do (that's in the logs above), and not CPU or memory (`podman stats`).
-* **How:** turn on the Prometheus endpoint once (restarts the gateway), then view a summary in the terminal:
+* **How:** turn on the Prometheus endpoint once (restarts the gateway), then view a summary in the terminal. `-w` refreshes it every 5 seconds; without it, it prints once:
 ```bash
 echo 'OPENSHELL_METRICS_PORT=9464' >> ~/.config/openshell/gateway.env
 brew services restart openshell
-bin/metrics-view.py -w   # refreshes every 5 seconds; without -w it prints once
+bin/metrics-view.py -w
 ```
 * For history and graphs, scrape `http://127.0.0.1:9464/metrics` with Prometheus, or send the metrics to an OpenTelemetry backend together with the logs, with the Collector configs in [observability/](observability). To browse and graph both locally, see [Viewing in Grafana](docs/logging.md#viewing-in-grafana).
 
 #### Viewing a web page in your browser
 * **What:** [view a web page the agent serves](docs/working-in-sandboxes.md#viewing-a-web-page-from-the-sandbox) in your own browser.
-* **How:** the agent runs a server on a port in the sandbox, and you forward the port:
+* **How:** the agent runs a server on a port in the sandbox, and you forward the port. After `start`, open http://127.0.0.1:3000:
 ```bash
-openshell forward start 3000 my-task -d   # then open http://127.0.0.1:3000
+openshell forward start 3000 my-task -d
 openshell forward stop  3000 my-task
 ```
 * **This adds risk:** the page is the agent's code, and in your browser it runs outside the sandbox, with your network access. It can reach other services on your machine, send data to any site, and use your browser's logins.

@@ -16,13 +16,11 @@ What happens in a sandbox is logged by its OpenShell supervisor: every connectio
 * **OCSF JSON** - the same events as complete structured records in the [OCSF](https://schema.ocsf.io/) schema, off by default. This is what `bin/otel-export.py` reads. See [OCSF JSON](#ocsf-json).
 
 ## Reading the logs
-```bash
-openshell logs my-task                       # the last 200 lines
-openshell logs my-task --since 30m -n 1000   # more, from the last 30 minutes
-openshell logs my-task --tail                # follow live
-openshell logs my-task --level warn          # warnings and errors only
-openshell logs my-task | grep DENIED         # what was blocked
-```
+* The last 200 lines: `openshell logs my-task`
+* More, from the last 30 minutes: `openshell logs my-task --since 30m -n 1000`
+* Follow live: `openshell logs my-task --tail`
+* Warnings and errors only: `openshell logs my-task --level warn`
+* What was blocked: `openshell logs my-task | grep DENIED`
 * Without a name, `openshell logs` uses the last-used sandbox. `--source sandbox` or `--source gateway` shows only one side.
 * **Line format:** `[time] [source] [level] [component] message`, with the time in Unix seconds. Security events have the component `[ocsf]`, an event type and an outcome:
 ```
@@ -34,13 +32,12 @@ openshell logs my-task | grep DENIED         # what was blocked
 
 ## Watching denials
 [bin/watch-denied.sh](../bin/watch-denied.sh) shows the denied connections of all sandboxes as a table that updates live: one row per sandbox and host, with how often it was denied, when last, and which binaries tried.
-```bash
-bin/watch-denied.sh                      # all sandboxes, including ones created later
-bin/watch-denied.sh --sandbox my-task    # only my-task (-s for short)
-bin/watch-denied.sh --since 1h           # start with the last hour (default 1m)
-bin/watch-denied.sh --all                # also show the known harmless denials
-bin/watch-denied.sh --raw                # the DENIED lines themselves, with full binary paths
-```
+* All sandboxes, including ones created later: `bin/watch-denied.sh`
+* Only `my-task` (`-s` for short): `bin/watch-denied.sh --sandbox my-task`
+* Start with the last hour (default 1m): `bin/watch-denied.sh --since 1h`
+* Also show the known harmless denials: `bin/watch-denied.sh --all`
+* The DENIED lines themselves, with full binary paths: `bin/watch-denied.sh --raw`
+
 ```
 Denied connections - all sandboxes - since 3h - Ctrl-C to stop
 
@@ -62,9 +59,9 @@ These show up in the logs but need no rule, so `bin/watch-denied.sh` hides them 
 Turn it on once, for all sandboxes. It applies within 10 seconds, without a restart:
 ```bash
 openshell settings set --global --key ocsf_json_enabled --value true --yes
-openshell settings set --global --key ocsf_json_enabled --value false --yes   # off again
-openshell settings get my-task | grep ocsf                                     # check
 ```
+* Check: `openshell settings get my-task | grep ocsf`
+* Off again: `openshell settings set --global --key ocsf_json_enabled --value false --yes`
 * **Where it goes:** with the Podman driver, OpenShell 0.1.3 doesn't write the `/var/log/openshell-ocsf.*.log` file [its docs](https://docs.nvidia.com/openshell/latest/observability/ocsf-json-export) describe. The supervisor container prints each event as an `OCSF-JSON {...}` line instead, so the records are in `podman logs openshell-supervisor-<sandbox id>`. `bin/otel-export.py` reads them from there.
 * **Only from then on:** events before the setting was turned on have no JSON record. The records are gone when the sandbox is deleted, so export what you want to keep.
 * **A record** carries the sandbox (`container.name`), the outcome (`action`, `disposition`), the destination (`dst_endpoint`), the process (`actor.process`), the rule that decided (`firewall_rule`) and a severity.
@@ -78,12 +75,10 @@ openshell settings get my-task | grep ocsf                                     #
 openshell settings set --global --key ocsf_json_enabled --value true --yes
 ```
 2. **Export to a file, or push to a collector:**
-```bash
-bin/otel-export.py --out sandboxes.otlp.jsonl                          # all events so far
-bin/otel-export.py --out - --since 1h --sandbox my-task                # last hour of one sandbox
-bin/otel-export.py --endpoint http://localhost:4318/v1/logs --follow   # live
-bin/otel-export.py --endpoint https://otlp.example.com/v1/logs --header "Authorization=Bearer $TOKEN" --follow
-```
+   * All events so far: `bin/otel-export.py --out sandboxes.otlp.jsonl`
+   * The last hour of one sandbox: `bin/otel-export.py --out - --since 1h --sandbox my-task`
+   * Live: `bin/otel-export.py --endpoint http://localhost:4318/v1/logs --follow`
+   * To a backend that needs a token: `bin/otel-export.py --endpoint https://otlp.example.com/v1/logs --header "Authorization=Bearer $TOKEN" --follow`
 
 * **Where the events come from:** the script reads the [OCSF JSON](#ocsf-json) records with `podman logs` of every `openshell-supervisor-*` container: all sandboxes, running or stopped. With `--follow` it picks up new sandboxes every 10 seconds. Events only start once the setting is on, and are gone when the sandbox is deleted.
 * **What a record looks like:** one resource per sandbox (`service.name=openshell-sandbox`, `openshell.sandbox.name`, `openshell.sandbox.id`, `container.image.name`). Each event keeps its own time, gets an OTel severity from the OCSF one, has the event's message as body, and carries the whole event flattened as `ocsf.*` attributes (`ocsf.action`, `ocsf.dst_endpoint.domain`, `ocsf.actor.process.name`, ...), plus `event.name`, `server.address`/`server.port` and `process.executable.path`. Filter denials on `ocsf.action = Denied`.
@@ -93,14 +88,17 @@ bin/otel-export.py --endpoint https://otlp.example.com/v1/logs --header "Authori
 
 ## Viewing the events
 [bin/otel-view.py](../bin/otel-view.py) is a minimal viewer for the terminal: one line per event (time, sandbox, severity, action, target, message), denials in red.
+* Live: `bin/otel-export.py --out - --follow | bin/otel-view.py`
+* A file: `bin/otel-view.py sandboxes.otlp.jsonl`
+* Only denials: `bin/otel-view.py --where ocsf.action=Denied sandboxes.otlp.jsonl`
+* One sandbox, every attribute: `bin/otel-view.py --where openshell.sandbox.name=my-task -v ...`
+* As an OTLP/HTTP endpoint on 127.0.0.1:4318, which the exporter then sends to:
 ```bash
-bin/otel-export.py --out - --follow | bin/otel-view.py                 # live
-bin/otel-view.py sandboxes.otlp.jsonl                                  # a file
-bin/otel-view.py --where ocsf.action=Denied sandboxes.otlp.jsonl       # only denials
-bin/otel-view.py --where openshell.sandbox.name=my-task -v ...         # one sandbox, every attribute
-bin/otel-view.py --listen                                              # OTLP/HTTP endpoint on 127.0.0.1:4318
-bin/otel-export.py --endpoint http://localhost:4318/v1/logs --follow   # ...which this sends to
+bin/otel-view.py --listen
+bin/otel-export.py --endpoint http://localhost:4318/v1/logs --follow
 ```
+
+Example output:
 ```
 10:22:55  cl3            Medium        Denied  www.example.org:443 (node)          Transparent TCP denied before relay: ...
 10:28:18  cl3            Informational Allowed                                     SSH connection accepted on supervisor Unix socket
@@ -108,10 +106,10 @@ bin/otel-export.py --endpoint http://localhost:4318/v1/logs --follow   # ...whic
 * `--where K=V` matches an attribute of the record or its resource. Give it several times to require all of them.
 * `--listen` accepts OTLP's JSON encoding only, not protobuf. Senders other than `bin/otel-export.py` need their JSON setting.
 * The events contain what an agent controls (hosts, URLs), so the viewer removes terminal control characters before printing.
-* For search, graphs and history, send the events to a real backend instead. For a local one, the [grafana/otel-lgtm](https://github.com/grafana/docker-otel-lgtm) image runs a Collector, Loki and Grafana in one container and takes OTLP on port 4318:
+* For search, graphs and history, send the events to a real backend instead. For a local one, the [grafana/otel-lgtm](https://github.com/grafana/docker-otel-lgtm) image runs a Collector, Loki and Grafana in one container and takes OTLP on port 4318. Then open Grafana on http://localhost:3000:
 ```bash
 podman run -d --name otel-lgtm -p 127.0.0.1:3000:3000 -p 127.0.0.1:4318:4318 docker.io/grafana/otel-lgtm:latest
-bin/otel-export.py --endpoint http://localhost:4318/v1/logs --follow   # then Grafana on http://localhost:3000
+bin/otel-export.py --endpoint http://localhost:4318/v1/logs --follow
 ```
 
 ## Gateway metrics
@@ -139,10 +137,9 @@ curl -s http://127.0.0.1:9464/metrics
 * Some series appear only after the first matching event, e.g. `relay_claim_duration_seconds` after the first `exec`.
 
 ### Viewing the metrics
-[bin/metrics-view.py](../bin/metrics-view.py) shows them as a short summary, without Prometheus:
+[bin/metrics-view.py](../bin/metrics-view.py) shows them as a short summary, without Prometheus. `bin/metrics-view.py` prints it once, and `-w` refreshes it every 5 seconds (`-w 2` for every 2):
 ```bash
-bin/metrics-view.py        # once
-bin/metrics-view.py -w     # refresh every 5 seconds (-w 2 for every 2)
+bin/metrics-view.py -w
 ```
 ```
 OpenShell gateway - http://127.0.0.1:9464/metrics - 10:49:19
@@ -183,8 +180,9 @@ podman run -d --name otel-collector -p 127.0.0.1:4318:4318 \
   -v "$PWD/observability/collector.yaml:/etc/otelcol-contrib/config.yaml:ro" \
   docker.io/otel/opentelemetry-collector-contrib:latest
 bin/otel-export.py --endpoint http://localhost:4318/v1/logs --follow
-podman logs -f otel-collector    # a line per batch: "metrics": 14, "log records": 59, ...
+podman logs -f otel-collector
 ```
+* The Collector logs a line per batch, e.g. `"metrics": 14, "log records": 59, ...`
 * **Needs** the [metrics endpoint](#gateway-metrics) on port 9464. The Collector scrapes it every 15 seconds at `host.containers.internal:9464`.
 * **Out of the box** everything goes to the `debug` exporter, which only prints to the Collector's log. To send to a backend, uncomment `otlphttp` in the file, set its `endpoint` (the backend's OTLP/HTTP base URL, without `/v1/...`), switch both pipelines to `[otlphttp]`, and pass the token with `podman run -e OTLP_TOKEN ...`.
 * **What arrives:** one resource with `service.name=openshell-gateway` and `service.instance.id=host.containers.internal:9464`. Counters become cumulative sums, gauges stay gauges, `grpc_request_duration_seconds` is a summary and `relay_claim_duration_seconds` a histogram. The scrape adds `up`, `scrape_duration_seconds` and a few more about itself; `up` is a simple "is the gateway reachable" signal.

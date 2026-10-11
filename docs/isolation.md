@@ -13,14 +13,15 @@ From the agent outwards, with Podman's defaults on macOS:
 | Linux VM | Fedora CoreOS on Apple's hypervisor (the `applehv` or `libkrun` provider), with its own kernel |
 | macOS | Only reachable through what the VM exposes: the shared folders and the Podman API |
 
-Check a machine:
+Check a machine: `podman machine list` shows the VM type, `inspect` prints `false` for rootless, `info` shows rootless, seccomp and SELinux, `getenforce` should print `Enforcing`, and the last command lists the host folders shared with the VM:
 ```bash
-podman machine list                                    # VM TYPE
-podman machine inspect --format '{{.Rootful}}'         # false = rootless
-podman info --format '{{.Host.Security}}'              # rootless, seccomp, SELinux
-podman machine ssh getenforce                          # Enforcing
-podman machine ssh 'mount | grep virtiofs'             # the shared host folders
+podman machine list
+podman machine inspect --format '{{.Rootful}}'
+podman info --format '{{.Host.Security}}'
+podman machine ssh getenforce
+podman machine ssh 'mount | grep virtiofs'
 ```
+(The commands in this doc have no comments on the same line: zsh, the default shell on macOS, doesn't treat `#` as a comment when you paste commands, unless you've run `setopt interactive_comments`.)
 
 ## Where it's weak
 * **Your home folder is shared with the VM.** `podman machine init` mounts `/Users`, `/private` and `/var/folders` read-write by default. So the VM protects your macOS processes, the Keychain and the network, but not your files. Whoever becomes the VM's user (`core`) can read `~/.ssh`, `~/.config/openshell` and a `.env` if you have one, edit `~/.zshrc`, or plant code in any of your repos.
@@ -52,14 +53,17 @@ The biggest gain for the least effort. Sandboxes get files through `openshell sa
 mkdir -p ~/openshell-share
 podman machine init openshell \
   --volume "$HOME/openshell-share:$HOME/openshell-share:ro"
-podman machine stop                     # the current machine; only one runs at a time
+```
+* Stop the current machine (only one can run at a time), start the new one, and check that only `openshell-share` is mounted:
+```bash
+podman machine stop
 podman machine start openshell
-podman machine ssh openshell 'mount | grep virtiofs'   # only openshell-share
+podman machine ssh openshell 'mount | grep virtiofs'
 ```
 * Make it the default and restart the gateway, so it uses the new machine:
 ```bash
 podman system connection default openshell
-brew services restart openshell         # if installed with Homebrew
+brew services restart openshell
 ```
 * The new machine has no images yet: `make images`, then check that everything works with `bin/sandbox.sh claude test -- -p 'reply with OK'` and `make test`.
 * Set `--cpus`, `--memory` and `--disk-size` on `init` as for your current machine (`podman machine list` shows them).

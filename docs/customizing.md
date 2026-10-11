@@ -179,9 +179,9 @@ Tested in a sandbox:
 * `context7_mcp`: Claude looked up a library ID through the MCP server.
 * `huggingface_mcp`: `hub_repo_search` worked. `hf_whoami` was blocked ("no matching allow rule") and `hf_fs` was blocked ("blocked by a deny rule").
 
-Use it as-is or copy it:
+Use it as-is or copy and edit it:
 ```bash
-cp policies/example.yaml policies/my-task.yaml   # then edit
+cp policies/example.yaml policies/my-task.yaml
 openshell sandbox create --name my-task --from claude-sandbox:latest --provider claude \
   --policy policies/my-task.yaml --detach -- sleep infinity
 ```

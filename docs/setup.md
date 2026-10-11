@@ -53,10 +53,13 @@ The gateway finds the Podman socket by itself, including the `podman machine` so
 * Validate the config, then restart the gateway:
 ```bash
 openshell-gateway config preflight --path ~/.config/openshell/gateway.toml
-
-# macOS
+```
+On macOS:
+```bash
 brew services restart openshell
-# Linux
+```
+On Linux:
+```bash
 systemctl --user restart openshell-gateway
 ```
 
@@ -116,15 +119,16 @@ If you do use `.env`, delete it once the provider is created, or keep the key in
 
 ### Other secrets managers
 Any secrets manager works, because the environment comes first: let the manager set the variable for just the one command, and `bin/provider.sh` uses it. For example:
+* **1Password CLI.** `.env.tpl` holds references, not secrets, e.g. `CLAUDE_CODE_OAUTH_TOKEN=op://Private/Claude setup-token/credential`:
 ```bash
-# 1Password CLI: .env.tpl holds references, not secrets, e.g.
-#   CLAUDE_CODE_OAUTH_TOKEN=op://Private/Claude setup-token/credential
 op run --env-file=.env.tpl -- bin/provider.sh claude
-
-# Bitwarden Secrets Manager
+```
+* **Bitwarden Secrets Manager:**
+```bash
 bws run -- bin/provider.sh claude
-
-# Linux Secret Service (GNOME Keyring, KWallet), pass, or anything else that prints the secret
+```
+* **Linux Secret Service** (GNOME Keyring, KWallet), **pass**, or anything else that prints the secret:
+```bash
 CLAUDE_CODE_OAUTH_TOKEN="$(secret-tool lookup service openshell account CLAUDE_CODE_OAUTH_TOKEN)" bin/provider.sh claude
 CLAUDE_CODE_OAUTH_TOKEN="$(pass show openshell/claude)" bin/provider.sh claude
 ```
