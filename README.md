@@ -5,7 +5,7 @@ Configs and notes for running AI coding agents (Claude Code, OpenCode) in [NVIDI
 | Path | What it is |
 |---|---|
 | [docs/](docs) | The full documentation, see [Documentation](#documentation) |
-| [bin/](bin) | Scripts you run: [sandbox.sh](bin/sandbox.sh) starts an agent sandbox, [provider.sh](bin/provider.sh) creates a provider from `.env`, [bundle.sh](bin/bundle.sh) moves a git repo in and the agent's commits out, [watch-denied.sh](bin/watch-denied.sh) shows the denied connections as a live table, [otel-export.py](bin/otel-export.py) exports the logs as OpenTelemetry and [otel-view.py](bin/otel-view.py) shows them in the terminal, [acp_client.py](bin/acp_client.py) chats with an agent over ACP |
+| [bin/](bin) | Scripts you run: [sandbox.sh](bin/sandbox.sh) starts an agent sandbox, [provider.sh](bin/provider.sh) creates a provider from `.env`, [bundle.sh](bin/bundle.sh) moves a git repo in and the agent's commits out, [watch-denied.sh](bin/watch-denied.sh) shows the denied connections as a live table, [otel-export.py](bin/otel-export.py) exports the logs as OpenTelemetry and [otel-view.py](bin/otel-view.py) shows them in the terminal, [metrics-view.py](bin/metrics-view.py) shows the gateway metrics, [acp_client.py](bin/acp_client.py) chats with an agent over ACP |
 | [images/](images) | One folder per sandbox image, named after the image: [claude-sandbox](images/claude-sandbox) (Claude Code), [claude-browser](images/claude-browser) (Claude Code plus a headless browser), [opencode-sandbox](images/opencode-sandbox) (OpenCode) |
 | [providers/](providers) | Provider profiles: [claude-code-oauth.yaml](providers/claude-code-oauth.yaml) (Claude subscription), [openrouter.yaml](providers/openrouter.yaml) (OpenRouter, for OpenCode) |
 | [policies/](policies) | Sandbox policies: [vscode-terminal.yaml](policies/vscode-terminal.yaml) (the default plus terminals, used everywhere), [browser.yaml](policies/browser.yaml) (for the browser image), [example.yaml](policies/example.yaml) (network rules to copy and adapt) |
@@ -23,7 +23,7 @@ Configs and notes for running AI coding agents (Claude Code, OpenCode) in [NVIDI
 | [Working in sandboxes](docs/working-in-sandboxes.md) | Starting and using a sandbox, VS Code, getting code and files in and out, viewing a web page, many sandboxes |
 | [Extras](docs/extras.md) | MCP servers on the host, ACP, headless browser use |
 | [Customizing](docs/customizing.md) | Provider profiles, sandbox policies, network rules |
-| [Logging](docs/logging.md) | Reading the logs, watching denials live, OCSF JSON, exporting to OpenTelemetry and viewing the events |
+| [Logging and metrics](docs/logging.md) | Reading the logs, watching denials live, OCSF JSON, exporting to OpenTelemetry and viewing the events, gateway metrics for Prometheus |
 | [Troubleshooting](docs/troubleshooting.md) | Symptoms, causes and fixes |
 
 Commands in the docs run from the repo root.
@@ -105,7 +105,17 @@ bin/otel-export.py --endpoint http://localhost:4318/v1/logs --follow   # live, t
 bin/otel-export.py --out - --follow | bin/otel-view.py                 # live, in the terminal
 ```
 * **Careful where you send them:** the events show what the agent did (hosts, URLs, process names).
-* See [Logging](docs/logging.md).
+* See [Logging and metrics](docs/logging.md).
+
+#### Gateway metrics
+* **What:** the gateway's own numbers: connected sandboxes, relays into sandboxes (`exec`, `connect`, SSH, port forwards), and API calls with latency and errors. Not what agents do (that's in the logs above), and not CPU or memory (`podman stats`).
+* **How:** turn on the Prometheus endpoint once (restarts the gateway), then view a summary in the terminal:
+```bash
+echo 'OPENSHELL_METRICS_PORT=9464' >> ~/.config/openshell/gateway.env
+brew services restart openshell
+bin/metrics-view.py -w   # refreshes every 5 seconds; without -w it prints once
+```
+* For history and graphs, scrape `http://127.0.0.1:9464/metrics` with Prometheus. See [Gateway metrics](docs/logging.md#gateway-metrics).
 
 #### Viewing a web page in your browser
 * **What:** [view a web page the agent serves](docs/working-in-sandboxes.md#viewing-a-web-page-from-the-sandbox) in your own browser.

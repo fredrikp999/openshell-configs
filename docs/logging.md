@@ -1,5 +1,5 @@
-# Logging
-What happens in a sandbox is logged by its OpenShell supervisor: every connection it allows or denies, HTTP requests checked by a rule, SSH sessions, policy and setting changes. This page shows how to read those logs, watch the denials live, and export everything to OpenTelemetry.
+# Logging and metrics
+What happens in a sandbox is logged by its OpenShell supervisor: every connection it allows or denies, HTTP requests checked by a rule, SSH sessions, policy and setting changes. This page shows how to read those logs, watch the denials live, export everything to OpenTelemetry, and get the gateway's own metrics.
 
 | You want to | Use |
 |---|---|
@@ -7,6 +7,7 @@ What happens in a sandbox is logged by its OpenShell supervisor: every connectio
 | See what's being blocked, live, across all sandboxes | [`bin/watch-denied.sh`](#watching-denials) |
 | Keep the events, or send them to a log backend | [`bin/otel-export.py`](#export-as-opentelemetry) |
 | Look through exported events in the terminal | [`bin/otel-view.py`](#viewing-the-events) |
+| Monitor the gateway itself | [`bin/metrics-view.py`](#viewing-the-metrics), or [Prometheus](#gateway-metrics) |
 
 ## Two kinds of logs
 * **The shorthand log** - one human-readable line per event, always on. This is what `openshell logs` shows, and what `bin/watch-denied.sh` reads.
@@ -110,3 +111,65 @@ bin/otel-export.py --endpoint http://localhost:4318/v1/logs --follow   # ...whic
 podman run -d --name otel-lgtm -p 127.0.0.1:3000:3000 -p 127.0.0.1:4318:4318 docker.io/grafana/otel-lgtm:latest
 bin/otel-export.py --endpoint http://localhost:4318/v1/logs --follow   # then Grafana on http://localhost:3000
 ```
+
+## Gateway metrics
+The gateway has a Prometheus endpoint, off by default. Its metrics are about the gateway: connected sandboxes, API calls, and the relays that carry `exec`, `connect`, SSH and port forwards into sandboxes. They don't count what agents do (use the [OCSF events](#export-as-opentelemetry) for denials per sandbox or host) or how much CPU and memory a sandbox uses (use `podman stats`).
+
+* **Turn it on** with the Homebrew service: put the port in `~/.config/openshell/gateway.env`, which the service loads at start, and restart the gateway. The restart may drop open sessions (agents in a terminal, VS Code, SSH); the sandboxes keep running and reconnect to the gateway.
+```bash
+echo 'OPENSHELL_METRICS_PORT=9464' >> ~/.config/openshell/gateway.env
+brew services restart openshell
+curl -s http://127.0.0.1:9464/metrics
+```
+   Without Homebrew, start the gateway with `--metrics-port 9464` or the same environment variable. Delete the line and restart to turn it off. The endpoint listens on `127.0.0.1` only (`--bind-address` changes that for all listeners).
+
+| Metric | Type | What it tells you |
+|---|---|---|
+| `openshell_server_supervisor_sessions` | gauge | Sandboxes connected to the gateway |
+| `openshell_server_grpc_requests_total{method,code}` | counter | Gateway API calls by method (`ExecSandbox`, `ListSandboxes`, `GetSandboxConfig`, ...) and gRPC status code |
+| `openshell_server_grpc_request_duration_seconds{method,code}` | summary | API call latency |
+| `openshell_server_routed_request_attempts_total{operation,route,relay_kind,outcome,grpc_code}` | counter | Relays into sandboxes (`relay_kind` `ssh` or `tcp`) and other routed calls, with `outcome` `success`, `local_error` or `remote_error` |
+| `openshell_server_relay_claim_duration_seconds` | histogram | How fast a sandbox picks up a relay |
+| `openshell_server_relay_pending`, `openshell_server_relay_pending_capacity` | gauge | Relays waiting for a sandbox, and the limit (256) |
+| `openshell_server_relay_rejected_total{reason}` | counter | Relays refused at the limit (`sandbox_capacity`, `replica_capacity`) |
+| `openshell_server_relay_expired_total` | counter | Relays dropped because the sandbox didn't connect back in time |
+
+* Some series appear only after the first matching event, e.g. `relay_claim_duration_seconds` after the first `exec`.
+
+### Viewing the metrics
+[bin/metrics-view.py](../bin/metrics-view.py) shows them as a short summary, without Prometheus:
+```bash
+bin/metrics-view.py        # once
+bin/metrics-view.py -w     # refresh every 5 seconds (-w 2 for every 2)
+```
+```
+OpenShell gateway - http://127.0.0.1:9464/metrics - 10:49:19
+
+Sandboxes connected  4
+Relays pending       0 / 256     rejected 0   expired 0
+Relays opened        ssh 4 ok   tcp 0 ok
+Relay pickup         3.3 ms average
+
+API CALLS                          TOTAL    /MIN   P50 MS   P99 MS  ERRORS
+ReportProviderReadiness              216    79.7      1.4      2.6       0
+GetSandboxConfig                     116    79.7      3.3      5.6       0
+RelayStream                            4    59.8      0.7      0.7       0
+```
+* `/MIN` is the rate since the previous refresh, so it's empty on the first one. Latency covers recent calls only, and shows `-` for methods that weren't called lately.
+* A different endpoint: `--url`, or `OPENSHELL_METRICS_URL`.
+
+### Prometheus
+For history and graphs, scrape the endpoint with Prometheus in a container. From a Podman container, the gateway is at `host.containers.internal`:
+```yaml
+# prometheus.yml
+scrape_configs:
+  - job_name: openshell
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["host.containers.internal:9464"]
+```
+```bash
+podman run -d --name prometheus -p 127.0.0.1:9090:9090 \
+  -v "$PWD/prometheus.yml:/etc/prometheus/prometheus.yml:ro" docker.io/prom/prometheus:latest
+```
+   Then, on http://localhost:9090: `openshell_server_supervisor_sessions` for connected sandboxes, `sum by (method) (rate(openshell_server_grpc_requests_total[5m]))` for API calls per method, `rate(openshell_server_routed_request_attempts_total{outcome!="success"}[5m])` for failing relays.
