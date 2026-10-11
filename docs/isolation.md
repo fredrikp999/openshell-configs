@@ -48,11 +48,12 @@ From weakest to strongest separation from your Mac:
 ## A Podman machine without host mounts
 The biggest gain for the least effort. Sandboxes get files through `openshell sandbox upload` and [git bundles](working-in-sandboxes.md#getting-code-in-and-out), not bind mounts, and `podman build` sends the build context over the API, so nothing in this repo should need the host folders in the VM.
 
-* Create a second machine. Passing `--volume` replaces the default mounts; this one shares only a read-only folder for anything you deliberately want to hand over:
+* Make sure there's enough free disk space first: `df -h /System/Volumes/Data`. Each machine has its own disk image with its own copy of every image, and building the images here takes several GB. If the Mac runs out of space, the VM's filesystem shuts down and the build fails with `server probably quit: unexpected EOF` (the VM's console log, `$TMPDIR/podman/openshell.log`, then shows `I/O error, dev vda`).
+* Create a second machine. Passing `--volume` replaces the default mounts; this one shares only one empty folder for anything you deliberately want to hand over:
 ```bash
 mkdir -p ~/openshell-share
 podman machine init openshell \
-  --volume "$HOME/openshell-share:$HOME/openshell-share:ro"
+  --volume "$HOME/openshell-share:$HOME/openshell-share"
 ```
 * Stop the current machine (only one can run at a time), start the new one, and check that only `openshell-share` is mounted:
 ```bash
@@ -60,6 +61,7 @@ podman machine stop
 podman machine start openshell
 podman machine ssh openshell 'mount | grep virtiofs'
 ```
+* **The share is writable from the VM, even with `:ro`.** With the `applehv` provider (tested with Podman 5.8), `:ro` on the volume is ignored. Keep the folder empty except for what you hand over, and treat anything in it as untrusted. Check it with `podman machine ssh openshell "touch $HOME/openshell-share/x && echo writable"`. The double quotes make your Mac's `$HOME` used, which is also the share's path in the VM. Then delete `~/openshell-share/x`.
 * Make it the default and restart the gateway, so it uses the new machine:
 ```bash
 podman system connection default openshell
@@ -68,5 +70,6 @@ brew services restart openshell
 * The new machine has no images yet: `make images`, then check that everything works with `bin/sandbox.sh claude test -- -p 'reply with OK'` and `make test`.
 * Set `--cpus`, `--memory` and `--disk-size` on `init` as for your current machine (`podman machine list` shows them).
 * To go back: make the old machine's connection the default again (`podman system connection list`), stop `openshell`, start the old machine and restart the gateway.
+* Once the new machine works, remove the old one to get its disk space back: `podman machine rm <old machine>`. The disk image of a machine grows but never shrinks on its own.
 
 This setup hasn't been tested end to end with this repo yet. In particular, check which machine the gateway uses (`podman --connection openshell ps` should list the sandbox while it runs).
