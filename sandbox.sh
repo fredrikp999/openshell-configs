@@ -36,7 +36,15 @@ case $agent in
   opencode)
     image=opencode-sandbox:latest
     provider=openrouter
-    set_cmd() { cmd="opencode -m ${OPENCODE_MODEL:-openrouter/nvidia/nemotron-3.5-lightning:free}"; } ;;
+    model=${OPENCODE_MODEL:-openrouter/nvidia/nemotron-3.5-lightning:free}
+    # The model goes into a command line and a JSON config, so only allow the
+    # characters model ids use. Anything else (quotes, spaces) could add words
+    # or config keys.
+    case $model in
+      ''|*[!A-Za-z0-9._:/@~+-]*)
+        echo "OPENCODE_MODEL '$model' is not a valid model id." >&2; exit 1 ;;
+    esac
+    set_cmd() { cmd="opencode -m $model"; } ;;
   *) usage ;;
 esac
 set_cmd
@@ -100,10 +108,15 @@ if $vscode; then
   exec openshell sandbox connect "$name" --editor vscode
 elif $acp; then
   # No pty and no login shell, so nothing but JSON-RPC reaches stdout.
+  # OpenCode's `acp` has no -m flag, so the model goes in through its config env
+  # ($model was checked above, so it can't break out of the JSON string).
   # shellcheck disable=SC2086
-  # OpenCode's `acp` has no -m flag, so the model goes in through its config env.
-  exec openshell sandbox exec "$name" --no-tty --no-login-shell --workdir "$workdir" \
-    --env "OPENCODE_CONFIG_CONTENT={\"model\":\"${OPENCODE_MODEL:-openrouter/nvidia/nemotron-3.5-lightning:free}\"}" -- $cmd "$@"
+  if [ "$agent" = opencode ]; then
+    set -- --env "OPENCODE_CONFIG_CONTENT={\"model\":\"$model\"}" -- $cmd "$@"
+  else
+    set -- -- $cmd "$@"
+  fi
+  exec openshell sandbox exec "$name" --no-tty --no-login-shell --workdir "$workdir" "$@"
 else
   # $cmd is split on purpose: it holds the agent command and its default args.
   # shellcheck disable=SC2086

@@ -28,10 +28,19 @@ credentials:
 discovery:
   credentials: [api_key]
 endpoints:
+  # Only the chat endpoint OpenCode uses (see `openshell logs <sandbox>`).
+  # OpenShell passes an Authorization header the agent sets itself through
+  # unchanged, so a manipulated agent could call openrouter.ai with someone
+  # else's key. Limiting the paths keeps the rest of the API (keys, credits,
+  # account) out of reach. Chat requests with a foreign key are still possible;
+  # see "Things to watch for" in the README.
   - host: openrouter.ai
     port: 443
     protocol: rest
-    access: read-write
     enforcement: enforce
+    rules:
+      - allow:
+          method: POST
+          path: /api/v1/chat/completions
 binaries:
   - /usr/local/bin/opencode

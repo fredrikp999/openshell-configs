@@ -28,6 +28,7 @@ import collections
 import json
 import os
 import queue
+import re
 import shutil
 import subprocess
 import sys
@@ -37,11 +38,30 @@ import time
 DEFAULT_MODEL = "openrouter/nvidia/nemotron-3.5-lightning:free"
 AGENT_CMD = {
     "opencode": ["opencode", "acp"],
-    "claude": ["claude-code-acp"],
+    "claude": ["claude-acp-start"],
 }
 INIT_TIMEOUT = 60  # seconds to wait for initialize / session/new
 
 USE_COLOR = sys.stderr.isatty() and sys.stdout.isatty() and "NO_COLOR" not in os.environ
+
+
+# Everything the agent sends is untrusted. Terminal control characters in it
+# (escape sequences, carriage returns, C1 controls) could rewrite what is on
+# screen, e.g. disguise a permission prompt, or reach terminal features such as
+# OSC 52 clipboard writes. Bidi overrides could reorder displayed text. They are
+# removed from every agent message and log line before anything is printed.
+_UNSAFE = re.compile("[\x00-\x08\x0b-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]")
+
+
+def clean(v):
+    """Strip terminal control characters from a string, or from all strings in a JSON value."""
+    if isinstance(v, str):
+        return _UNSAFE.sub("", v)
+    if isinstance(v, list):
+        return [clean(x) for x in v]
+    if isinstance(v, dict):
+        return {clean(k): clean(x) for k, x in v.items()}
+    return v
 
 
 def style(text, code):
@@ -133,21 +153,22 @@ class Acp:
             if not line:
                 continue
             try:
-                msg = json.loads(line)
+                msg = clean(json.loads(line))
             except ValueError:
                 # Something other than JSON-RPC on stdout, e.g. a banner or a pty-mangled line.
+                line = clean(line)
                 self.stderr_tail.append("(stdout, not JSON) " + line)
                 if self.verbose:
                     warn("agent stdout is not JSON: " + line)
                 continue
             if self.verbose:
-                info("<- " + line)
+                info("<- " + clean(line))
             self.inbox.put(msg)
         self.inbox.put(None)  # EOF: the agent exited
 
     def _read_stderr(self):
         for line in self.proc.stderr:
-            line = line.rstrip()
+            line = clean(line.rstrip())
             self.stderr_tail.append(line)
             if self.verbose:
                 info("[agent] " + line)
@@ -298,7 +319,21 @@ def show_update(u, verbose):
 def ask_permission(params):
     tool = params.get("toolCall", {})
     options = params.get("options", [])
+    # The title is the agent's own description, so also show what the tool will
+    # actually do: its kind and raw input (e.g. the command line or file path).
     print(style("\n[permission] the agent wants to: %s" % (tool.get("title") or tool.get("toolCallId")), "33;1"))
+    print("  kind:  %s" % (tool.get("kind") or "unknown"))
+    raw = tool.get("rawInput")
+    if raw not in (None, {}, ""):
+        text = json.dumps(raw, indent=2, ensure_ascii=False) if not isinstance(raw, str) else raw
+        lines = text.splitlines()
+        print("  input: " + "\n         ".join(lines[:20]))
+        if len(lines) > 20:
+            print("         ... (%d more lines, see -v)" % (len(lines) - 20))
+    else:
+        print("  input: (not given by the agent; the title above is all there is)")
+    for loc in tool.get("locations") or []:
+        print("  path:  %s" % loc.get("path"))
     if not options:
         return {"outcome": {"outcome": "cancelled"}}
     for i, o in enumerate(options):

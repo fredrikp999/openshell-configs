@@ -22,6 +22,12 @@ esac
 
 cd "$(dirname "$0")"
 [ -f .env ] || { echo ".env not found. Run: cp .env.example .env, then fill it in." >&2; exit 1; }
+# .env holds the keys and is run as shell code below, so it must be yours and
+# not readable or writable by anyone else.
+if [ ! -O .env ] || [ -n "$(find .env -perm -004 -o -perm -040 -o -perm -002 -o -perm -020)" ]; then
+  echo ".env must be owned by you and not readable or writable by others. Run: chmod 600 .env" >&2
+  exit 1
+fi
 
 if openshell provider profile list 2>/dev/null | grep -qw "$profile"; then
   echo "Profile $profile already imported."

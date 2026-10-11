@@ -332,6 +332,8 @@ openshell sandbox create \
 ```
 
 ### Things to watch for
+* **Only the chat endpoint** - the profile allows just `POST /api/v1/chat/completions` on openrouter.ai, the one call OpenCode makes. Other OpenRouter API paths (keys, credits, account) are denied. Check with `openshell logs <sandbox>` if a new OpenCode version needs more.
+* **An agent can bring its own key** - OpenShell only swaps its placeholder for your key; an `Authorization` header the agent sets itself goes through unchanged (tested: a made-up key reached OpenRouter and was rejected there). A manipulated agent could therefore send your code in a chat request on someone else's OpenRouter account, which can log prompts. The path rule above narrows this but can't close it. Keep secrets out of sandboxes, and treat what's in a sandbox as visible to the model provider anyway.
 * **Binary path** - only `/usr/local/bin/opencode` may use the key. If you install OpenCode elsewhere (e.g. via npm), add that path to the profile and [update it](#update-a-profile).
 * **Hosts left blocked** - OpenCode tries `models.opencode.ai` (model list) and `registry.npmjs.org` (update check). Both are denied. OpenCode works without them, so leave them blocked unless you need them.
 * **The sandbox user** is uid 1000 with `HOME=/sandbox`.

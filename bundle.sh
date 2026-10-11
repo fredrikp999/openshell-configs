@@ -50,10 +50,22 @@ quiet() {
   "$@" >"$tmp/log" 2>&1 || { cat "$tmp/log" >&2; exit 1; }
 }
 
+# Remove terminal control characters (escape sequences, carriage returns) from
+# text the agent controls, such as output from the sandbox and commit messages,
+# so it can't rewrite what is on screen or use terminal features like OSC 52.
+clean() {
+  LC_ALL=C tr -d '\000-\010\013-\037\177'
+}
+
 # Run a shell script in the sandbox, with arguments ($1, $2, ...) passed safely.
+# Its output is cleaned before it is shown; the exit code is kept.
 in_sandbox() {
   script=$1; shift
-  openshell sandbox exec "$sandbox" --no-tty -- sh -c "$script" sh "$@"
+  rc=0
+  openshell sandbox exec "$sandbox" --no-tty --no-login-shell -- sh -c "$script" sh "$@" \
+    >"$tmp/sandbox.out" 2>&1 || rc=$?
+  clean <"$tmp/sandbox.out"
+  return $rc
 }
 
 case $cmd in
@@ -111,6 +123,11 @@ case $cmd in
     }
     quiet openshell sandbox download "$sandbox" "/sandbox/$bundle" "$tmp/"
     in_sandbox 'rm -f "/sandbox/$1"' "$bundle"
+    if ! git -C "$repo" bundle verify -q "$tmp/$bundle" >"$tmp/err" 2>&1; then
+      clean <"$tmp/err" >&2
+      echo "The bundle from the sandbox is not valid for $repo. Nothing was changed." >&2
+      exit 1
+    fi
     plus=
     $force && plus=+
     if ! git -C "$repo" fetch -q "$tmp/$bundle" "$plus$branch:$branch" 2>"$tmp/err"; then
@@ -120,8 +137,8 @@ case $cmd in
       exit 1
     fi
     echo "Fetched into $repo as branch $branch:"
-    git -C "$repo" log --oneline "$base..$branch"
-    git -C "$repo" diff --stat "$base...$branch"
+    git -C "$repo" log --oneline "$base..$branch" | clean
+    git -C "$repo" diff --stat "$base...$branch" | clean
     echo
     echo "Review:   git -C $repo diff $base...$branch"
     echo "Push:     git -C $repo push origin $branch"
