@@ -69,13 +69,31 @@ openshell sandbox download my-task /sandbox/report.html .         # -> ./report.
 ```
 8. [Approve or reject network rules](#network-rules) when the agent gets blocked.
 
-### MCP servers and ACP
+### Optional
+Not needed for the basic steps above. Each one gives the agent more reach, so add it when a task needs it.
+
+#### MCP servers and ACP
 * **Remote MCP servers** (HTTP): add them in the agent as usual and allow them with a `protocol: mcp` rule, which can limit the methods and tools. Tokens go in a provider, never in the policy. See [Example policy with network rules](#example-policy-with-network-rules).
 * **Local MCP servers** (stdio, e.g. as container images): a sandbox can't run containers, so run the server on the host behind an HTTP bridge and use it like a remote server, by the host's IP. Its secrets stay on the host. See [MCP servers in containers on the host](#mcp-servers-in-containers-on-the-host).
 * **ACP:** to drive the agent from a UI on the host, `./sandbox.sh claude|opencode my-task --acp` runs its ACP server over stdin/stdout, without opening a port. To try it, chat with `./acp_client.py connect my-task`. See [ACP](#acp-agent-client-protocol).
 
-### Browser
-Claude Code can use a headless Chromium **inside the sandbox**, through Playwright MCP: build the `claude-browser` image, list the sites the browser may open in [policies/browser.yaml](policies/browser.yaml), and start with `./sandbox.sh claude my-task --browser`. OpenShell then decides which sites the browser can reach, the same way as for any other program, and the browser has none of your logins. Any page the browser opens can receive data in its URL, so the list of sites is what keeps data in. A dev server in the sandbox (`localhost`) works without a rule. Don't let the agent use your own Chrome. See [Browser](#browser-1).
+#### Headless browser use
+* **What:** Claude Code uses a headless Chromium **inside the sandbox**, through Playwright MCP. The browser has none of your logins.
+* **How:** build the `claude-browser` image, list the sites the browser may open in [policies/browser.yaml](policies/browser.yaml), and start with `./sandbox.sh claude my-task --browser`.
+* **What limits it:** OpenShell decides which sites the browser can reach, the same way as for any other program. Any page the browser opens can receive data in its URL, so the list of sites is what keeps data in.
+* **Local pages:** a dev server in the sandbox (`localhost`) works without a rule.
+* **Don't** let the agent use your own Chrome.
+* See [Browser](#browser).
+
+#### Viewing a web page in your browser
+* **What:** [view a web page the agent serves](#viewing-a-web-page-from-the-sandbox) in your own browser.
+* **How:** the agent runs a server on a port in the sandbox, and you forward the port:
+```bash
+openshell forward start 3000 my-task -d   # then open http://127.0.0.1:3000
+openshell forward stop  3000 my-task
+```
+* **This adds risk:** the page is the agent's code, and in your browser it runs outside the sandbox, with your network access. It can reach other services on your machine, send data to any site, and use your browser's logins.
+* **So:** only do it when you need to, and open the page in a private window.
 
 If something fails, see [Troubleshooting](#troubleshooting).
 
@@ -224,7 +242,7 @@ There is no ready-made image, so build one from [Dockerfile.claudecode](Dockerfi
 podman build -t claude-sandbox:latest -f Dockerfile.claudecode .
 ```
 
-Why the wrappers are needed: onboarding runs a connectivity check that connects to `api.anthropic.com` without going through the OpenShell proxy. The sandbox denies that connection, and Claude Code exits with `Failed to connect to api.anthropic.com: EACCES`. On first start, the wrappers copy `/etc/claude-start.json`, which holds `{"hasCompletedOnboarding": true}`, to `~/.claude.json` (`/sandbox/.claude.json`), so the check is skipped. (The [browser image](#browser-1) replaces that file to also register its MCP server.) All other traffic goes through the proxy and works.
+Why the wrappers are needed: onboarding runs a connectivity check that connects to `api.anthropic.com` without going through the OpenShell proxy. The sandbox denies that connection, and Claude Code exits with `Failed to connect to api.anthropic.com: EACCES`. On first start, the wrappers copy `/etc/claude-start.json`, which holds `{"hasCompletedOnboarding": true}`, to `~/.claude.json` (`/sandbox/.claude.json`), so the check is skipped. (The [browser image](#browser) replaces that file to also register its MCP server.) All other traffic goes through the proxy and works.
 
 ### Create the sandbox
 Quickest: `./sandbox.sh claude [name]` for Claude in your terminal, or add `--vscode` for VS Code. See [Start a sandbox](#start-and-use-a-sandbox). The sections below show what it does by hand.
@@ -447,7 +465,7 @@ openshell sandbox delete my-task
 | `./sandbox.sh claude my-task -- -p 'reply with OK'` | Passes arguments to the agent (here: a non-interactive smoke test) |
 | `./sandbox.sh opencode my-task --acp` | Runs OpenCode's ACP server on stdin/stdout, for a UI (see [ACP](#acp-agent-client-protocol)) |
 | `./sandbox.sh claude my-task --acp` | The same for Claude Code, through the ACP adapter |
-| `./sandbox.sh claude my-task --browser` | Claude with a headless browser: image `claude-browser`, policy [policies/browser.yaml](policies/browser.yaml) (see [Browser](#browser-1)). Only matters when the sandbox is created |
+| `./sandbox.sh claude my-task --browser` | Claude with a headless browser: image `claude-browser`, policy [policies/browser.yaml](policies/browser.yaml) (see [Browser](#browser)). Only matters when the sandbox is created |
 
 * The script uses the image, provider and agent command from the table above. Set the OpenCode model with `OPENCODE_MODEL=...`.
 * **Requirements:** the provider and image from the agent's chapter must exist.
@@ -673,6 +691,33 @@ Possible, but a sandbox that can push can also send your code anywhere the token
 * Protect `main` on the git server. The policy can limit which repository, but not which branch.
 * Opening the MR or PR from inside also needs `gh` or `glab` in the image, and API access to that repository in the policy.
 
+## Viewing a web page from the sandbox
+To see and click through a page the agent builds, the agent serves it on a port in the sandbox, and OpenShell forwards that port to your machine. The forward goes through the gateway (over SSH, like VS Code), so the sandbox opens no port and no network rule is needed.
+
+1. **Ask the agent to serve the page** on a port, in the background, e.g. "serve the page on port 3000". A small server in Node.js (which the Claude image has; it has no Python) needs nothing else. A dev server like `npx vite` must first be installed from npm, which needs the `npm_registry` rule from [policies/example.yaml](policies/example.yaml). Binding to `127.0.0.1` in the sandbox is enough.
+2. **Forward the port** on your machine:
+```bash
+openshell forward start 3000 my-task -d
+```
+```
+✓ Forwarding port 3000 to sandbox my-task in the background
+  Access at: http://127.0.0.1:3000/
+  Stop with: openshell forward stop 3000 my-task
+```
+3. **Open http://127.0.0.1:3000.** With a dev server that reloads on changes, you see the agent's edits right away.
+4. **List and stop forwards:**
+```bash
+openshell forward list
+openshell forward stop 3000 my-task
+```
+
+* **Without `-d`** the forward runs in the foreground until Ctrl-C.
+* **Bound to `127.0.0.1` on your machine** by default, so others on your network can't reach it. `openshell forward start 0.0.0.0:3000 ...` would open it to them; don't.
+* **One forward per local port.** A second `forward start` on the same port fails with `Port 3000 is already forwarded`. Stop the old one first, or use another port.
+* **The page runs outside the sandbox.** In your browser, the agent's code has your network access, not the sandbox's: it can call other services on your `localhost` (e.g. an [MCP server on the host](#mcp-servers-in-containers-on-the-host)), send data to any site, and use whatever your browser is logged into. Open it in a private window or a separate browser profile without logins, and treat it like the agent's other code until you've reviewed it.
+* **Alternatives:** VS Code forwards ports itself when connected with `--editor vscode` (see its *Ports* tab). For one static page, [download it](#single-files) and open the file. `openshell service expose` publishes a service through the gateway under its own URL, which is more than viewing it yourself needs.
+* **For the agent itself** to look at the page, use the [browser](#browser) in the sandbox instead. It reaches `localhost` there without any forward.
+
 ## Many sandboxes in parallel
 * **One sandbox per task or branch**, named after the task (`claude-auth-fix`, `claude-docs`). Each has its own filesystem, policy and approved rules, so agents don't interfere with each other.
 * **Providers are shared** - create a provider once and attach it to every sandbox with `--provider`.
@@ -764,7 +809,7 @@ What a sandbox may access comes from three places:
 * **Network rules** you approve add more hosts, per sandbox.
 
 ### Filesystem policy
-This repo has three policies: this one, [policies/example.yaml](policies/example.yaml) (below) and [policies/browser.yaml](policies/browser.yaml) for the [browser](#browser-1). The one used everywhere is [policies/vscode-terminal.yaml](policies/vscode-terminal.yaml). It is the default policy plus `/dev/pts` and `/dev/ptmx`, so programs inside the sandbox can open terminals. VS Code's integrated terminal needs this; without it, it fails with `forkpty(3) failed`.
+This repo has three policies: this one, [policies/example.yaml](policies/example.yaml) (below) and [policies/browser.yaml](policies/browser.yaml) for the [browser](#browser). The one used everywhere is [policies/vscode-terminal.yaml](policies/vscode-terminal.yaml). It is the default policy plus `/dev/pts` and `/dev/ptmx`, so programs inside the sandbox can open terminals. VS Code's integrated terminal needs this; without it, it fails with `forkpty(3) failed`.
 ```yaml
 version: 1
 filesystem_policy:
@@ -997,7 +1042,7 @@ Start with `openshell logs <sandbox> | grep DENIED` and `openshell sandbox get <
 | VS Code: `The terminal process failed to launch: ... forkpty(3) failed` | The sandbox was created without the terminal policy, so it can't open terminals | Check with `openshell policy get <sandbox> --base \| grep pts`. No output: delete the sandbox and create it again with `--policy policies/vscode-terminal.yaml`. `policy set` on a running sandbox doesn't help |
 | VS Code hangs on first connect, `Downloading VS Code server` in the log | The sandbox can't download VS Code Server itself | Set `"remote.SSH.localServerDownload": "always"`, see [VS Code](#vs-code) |
 | Sandbox is `Completed` or `Error`, VS Code can't connect | The main process (the agent) exited, and the sandbox stopped with it | Create the sandbox with `--detach -- sleep infinity` and run the agent in a terminal |
-| Browser: `Target crashed` | Chromium's zygote process can't start under OpenShell's syscall filter | Start the server with `playwright-mcp-start`, which uses `/etc/playwright-mcp.json` (`--no-zygote`). See [Browser](#browser-1) |
+| Browser: `Target crashed` | Chromium's zygote process can't start under OpenShell's syscall filter | Start the server with `playwright-mcp-start`, which uses `/etc/playwright-mcp.json` (`--no-zygote`). See [Browser](#browser) |
 | Browser: `net::ERR_CERT_AUTHORITY_INVALID` | Chromium doesn't trust OpenShell's CA | Start the server with `playwright-mcp-start`, which adds the CA to Chromium's NSS database |
 | Browser: `net::ERR_NETWORK_ACCESS_DENIED` | The site isn't in the policy's `browser_sites` rule | Add it to [policies/browser.yaml](policies/browser.yaml) and run `openshell policy set` (see [Allowing sites](#allowing-sites)) |
 | Sandbox stuck in `Provisioning` after `openshell sandbox start` | The restart doesn't finish | Delete the sandbox and create it again |
