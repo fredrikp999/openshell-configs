@@ -7,10 +7,11 @@ Configs and notes for running AI coding agents (Claude Code, OpenCode) in [NVIDI
 | [providers/openrouter.yaml](providers/openrouter.yaml) | Profile for the OpenRouter API, used by OpenCode |
 | [policies/vscode-terminal.yaml](policies/vscode-terminal.yaml) | Sandbox policy: the default plus terminal access, for VS Code |
 | [policies/example.yaml](policies/example.yaml) | Example sandbox policy with network rules, to copy and adapt |
-| [Dockerfile.claudecode](Dockerfile.claudecode) | Image `claude-sandbox`: Claude Code, git and the `claude-start` wrapper |
+| [Dockerfile.claudecode](Dockerfile.claudecode) | Image `claude-sandbox`: Claude Code, git, the ACP adapter and the `claude-start` / `claude-acp-start` wrappers |
 | [Dockerfile.opencode](Dockerfile.opencode) | Image `opencode-sandbox`: the official OpenCode image plus git, bash and VS Code support |
 | [provider.sh](provider.sh) | Imports a provider profile and creates the provider from `.env` |
 | [sandbox.sh](sandbox.sh) | Starts an agent sandbox, in the terminal or in VS Code |
+| [acp_client.py](acp_client.py) | Minimal ACP client: chat with the agent in a sandbox from the host terminal |
 | [bundle.sh](bundle.sh) | Moves a git repo into a sandbox and the agent's commits back out, with git bundles |
 | [.env.example](.env.example) | Template for `.env`, which holds your API key and token (ignored by git) |
 
@@ -30,7 +31,7 @@ OpenShell runs AI coding agents in locked-down sandboxes. Agents get only the ne
 2. [Put your key or token in `.env`](#credentials-in-env).
 3. For an agent ([Claude Code](#claude-code-with-a-claude-subscription) or [OpenCode](#opencode-with-openrouter)): import its profile, create a provider (`./provider.sh claude` or `./provider.sh opencode` does both), build its image.
 4. [Start and use a sandbox](#start-and-use-a-sandbox), with the agent in your terminal or with VS Code. By hand (for OpenCode: image `opencode-sandbox:latest`, provider `openrouter`, agent `opencode`):
-``` shell
+```bash
 # once: create a sandbox that keeps running
 openshell sandbox create --name my-task --from claude-sandbox:latest --provider claude \
   --policy policies/vscode-terminal.yaml --detach -- sleep infinity
@@ -40,13 +41,13 @@ openshell sandbox exec my-task --workdir /sandbox -- claude-start   # agent in t
 openshell sandbox connect my-task --editor vscode                   # VS Code
 ```
 Or with the script, which creates the sandbox on first use:
-``` shell
+```bash
 ./sandbox.sh claude my-task            # agent in this terminal
 ./sandbox.sh claude my-task --vscode   # the same sandbox in VS Code
 ```
 5. In VS Code, start the agent in the integrated terminal (`claude-start` or `opencode`).
 6. Open a shell in the sandbox when you need one, with `sandbox exec` or plain SSH:
-``` shell
+```bash
 openshell sandbox exec my-task --workdir /sandbox -- bash
 
 # SSH: add the host entry once (already there after a --editor vscode connect)
@@ -54,7 +55,7 @@ openshell sandbox ssh-config my-task >> ~/.ssh/config
 ssh openshell-my-task.default
 ```
 7. [Move code in and out](#getting-code-in-and-out) with git bundles, then review, push and open the MR from your machine:
-``` shell
+```bash
 ./bundle.sh in  my-task ./myrepo   # repo into /sandbox/myrepo, on branch agent/my-task
 ./bundle.sh out my-task ./myrepo   # the agent's commits back as branch agent/my-task
 ```
@@ -70,18 +71,18 @@ OpenShell runs the sandboxes in a container runtime. These steps use Podman (5.x
 On macOS, Podman runs containers in a Linux VM called a Podman machine.
 
 * Install Podman, either with the installer from [podman.io](https://podman.io/) (the Podman docs recommend this) or with Homebrew:
-``` shell
+```bash
 brew install podman
 ```
 
 * Create and start the Podman machine:
-``` shell
+```bash
 podman machine init
 podman machine start
 ```
 
 * Verify the version is 5.x and that containers run:
-``` shell
+```bash
 podman --version
 podman run --rm quay.io/podman/hello
 ```
@@ -91,31 +92,31 @@ Podman on Linux needs cgroups v2 and an active Podman user socket.
 
 * Install Podman, e.g. `sudo apt install podman` or `sudo dnf install podman`
 * Start the user socket, and enable it so it starts at login:
-``` shell
+```bash
 systemctl --user enable --now podman.socket
 ```
 
 * Check that cgroups v2 is used (should print `v2`):
-``` shell
+```bash
 podman info --format '{{.Host.CgroupsVersion}}'
 ```
 
 ## Install OpenShell
 * Run the installer. It installs the CLI, the policy prover and a local gateway. On macOS it uses Homebrew and runs the gateway as a Homebrew service at `https://localhost:17670`. On Linux it runs as a systemd user service.
-``` shell
+```bash
 curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh
 ```
 
 ### Use Podman for the gateway
 If you don't set a driver, the gateway auto-detects one. It tries Kubernetes first, then Podman, then Docker. To make sure it uses Podman, set the driver in `~/.config/openshell/gateway.toml`:
-``` toml
+```toml
 [openshell.gateway]
 compute_driver = "podman"
 ```
 The gateway finds the Podman socket by itself, including the `podman machine` socket on macOS.
 
 * Validate the config, then restart the gateway:
-``` shell
+```bash
 openshell-gateway config preflight --path ~/.config/openshell/gateway.toml
 
 # macOS
@@ -125,18 +126,18 @@ systemctl --user restart openshell-gateway
 ```
 
 ### Verify the installation
-``` shell
+```bash
 openshell status
 ```
 * If something is wrong, check the gateway service: `brew services list` on macOS, or `journalctl --user -u openshell-gateway -f` on Linux
 * Quick test with the default sandbox image (a minimal Ubuntu without an agent):
-``` shell
+```bash
 openshell sandbox create --name demo
 ```
 
 ## Credentials in .env
 Keys and tokens go in `.env` in this folder. Start from the template; `.env` is ignored by git (see [.gitignore](.gitignore)):
-``` shell
+```bash
 cp .env.example .env
 ```
 Then fill in the values, e.g.:
@@ -145,7 +146,7 @@ OPENROUTER_API_KEY=sk-or-...
 CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-...
 ```
 `openshell provider create --from-existing` reads them from the environment, so they must be *exported*. A plain `source .env` doesn't export lines without `export`. Load the file in a subshell, only for the command that needs it:
-``` shell
+```bash
 (set -a; . ./.env; openshell provider create ...)
 ```
 * `set -a` exports the variables, so `openshell` can read them.
@@ -160,14 +161,14 @@ Claude Code runs with a Claude subscription (Pro/Max) via an OAuth token, not an
 
 ### Create an OAuth token (on the host)
 Run on your own machine. It opens the browser to log in with your Claude account and prints a long-lived (1 year) token:
-``` shell
+```bash
 claude setup-token
 ```
 * Add the token to `.env` as `CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-...`
 
 ### Import the profile
 (Skip this and the next section with `./provider.sh claude`, which imports the profile and creates the provider.)
-``` shell
+```bash
 openshell provider profile lint   -f providers/claude-code-oauth.yaml
 openshell provider profile import -f providers/claude-code-oauth.yaml
 ```
@@ -177,14 +178,14 @@ openshell provider profile import -f providers/claude-code-oauth.yaml
 The profile is only a template. The provider is the instance that holds your token in the gateway, and it is what a sandbox refers to with `--provider`. Importing the profile does not create the provider.
 
 * Check that the profile is imported; `claude-code-oauth` should be listed:
-``` shell
+```bash
 openshell provider profile list
 ```
 
 * Load `.env` (see [Credentials in .env](#credentials-in-env)) and create the provider:
   * `--name` is your own name for the provider, used later with `--provider claude`
   * `--type` is the `id` of the profile in [providers/claude-code-oauth.yaml](providers/claude-code-oauth.yaml)
-``` shell
+```bash
 (set -a; . ./.env; openshell provider create \
   --name claude \
   --type claude-code-oauth \
@@ -193,7 +194,7 @@ openshell provider profile list
 Expected output: `✓ Created provider claude`
 
 * Verify; `claude` should be listed with type `claude-code-oauth` and 1 credential key:
-``` shell
+```bash
 openshell provider list
 ```
 ```
@@ -202,12 +203,12 @@ claude      claude-code-oauth  1                 0
 ```
 
 ### Build the image
-There is no ready-made image, so build one from [Dockerfile.claudecode](Dockerfile.claudecode). It is `node:22-slim` with `git` and Claude Code (installed via npm), plus a `claude-start` wrapper that skips Claude Code's first-run onboarding and then starts `claude`.
-``` shell
+There is no ready-made image, so build one from [Dockerfile.claudecode](Dockerfile.claudecode). It is `node:22-slim` with `git`, Claude Code and the ACP adapter `claude-agent-acp` (both installed via npm), plus two wrappers that skip Claude Code's first-run onboarding: `claude-start` then starts `claude`, and `claude-acp-start` starts `claude-agent-acp` (for [ACP](#acp-agent-client-protocol)).
+```bash
 podman build -t claude-sandbox:latest -f Dockerfile.claudecode .
 ```
 
-Why the wrapper is needed: onboarding runs a connectivity check that connects to `api.anthropic.com` without going through the OpenShell proxy. The sandbox denies that connection, and Claude Code exits with `Failed to connect to api.anthropic.com: EACCES`. The wrapper writes `{"hasCompletedOnboarding": true}` to `~/.claude.json` (`/sandbox/.claude.json`) on first start, so the check is skipped. All other traffic goes through the proxy and works.
+Why the wrappers are needed: onboarding runs a connectivity check that connects to `api.anthropic.com` without going through the OpenShell proxy. The sandbox denies that connection, and Claude Code exits with `Failed to connect to api.anthropic.com: EACCES`. The wrappers write `{"hasCompletedOnboarding": true}` to `~/.claude.json` (`/sandbox/.claude.json`) on first start, so the check is skipped. All other traffic goes through the proxy and works.
 
 ### Create the sandbox
 Quickest: `./sandbox.sh claude [name]` for Claude in your terminal, or add `--vscode` for VS Code. See [Start a sandbox](#start-and-use-a-sandbox). The sections below show what it does by hand.
@@ -216,7 +217,7 @@ Always start Claude with `claude-start`, not `claude`.
 
 #### With VS Code and a terminal (recommended)
 The sandbox runs `sleep infinity` as its main process, so it keeps running while you start and quit Claude. The [terminal policy](#filesystem-policy) lets VS Code open terminals inside it.
-``` shell
+```bash
 openshell sandbox create \
   --name claude-agent1 \
   --from claude-sandbox:latest \
@@ -229,19 +230,19 @@ openshell sandbox connect claude-agent1 --editor vscode
 ```
 Then start Claude in one of these ways:
 * **In VS Code's terminal** (*Terminal > New Terminal*), which runs inside the sandbox:
-``` shell
+```bash
 cd /sandbox/myrepo
 claude-start
 ```
 * **From a terminal on your machine:**
-``` shell
+```bash
 openshell sandbox exec claude-agent1 --tty --workdir /sandbox/myrepo -- claude-start
 ```
 * You can run several Claude sessions in the same sandbox, e.g. one per terminal tab.
 
 #### Claude as the main process
 Simpler, but the sandbox stops (`Completed`) when you quit Claude, and VS Code can no longer connect.
-``` shell
+```bash
 openshell sandbox create \
   --name claude-agent1 \
   --from claude-sandbox:latest \
@@ -256,7 +257,7 @@ openshell sandbox create \
 * **Binary paths** - only the binaries listed in the profile may reach the endpoints and get the token. The profile covers `/usr/bin/claude`, `/usr/local/bin/claude` and the npm install path `/usr/local/lib/node_modules/@anthropic-ai/**`. If requests are denied, check `openshell logs claude-agent1` for the blocked binary path, add it to `binaries` and [update the profile](#update-a-profile).
 * **Don't use `/login` inside the sandbox** - an interactive login would store the OAuth credentials in the sandbox (`~/.claude/.credentials.json`) and needs extra login hosts opened. `setup-token` + provider keeps the token outside.
 * **Token expiry** - the token is valid for a year. Regenerate with `claude setup-token`, put the new token in `.env`, and update the provider:
-``` shell
+```bash
 (set -a; . ./.env; openshell provider update claude --from-existing)
 ```
 * **Only Anthropic hosts in the profile** - OpenShell swaps the token placeholder for the real token on requests to *every* host in the profile. Shared third-party services such as `sentry.io` would let a manipulated agent send the token, or your code, to someone else's account, so the profile lists only `api.anthropic.com` and `platform.claude.com`. The image sets `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`, so Claude Code doesn't try to send telemetry, error reports or update checks (`statsig.anthropic.com`, `sentry.io`, Datadog).
@@ -269,7 +270,7 @@ OpenCode uses models through the OpenRouter API, with an OpenRouter API key.
 (Skip this and the next section with `./provider.sh opencode`, which imports the profile and creates the provider.)
 
 The profile describes the OpenRouter API, not OpenCode: the API key, the host `openrouter.ai`, and which binary may use the key. This repo has a local copy of the upstream profile: [providers/openrouter.yaml](providers/openrouter.yaml). It doesn't change with upstream, and only `/usr/local/bin/opencode` may use the key, the opencode path in the image.
-``` shell
+```bash
 openshell provider profile lint   -f providers/openrouter.yaml
 openshell provider profile import -f providers/openrouter.yaml
 ```
@@ -278,7 +279,7 @@ openshell provider profile import -f providers/openrouter.yaml
 
 ### Create the provider
 * Put the key in `.env` as `OPENROUTER_API_KEY=sk-or-...`, load it (see [Credentials in .env](#credentials-in-env)) and create the provider:
-``` shell
+```bash
 (set -a; . ./.env; openshell provider create \
   --name openrouter \
   --type openrouter \
@@ -291,7 +292,7 @@ The official image `ghcr.io/anomalyco/opencode:latest` is Alpine-based and has n
 * adds `git` (for [getting code in and out](#getting-code-in-and-out)), `bash` (VS Code's terminal), `libstdc++` (needed by VS Code Server on Alpine) and `script`
 * clears the entrypoint, so the command after `--` (e.g. `sleep infinity`) runs as is
 * keeps `opencode` at `/usr/local/bin/opencode`, the only path the `openrouter` profile lets use the API key
-``` shell
+```bash
 podman build -t opencode-sandbox:latest -f Dockerfile.opencode .
 ```
 
@@ -299,7 +300,7 @@ podman build -t opencode-sandbox:latest -f Dockerfile.opencode .
 Quickest: `./sandbox.sh opencode [name]` for OpenCode in your terminal, or add `--vscode` for VS Code. See [Start a sandbox](#start-and-use-a-sandbox). The sections below show what it does by hand.
 
 #### With VS Code and a terminal (recommended)
-``` shell
+```bash
 openshell sandbox create \
   --name opencode-agent2 \
   --from opencode-sandbox:latest \
@@ -312,18 +313,18 @@ openshell sandbox connect opencode-agent2 --editor vscode
 ```
 Then start OpenCode in one of these ways:
 * **In VS Code's terminal** (*Terminal > New Terminal*):
-``` shell
+```bash
 cd /sandbox/myrepo
 opencode -m openrouter/nvidia/nemotron-3.5-lightning:free
 ```
 * **From a terminal on your machine:**
-``` shell
+```bash
 openshell sandbox exec opencode-agent2 --tty --workdir /sandbox -- opencode -m openrouter/nvidia/nemotron-3.5-lightning:free
 ```
 
 #### OpenCode as the main process
 Uses the official image directly. The sandbox stops when you quit OpenCode, and the image doesn't support VS Code's terminal.
-``` shell
+```bash
 openshell sandbox create \
   --name opencode-agent1 \
   --from ghcr.io/anomalyco/opencode:latest \
@@ -346,16 +347,16 @@ Create a sandbox once, then use it as often as you like: with the agent in your 
 
 You can do this by hand or with [sandbox.sh](sandbox.sh). The values per agent:
 
-| Agent | Image | Provider | Agent command |
-|---|---|---|---|
-| Claude Code | `claude-sandbox:latest` | `claude` | `claude-start` |
-| OpenCode | `opencode-sandbox:latest` | `openrouter` | `opencode -m openrouter/nvidia/nemotron-3.5-lightning:free` |
+| Agent | Image | Provider | Agent command | ACP command |
+|---|---|---|---|---|
+| Claude Code | `claude-sandbox:latest` | `claude` | `claude-start` | `claude-acp-start` |
+| OpenCode | `opencode-sandbox:latest` | `openrouter` | `opencode -m openrouter/nvidia/nemotron-3.5-lightning:free` | `opencode acp` |
 
 The examples below use Claude and the sandbox name `my-task`.
 
 ### By hand
 1. **Create the sandbox** (once):
-``` shell
+```bash
 openshell sandbox create \
   --name my-task \
   --from claude-sandbox:latest \
@@ -369,7 +370,7 @@ openshell sandbox create \
 * Wait until `openshell sandbox list` shows `my-task` as `Ready`.
 
 2. **Use the agent in your terminal:**
-``` shell
+```bash
 openshell sandbox exec my-task --workdir /sandbox -- claude-start
 ```
 * `--workdir` is the folder the agent starts in, e.g. `/sandbox/myrepo`.
@@ -377,47 +378,47 @@ openshell sandbox exec my-task --workdir /sandbox -- claude-start
 * Quit the agent as usual. The sandbox keeps running.
 
 3. **Or use VS Code:**
-``` shell
+```bash
 openshell sandbox connect my-task --editor vscode
 ```
 * VS Code opens a window connected to the sandbox. Open a folder with *File > Open Folder*, and start the agent in *Terminal > New Terminal* with `claude-start`.
 * See [VS Code](#vs-code) for the one-time setup.
 
 4. **Or open a shell in the sandbox** to look around or run commands:
-``` shell
+```bash
 openshell sandbox exec my-task --workdir /sandbox -- bash
 ```
 * Leave the shell with `exit` or Ctrl-D. The sandbox keeps running.
 * The shell has the same restrictions as the agent, and the provider's credentials as placeholders, so you can start `claude-start` or `opencode` from it too.
 * **A single command, no shell:**
-``` shell
+```bash
 openshell sandbox exec my-task -- ls -la /sandbox
 ```
 * **Plain SSH:** after you've connected a sandbox once with `--editor vscode`, it has an SSH host entry (`openshell-<name>.default`), so this works:
-``` shell
+```bash
 ssh openshell-my-task.default
 ```
 For other sandboxes, add the entry first:
-``` shell
+```bash
 openshell sandbox ssh-config my-task >> ~/.ssh/config
 ```
 The entry tunnels SSH through the gateway with `openshell ssh-proxy`, so the sandbox doesn't need an open port. `scp` doesn't work over this connection and the images have no `rsync`. To copy files, use `openshell sandbox upload` and `download` (see [Getting code in and out](#getting-code-in-and-out)).
 
 5. **Later:** check that the sandbox is still running, and use it again with step 2, 3 or 4:
-``` shell
+```bash
 openshell sandbox list
 ```
 * `Ready`: running, use it.
 * `Completed` or `Error`: stopped. Delete it and create it again (step 1). Files in it are lost, so get your work out first (see [Getting code in and out](#getting-code-in-and-out)).
 
 6. **When the task is done:**
-``` shell
+```bash
 openshell sandbox delete my-task
 ```
 
 ### With the script
 [sandbox.sh](sandbox.sh) does steps 1 to 3 in one command. It creates the sandbox on first use and reuses it after that:
-``` shell
+```bash
 ./sandbox.sh <claude|opencode> [name] [--vscode|--acp] [--workdir DIR] [-- agent args...]
 ```
 | Command | What happens |
@@ -429,6 +430,7 @@ openshell sandbox delete my-task
 | `./sandbox.sh claude my-task -w /sandbox/myrepo` | Claude starts in `/sandbox/myrepo` |
 | `./sandbox.sh claude my-task -- -p 'reply with OK'` | Passes arguments to the agent (here: a non-interactive smoke test) |
 | `./sandbox.sh opencode my-task --acp` | Runs OpenCode's ACP server on stdin/stdout, for a UI (see [ACP](#acp-agent-client-protocol)) |
+| `./sandbox.sh claude my-task --acp` | The same for Claude Code, through the ACP adapter |
 
 * The script uses the image, provider and agent command from the table above. Set the OpenCode model with `OPENCODE_MODEL=...`.
 * **Requirements:** the provider and image from the agent's chapter must exist.
@@ -437,10 +439,14 @@ openshell sandbox delete my-task
 
 ## ACP (Agent Client Protocol)
 To build a UI that runs on the host and talks to the agent in the sandbox, use [ACP](https://agentclientprotocol.com). ACP is JSON-RPC over the agent's stdin and stdout, so no port is opened in the sandbox: the client starts the agent through the gateway and speaks ACP over the pipes, like the SSH tunnel for VS Code.
-``` shell
+```bash
 ./sandbox.sh opencode my-task --acp
-# which runs:
+# which runs (plus the model in OPENCODE_CONFIG_CONTENT, see below):
 openshell sandbox exec my-task --no-tty --no-login-shell --workdir /sandbox -- opencode acp
+
+./sandbox.sh claude my-task --acp
+# which runs:
+openshell sandbox exec my-task --no-tty --no-login-shell --workdir /sandbox -- claude-acp-start
 ```
 * **Client side:** spawn the command above as a subprocess and give its stdin/stdout to an ACP client library (e.g. `@agentclientprotocol/sdk` for TypeScript). Flow: `initialize`, `session/new` (with `cwd` as a path *inside* the sandbox), then `session/prompt`. Keep the process running for the whole session. The agent's stderr is log output; show it separately.
 * **Clean stdout:** `--no-tty` stops a pty from mangling the stream, `--no-login-shell` stops profile scripts from printing before the first message. The script prints its own messages (e.g. "Creating sandbox...") to stderr, so create the sandbox once beforehand if your client is strict.
@@ -448,14 +454,14 @@ openshell sandbox exec my-task --no-tty --no-login-shell --workdir /sandbox -- o
 * **OpenCode:** `opencode acp` is built in, so the image needs no changes. It has no `-m` flag, so the script sets the model (`OPENCODE_MODEL`, same default as above) through the `OPENCODE_CONFIG_CONTENT` env var. Without a model, OpenCode picks an `opencode/...` one and fails with "Cannot connect to API", because `opencode.ai` is blocked.
 * **Claude Code:** has no native ACP mode, so the image includes the adapter [`@agentclientprotocol/claude-agent-acp`](https://www.npmjs.com/package/@agentclientprotocol/claude-agent-acp). `--acp` runs `claude-acp-start`, which skips onboarding (like `claude-start`) and starts `claude-agent-acp`. The adapter runs Claude Code through the Claude Agent SDK, which by default uses its own bundled `claude` binary deep in the adapter's `node_modules`. That path is not in the profile's `binaries`, so its requests would go out without the token. The image sets `CLAUDE_CODE_EXECUTABLE` to the globally installed `claude.exe` instead, which the profile already allows. Rebuild the image and create a new sandbox after updating; existing sandboxes keep the old image.
 * **Network:** egress rules are unchanged; ACP doesn't open anything.
-* **Fallback:** if the gRPC exec stream misbehaves, use the SSH route (see [By hand](#by-hand)): `ssh openshell-my-task.default opencode acp` (add `-T` to disable the pty).
+* **Fallback:** if the gRPC exec stream misbehaves, use the SSH route (see [By hand](#by-hand)): `ssh openshell-my-task.default opencode acp` or `... claude-acp-start` (add `-T` to disable the pty).
 * **Example client:** [acp_client.py](acp_client.py) is a minimal client (Python 3, no dependencies) that lists sandboxes and chats with the agent in one:
-``` shell
+```bash
 ./acp_client.py list
-./acp_client.py connect opencode-agent1 [--agent opencode|claude] [--model M] [--cwd /sandbox]
+./acp_client.py connect <sandbox> [--agent opencode|claude] [--model M] [--cwd /sandbox]
 ```
   Type a prompt and press Enter; `/help` lists the commands, `/models [FILTER]` lists the models the agent offers, `/model ID` switches model for the session, `/commands` lists the agent's own slash commands (e.g. `/init`, `/review`), `/quit` or Ctrl-D exits, and Ctrl-C cancels a running prompt. It checks that the sandbox exists and is `Ready`, prints the agent's text and tool calls, asks permission requests on the terminal, and refuses any `fs/*` or `terminal/*` request from the agent. If the agent fails or exits, it shows the agent's last output with a hint (missing adapter, blocked API host, wrong model). Options: `--timeout SEC` for startup, `-v` for the JSON-RPC traffic and the agent's stderr. Exit codes: 0 ok, 1 agent error, 2 bad usage or sandbox. Without `--agent`, it picks the agent by which ACP command the sandbox has (`claude-acp-start` or `opencode`). Use it as a starting point for your UI.
-* **Test it** before building the UI: `printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{}}}' | ./sandbox.sh opencode my-task --acp` should print one JSON response.
+* **Test it** before building the UI: `printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{}}}' | ./sandbox.sh opencode my-task --acp` (or `claude` instead of `opencode`) should print one JSON response.
 
 ## VS Code
 VS Code connects to a sandbox over SSH with the Remote-SSH extension. OpenShell tunnels the SSH connection through the gateway, so the sandbox doesn't expose any port.
@@ -463,14 +469,14 @@ VS Code connects to a sandbox over SSH with the Remote-SSH extension. OpenShell 
 ### One-time setup
 * Install the [Remote-SSH](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh) extension, and make sure the `code` command works in a terminal (in VS Code: *Shell Command: Install 'code' command in PATH*).
 * Add this to your VS Code user settings (`settings.json`):
-``` json
+```json
 "remote.SSH.localServerDownload": "always",
 ```
 VS Code installs "VS Code Server" in the sandbox on first connect. By default the sandbox downloads it itself, which fails because the sandbox can't reach Microsoft's servers. With this setting, your machine downloads it and copies it in over SSH.
 
 ### Connect
 The sandbox must be running (`Ready` in `openshell sandbox list`) and created with `--policy policies/vscode-terminal.yaml`, otherwise VS Code's terminal won't start.
-``` shell
+```bash
 openshell sandbox connect claude-agent1 --editor vscode
 ```
 * This opens a VS Code window connected to the sandbox. Use *File > Open Folder* to open e.g. `/sandbox/myrepo`.
@@ -508,12 +514,12 @@ A git bundle is a single file that contains commits, like a portable remote. The
 
 #### With the script
 [bundle.sh](bundle.sh) does the steps below in two commands:
-``` shell
+```bash
 ./bundle.sh in  <sandbox> <repo> [--branch NAME] [--base BRANCH]
 ./bundle.sh out <sandbox> <repo> [--branch NAME] [--base BRANCH] [--force]
 ```
 A typical task, with the sandbox `my-task` and the repo `./myrepo`:
-``` shell
+```bash
 ./bundle.sh in my-task ./myrepo
 # the agent works in /sandbox/myrepo and commits on branch agent/my-task
 ./bundle.sh out my-task ./myrepo
@@ -532,13 +538,13 @@ git -C ./myrepo push origin agent/my-task      # then open the MR
 #### By hand
 
 * Pack the repo on the host and upload it:
-``` shell
+```bash
 git -C ./myrepo bundle create ../in.bundle --all
 openshell sandbox upload claude-agent1 ./in.bundle /sandbox
 ```
 
 * Clone it inside the sandbox on a work branch, e.g. ask the agent to do it, or run:
-``` shell
+```bash
 openshell sandbox exec claude-agent1 -- sh -c '
   git clone -q /sandbox/in.bundle /sandbox/myrepo &&
   cd /sandbox/myrepo &&
@@ -548,14 +554,14 @@ openshell sandbox exec claude-agent1 -- sh -c '
 ```
 
 * Let the agent work and commit on `agent/my-task`. Then pack the new commits and download them:
-``` shell
+```bash
 openshell sandbox exec claude-agent1 -- \
   git -C /sandbox/myrepo bundle create /sandbox/out.bundle main..agent/my-task
 openshell sandbox download claude-agent1 /sandbox/out.bundle .
 ```
 
 * Fetch the branch into your repo, review it, then push and open the MR yourself:
-``` shell
+```bash
 git -C ./myrepo fetch ../out.bundle agent/my-task:agent/my-task
 git -C ./myrepo log --oneline main..agent/my-task
 git -C ./myrepo diff main agent/my-task
@@ -566,7 +572,7 @@ git -C ./myrepo push origin agent/my-task
 
 ### 2. Read-only clone in the sandbox
 Attach a git provider that only allows reads, so the agent can clone and fetch by itself. Get the results out with a bundle as in approach 1. The upstream [github.yaml](https://github.com/NVIDIA/OpenShell/blob/main/providers/github.yaml) profile works this way: it allows clone and fetch, but not push.
-``` shell
+```bash
 openshell provider profile import --url https://raw.githubusercontent.com/NVIDIA/OpenShell/main/providers/github.yaml
 GITHUB_TOKEN=<read-only-token> openshell provider create --name github-ro --type github --from-existing
 openshell sandbox create ... --provider claude --provider github-ro ...
@@ -585,13 +591,13 @@ Possible, but a sandbox that can push can also send your code anywhere the token
 * **Providers are shared** - create a provider once and attach it to every sandbox with `--provider`.
 * **Labels** - add e.g. `--label project=foo --label task=auth` on create, then list with `openshell sandbox list --selector project=foo`.
 * **Templates** - store the image and resources once, then create sandboxes from it. `--template` can't be combined with `--from`, `--cpu`, `--memory` or `--env`:
-``` shell
+```bash
 openshell sandbox template create claude --image claude-sandbox:latest --cpu 2 --memory 4Gi
 openshell sandbox create --name claude-auth-fix --template claude --provider claude \
   --policy policies/vscode-terminal.yaml --detach -- sleep infinity
 ```
 * **Resources** - all sandboxes run inside the one Podman machine. Give it room if you run several:
-``` shell
+```bash
 podman machine stop
 podman machine set --cpus 6 --memory 12288
 podman machine start
@@ -617,7 +623,7 @@ A profile is a YAML file that you write yourself or download, and then import in
 | `display_name`, `description`, `category`, `inference_capable` | Labels and metadata | `agent`, `true` |
 
 ### Minimal example
-``` yaml
+```yaml
 id: my-agent
 display_name: My agent
 description: My agent with an API key
@@ -646,7 +652,7 @@ binaries:
 1. Start from a similar profile. Export one that's already in the gateway with `openshell provider profile export <id>`, or copy one from the OpenShell repo.
 2. Edit `id`, `credentials`, `endpoints` and `binaries`. To find the right binary path, run the agent once and check `openshell logs <sandbox> | grep DENIED`.
 3. Validate and import it, then check the result:
-``` shell
+```bash
 openshell provider profile lint   -f providers/my-agent.yaml
 openshell provider profile import -f providers/my-agent.yaml
 openshell provider profile describe my-agent
@@ -655,7 +661,7 @@ openshell provider profile describe my-agent
 
 ### Update a profile
 `import` and `lint` fail once the profile exists (`custom provider profile '...' already exists`). Use `update` instead. It needs the current `resource_version` from the gateway, so the commands below read it and add it to a temporary copy of the file. Set `ID` to the profile's id, e.g. `claude-code-oauth` or `openrouter`:
-``` shell
+```bash
 ID=claude-code-oauth
 V=$(openshell provider profile export $ID | awk '/^resource_version:/{print $2}')
 sed "s/^id: $ID\$/&\nresource_version: $V/" providers/$ID.yaml > /tmp/$ID.yaml
@@ -672,7 +678,7 @@ What a sandbox may access comes from three places:
 
 ### Filesystem policy
 This repo has two policies. The one used everywhere is [policies/vscode-terminal.yaml](policies/vscode-terminal.yaml). It is the default policy plus `/dev/pts` and `/dev/ptmx`, so programs inside the sandbox can open terminals. VS Code's integrated terminal needs this; without it, it fails with `forkpty(3) failed`.
-``` yaml
+```yaml
 version: 1
 filesystem_policy:
   include_workdir: true        # the workdir (/sandbox) is read-write
@@ -698,7 +704,7 @@ landlock:
 
 Create your own:
 1. Start from [policies/example.yaml](policies/example.yaml) (see [Example policy with network rules](#example-policy-with-network-rules)), or from the default policy of an existing sandbox. `--base` leaves out the provider's network rules, and the `sed` drops the header lines before the YAML:
-``` shell
+```bash
 openshell policy get claude-agent1 --base | sed -n '/^version:/,$p' > policies/my-policy.yaml
 ```
 2. Edit the file, e.g. add paths to `read_only` or `read_write`. Only add what's needed: every path you add is something the agent can reach too.
@@ -722,7 +728,7 @@ Use it:
 | `huggingface_mcp` | Claude Code using the Hugging Face MCP server: all standard MCP methods, and tools matching `hub_repo_*` | Other tools, and `hf_fs` explicitly (`deny_rules`) |
 
 The structure of a rule:
-``` yaml
+```yaml
 network_policies:
   npm_registry:                    # rule name (any)
     name: npm-registry
@@ -742,7 +748,7 @@ network_policies:
 * **Credentials:** a network rule never sends provider credentials. Those only go to the hosts in the provider's profile.
 
 **Remote MCP servers** (`context7_mcp`, `huggingface_mcp`) use `protocol: mcp`. OpenShell then reads every MCP request and checks the method and, for `tools/call`, the tool name:
-``` yaml
+```yaml
   context7_mcp:
     name: context7-mcp
     endpoints:
@@ -782,7 +788,7 @@ Tested in a sandbox:
 * `huggingface_mcp`: `hub_repo_search` worked. `hf_whoami` was blocked ("no matching allow rule") and `hf_fs` was blocked ("blocked by a deny rule").
 
 Use it as-is or copy it:
-``` shell
+```bash
 cp policies/example.yaml policies/my-task.yaml   # then edit
 openshell sandbox create --name my-task --from claude-sandbox:latest --provider claude \
   --policy policies/my-task.yaml --detach -- sleep infinity
@@ -792,18 +798,18 @@ openshell sandbox create --name my-task --from claude-sandbox:latest --provider 
 A sandbox starts out mostly locked down. When the agent or another tool tries to reach a host that isn't allowed, the connection is denied and logged, and OpenShell proposes a rule that would allow it. Ask the agent to do what you want to allow (e.g. fetch a web page), then review the proposals. The examples use `opencode-agent1`.
 
 * Check the logs:
-``` shell
+```bash
 openshell logs opencode-agent1
 openshell logs opencode-agent1 | grep DENIED
 ```
 
 * List the pending proposals:
-``` shell
+```bash
 openshell rule get opencode-agent1 --status pending
 ```
 
 * Approve a proposal:
-``` shell
+```bash
 openshell rule approve opencode-agent1 --chunk-id <chunk-id>
 ```
 ```
@@ -811,7 +817,7 @@ OK Chunk approved. Policy version: 2, hash: 896a5bc27d1f
 ```
 
 * Or reject it, with a reason:
-``` shell
+```bash
 openshell rule reject opencode-agent1 \
   --chunk-id <chunk-id> \
   --reason "Not needed for this task."
@@ -821,7 +827,7 @@ OK Chunk rejected.
 ```
 
 * View the policy versions:
-``` shell
+```bash
 openshell policy list opencode-agent1
 ```
 ```
@@ -832,7 +838,7 @@ VERSION  HASH           STATUS       CREATED                  ERROR
 ```
 
 * View the approved rules:
-``` shell
+```bash
 openshell rule get opencode-agent1 --status approved
 ```
 ```
@@ -861,6 +867,7 @@ Start with `openshell logs <sandbox> | grep DENIED` and `openshell sandbox get <
 | `provider create --from-existing` finds no credential | `.env` was loaded without exporting the variables | Run the command as `(set -a; . ./.env; openshell provider create ...)` |
 | `custom provider profile '...' already exists` on `lint` or `import` | The profile is already in the gateway | Use `update` instead, see [Update a profile](#update-a-profile) |
 | Claude: `Unable to connect to Anthropic services ... Failed to connect to api.anthropic.com: EACCES` | Claude Code's first-run connectivity check bypasses the proxy and is denied | Start with `claude-start`, not `claude` (see [Build the image](#build-the-image)). Also check the logs for other denied hosts |
+| ACP: `claude-acp-start: command not found` (or `opencode: command not found`) | The sandbox was created from an image without the ACP command, or `--agent` names the wrong agent for the sandbox | Rebuild the image, then `openshell sandbox delete <sandbox>` and create it again; existing sandboxes keep their old image. With `acp_client.py`, leave out `--agent` to detect it |
 | Log line `transparent TCP mapping is expired` | A connection to `api.anthropic.com` bypassed the proxy and was denied | Harmless on its own. Together with the `EACCES` error, see the row above |
 | VS Code: `The terminal process failed to launch: ... forkpty(3) failed` | The sandbox was created without the terminal policy, so it can't open terminals | Check with `openshell policy get <sandbox> --base \| grep pts`. No output: delete the sandbox and create it again with `--policy policies/vscode-terminal.yaml`. `policy set` on a running sandbox doesn't help |
 | VS Code hangs on first connect, `Downloading VS Code server` in the log | The sandbox can't download VS Code Server itself | Set `"remote.SSH.localServerDownload": "always"`, see [VS Code](#vs-code) |
