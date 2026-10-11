@@ -40,36 +40,42 @@ From weakest to strongest separation from your Mac:
 | Docker Desktop | One shared VM, `dockerd` runs as root in it | The shared folders, `/Users` by default (configurable) | Enhanced Container Isolation (Business plan) adds user namespaces |
 | **Podman machine (default)** | One shared VM, rootless containers, SELinux | `/Users` read-write | Better defaults inside the VM than Docker, same problem with the shared folder |
 | Colima, Lima, Rancher Desktop | One shared VM | Depends on the mount settings; check before relying on them | Similar to Podman |
-| **Podman machine without host mounts** | As above | Nothing, or one folder you choose | Same speed, much smaller blast radius. See [below](#a-podman-machine-without-host-mounts) |
+| **Podman machine with minimal host mounts** | As above | Only OpenShell's cache folder, and one folder you choose | Same speed, much smaller blast radius. See [below](#a-podman-machine-with-minimal-host-mounts) |
 | One VM per sandbox (OpenShell's MicroVM driver, Apple's `container` on macOS 26) | A kernel per sandbox | Only what you mount | No shared kernel between sandboxes. Check that OpenShell supports it on your setup first |
 | A separate full VM (UTM, Tart, Parallels) with OpenShell inside, no shared folders | A VM you manage | Nothing | Heavier, and you maintain the VM |
 | A remote or cloud machine | A different computer | Nothing on your Mac | Strongest separation, costs money and adds latency |
 
-## A Podman machine without host mounts
-The biggest gain for the least effort. Sandboxes get files through `openshell sandbox upload` and [git bundles](working-in-sandboxes.md#getting-code-in-and-out), not bind mounts, and `podman build` sends the build context over the API, so nothing in this repo should need the host folders in the VM.
+## A Podman machine with minimal host mounts
+The biggest gain for the least effort: share only what OpenShell needs instead of your whole home folder. Sandboxes get your files through `openshell sandbox upload` and [git bundles](working-in-sandboxes.md#getting-code-in-and-out), not bind mounts, and `podman build` sends the build context over the API. The one host folder the Podman driver does need is its cache, `~/.local/share/openshell/podman-sandbox`: the gateway unpacks the sandbox supervisor binary from the `supervisor` image there and bind-mounts it into every sandbox by its Mac path. Without it, `sandbox create` fails with `statfs .../podman-sandbox/<hash>/openshell-sandbox: no such file or directory`. The folder only holds that Linux binary, which macOS never runs.
 
-* Make sure there's enough free disk space first: `df -h /System/Volumes/Data`. Each machine has its own disk image with its own copy of every image, and building the images here takes several GB. If the Mac runs out of space, the VM's filesystem shuts down and the build fails with `server probably quit: unexpected EOF` (the VM's console log, `$TMPDIR/podman/openshell.log`, then shows `I/O error, dev vda`).
-* Create a second machine. Passing `--volume` replaces the default mounts; this one shares only one empty folder for anything you deliberately want to hand over:
+* Make sure there's enough free disk space first: `df -h /System/Volumes/Data`. Each machine has its own disk image with its own copy of every image, and building the images here takes about 8 GB. If the Mac runs out of space, the VM's filesystem shuts down and the build fails with `server probably quit: unexpected EOF` (the VM's console log, `$TMPDIR/podman/openshell.log`, then shows `I/O error, dev vda`).
+* Create a second machine. Passing `--volume` replaces the default mounts. This one shares the OpenShell cache, and an empty folder for anything you deliberately want to hand over (leave that one out if you don't need it). Mounts can't be changed later, only by creating the machine again:
 ```bash
-mkdir -p ~/openshell-share
+mkdir -p ~/openshell-share ~/.local/share/openshell/podman-sandbox
 podman machine init openshell \
-  --volume "$HOME/openshell-share:$HOME/openshell-share"
+  --volume "$HOME/openshell-share:$HOME/openshell-share" \
+  --volume "$HOME/.local/share/openshell/podman-sandbox:$HOME/.local/share/openshell/podman-sandbox"
 ```
-* Stop the current machine (only one can run at a time), start the new one, and check that only `openshell-share` is mounted:
+* Set `--cpus`, `--memory` and `--disk-size` on `init` as for your current machine (`podman machine list` shows them).
+* Stop the current machine (only one can run at a time), start the new one, and check that only the two folders are mounted:
 ```bash
 podman machine stop
 podman machine start openshell
 podman machine ssh openshell 'mount | grep virtiofs'
 ```
-* **The share is writable from the VM, even with `:ro`.** With the `applehv` provider (tested with Podman 5.8), `:ro` on the volume is ignored. Keep the folder empty except for what you hand over, and treat anything in it as untrusted. Check it with `podman machine ssh openshell "touch $HOME/openshell-share/x && echo writable"`. The double quotes make your Mac's `$HOME` used, which is also the share's path in the VM. Then delete `~/openshell-share/x`.
-* Make it the default and restart the gateway, so it uses the new machine:
+* **The shares are writable from the VM, even with `:ro`.** With the `applehv` provider (tested with Podman 5.8), `:ro` on a volume is ignored. Keep `openshell-share` empty except for what you hand over, and treat anything in it as untrusted. Check it with `podman machine ssh openshell "touch $HOME/openshell-share/x && echo writable"`. The double quotes make your Mac's `$HOME` used, which is also the share's path in the VM. Then delete `~/openshell-share/x`.
+* Make it the default and restart the gateway, so it uses the new machine. Check with `podman system connection list` that `openshell` is the default: removing a machine can make another, stale connection the default again.
 ```bash
 podman system connection default openshell
 brew services restart openshell
 ```
-* The new machine has no images yet: `make images`, then check that everything works with `bin/sandbox.sh claude test -- -p 'reply with OK'` and `make test`.
-* Set `--cpus`, `--memory` and `--disk-size` on `init` as for your current machine (`podman machine list` shows them).
+* Let the VM's clock catch up quickly. By default, chrony in the VM only jumps the clock right after boot; later, e.g. after the Mac has slept, it corrects a gap very slowly. Sandboxes then fail to start with `ContainerExited`, and the supervisor container's log (`podman logs openshell-supervisor-<id>`) says `session token was issued in the future`. This lets chrony jump the clock whenever it's more than 1 s off, and survives restarts of the machine:
+```bash
+podman machine ssh openshell "sudo sed -i 's/^makestep 1.0 3\$/makestep 1.0 -1/' /etc/chrony.conf && sudo systemctl restart chronyd"
+```
+  Check with `podman machine ssh openshell chronyc tracking`: `System time` should be well under a second.
+* The new machine has no images yet: `make images`, then check that a sandbox works with `bin/sandbox.sh claude test -- -p 'reply with OK'`, and run `make test`. While a sandbox runs, `podman --connection openshell ps` lists its containers.
 * To go back: make the old machine's connection the default again (`podman system connection list`), stop `openshell`, start the old machine and restart the gateway.
 * Once the new machine works, remove the old one to get its disk space back: `podman machine rm <old machine>`. The disk image of a machine grows but never shrinks on its own.
 
-This setup hasn't been tested end to end with this repo yet. In particular, check which machine the gateway uses (`podman --connection openshell ps` should list the sandbox while it runs).
+Tested on macOS with Podman 5.8 and OpenShell 0.1.3: building the images, running Claude Code in a sandbox, and `make test` (browser, host MCP, HyperFrames). The VS Code connection hasn't been tested on this setup yet.
