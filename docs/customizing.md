@@ -194,6 +194,7 @@ A sandbox starts out mostly locked down. When the agent or another tool tries to
 openshell logs opencode-agent1
 openshell logs opencode-agent1 | grep DENIED
 ```
+   Or watch them live, for all sandboxes, with `bin/watch-denied.sh` (see [Watching denials](logging.md#watching-denials)).
 
 * List the pending proposals:
 ```bash

@@ -5,7 +5,7 @@ Configs and notes for running AI coding agents (Claude Code, OpenCode) in [NVIDI
 | Path | What it is |
 |---|---|
 | [docs/](docs) | The full documentation, see [Documentation](#documentation) |
-| [bin/](bin) | Scripts you run: [sandbox.sh](bin/sandbox.sh) starts an agent sandbox, [provider.sh](bin/provider.sh) creates a provider from `.env`, [bundle.sh](bin/bundle.sh) moves a git repo in and the agent's commits out, [watch-denied.sh](bin/watch-denied.sh) shows the denied connections as a live table, [otel-export.py](bin/otel-export.py) exports the logs as OpenTelemetry, [acp_client.py](bin/acp_client.py) chats with an agent over ACP |
+| [bin/](bin) | Scripts you run: [sandbox.sh](bin/sandbox.sh) starts an agent sandbox, [provider.sh](bin/provider.sh) creates a provider from `.env`, [bundle.sh](bin/bundle.sh) moves a git repo in and the agent's commits out, [watch-denied.sh](bin/watch-denied.sh) shows the denied connections as a live table, [otel-export.py](bin/otel-export.py) exports the logs as OpenTelemetry and [otel-view.py](bin/otel-view.py) shows them in the terminal, [acp_client.py](bin/acp_client.py) chats with an agent over ACP |
 | [images/](images) | One folder per sandbox image, named after the image: [claude-sandbox](images/claude-sandbox) (Claude Code), [claude-browser](images/claude-browser) (Claude Code plus a headless browser), [opencode-sandbox](images/opencode-sandbox) (OpenCode) |
 | [providers/](providers) | Provider profiles: [claude-code-oauth.yaml](providers/claude-code-oauth.yaml) (Claude subscription), [openrouter.yaml](providers/openrouter.yaml) (OpenRouter, for OpenCode) |
 | [policies/](policies) | Sandbox policies: [vscode-terminal.yaml](policies/vscode-terminal.yaml) (the default plus terminals, used everywhere), [browser.yaml](policies/browser.yaml) (for the browser image), [example.yaml](policies/example.yaml) (network rules to copy and adapt) |
@@ -21,8 +21,9 @@ Configs and notes for running AI coding agents (Claude Code, OpenCode) in [NVIDI
 | [Setup](docs/setup.md) | Podman, installing OpenShell, credentials in `.env` |
 | [Agents](docs/agents.md) | Claude Code with a Claude subscription, OpenCode with OpenRouter: profile, provider, image, sandbox |
 | [Working in sandboxes](docs/working-in-sandboxes.md) | Starting and using a sandbox, VS Code, getting code and files in and out, viewing a web page, many sandboxes |
-| [Extras](docs/extras.md) | MCP servers on the host, ACP, headless browser use, OpenTelemetry export |
+| [Extras](docs/extras.md) | MCP servers on the host, ACP, headless browser use |
 | [Customizing](docs/customizing.md) | Provider profiles, sandbox policies, network rules |
+| [Logging](docs/logging.md) | Reading the logs, watching denials live, OCSF JSON, exporting to OpenTelemetry and viewing the events |
 | [Troubleshooting](docs/troubleshooting.md) | Symptoms, causes and fixes |
 
 Commands in the docs run from the repo root.
@@ -76,7 +77,7 @@ bin/bundle.sh out my-task ./myrepo   # the agent's commits back as branch agent/
 openshell sandbox upload   my-task ./notes.md /sandbox            # -> /sandbox/notes.md
 openshell sandbox download my-task /sandbox/report.html .         # -> ./report.html
 ```
-8. [Approve or reject network rules](docs/customizing.md#network-rules) when the agent gets blocked.
+8. [Approve or reject network rules](docs/customizing.md#network-rules) when the agent gets blocked. `bin/watch-denied.sh` shows what is being blocked, live, across all sandboxes (see [Watching denials](docs/logging.md#watching-denials)).
 
 ### Optional
 Not needed for the basic steps above. Each one gives the agent more reach, so add it when a task needs it.
@@ -93,6 +94,18 @@ Not needed for the basic steps above. Each one gives the agent more reach, so ad
 * **Local pages:** a dev server in the sandbox (`localhost`) works without a rule.
 * **Don't** let the agent use your own Chrome.
 * See [Headless browser use](docs/extras.md#headless-browser-use).
+
+#### Logs and OpenTelemetry
+* **What:** keep the sandboxes' security events (every allowed and denied connection, HTTP request and SSH session), or send them to a log backend, as OpenTelemetry logs.
+* **How:** turn on OpenShell's structured log once, then export to a file or push to an OTLP endpoint, and look at the events with the small terminal viewer:
+```bash
+openshell settings set --global --key ocsf_json_enabled --value true --yes
+bin/otel-export.py --out sandboxes.otlp.jsonl                          # to a file
+bin/otel-export.py --endpoint http://localhost:4318/v1/logs --follow   # live, to a collector
+bin/otel-export.py --out - --follow | bin/otel-view.py                 # live, in the terminal
+```
+* **Careful where you send them:** the events show what the agent did (hosts, URLs, process names).
+* See [Logging](docs/logging.md).
 
 #### Viewing a web page in your browser
 * **What:** [view a web page the agent serves](docs/working-in-sandboxes.md#viewing-a-web-page-from-the-sandbox) in your own browser.

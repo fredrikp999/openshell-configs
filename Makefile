@@ -29,7 +29,7 @@ test:
 
 lint:
 	$(SHELLCHECK) -S warning $(SCRIPTS)
-	python3 -m py_compile bin/acp_client.py bin/otel-export.py
+	python3 -m py_compile bin/acp_client.py bin/otel-export.py bin/otel-view.py
 	node --check tests/browser/browser_probe.js
 	node --check tests/host-mcp/mcp_probe.js
 	@for f in images/*/*.json; do python3 -m json.tool $$f >/dev/null || { echo "invalid JSON: $$f"; exit 1; }; done

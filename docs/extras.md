@@ -1,4 +1,4 @@
-# Extras: MCP servers, ACP, a headless browser and OpenTelemetry export
+# Extras: MCP servers, ACP and a headless browser
 Optional additions to the basic setup. Each one gives the agent more reach, so add it when a task needs it.
 
 ## MCP servers in containers on the host
@@ -120,24 +120,3 @@ openshell sandbox exec web-task --workdir /sandbox -- claude-start
 * **Size and memory:** the image is about 1.9 GB, and Chromium needs memory. Give the Podman machine more if you run several (see [Many sandboxes in parallel](working-in-sandboxes.md#many-sandboxes-in-parallel)).
 * **Existing sandboxes** keep their old image. Create a new one after rebuilding.
 * **Test:** [tests/browser/run.sh](../tests/browser/run.sh) creates a sandbox and checks that an allowed site loads, a site not in the list is denied, and a local server on `127.0.0.1` and `localhost` loads. `--claude` also checks it with Claude Code.
-
-## Export logs as OpenTelemetry
-[bin/otel-export.py](../bin/otel-export.py) sends the sandboxes' security events (every allowed and denied connection, HTTP request, SSH session and config change) to any OpenTelemetry backend as OTLP logs. OpenShell has no OTel export of its own; its structured log is [OCSF JSON](https://docs.nvidia.com/openshell/latest/observability/ocsf-json-export), which the script converts.
-
-1. **Turn on the OCSF JSON export**, once for all sandboxes (applies within 10 seconds, no restart; `--value false` turns it off):
-```bash
-openshell settings set --global --key ocsf_json_enabled --value true --yes
-```
-2. **Export to a file, or push to a collector:**
-```bash
-bin/otel-export.py --out sandboxes.otlp.jsonl                          # all events so far
-bin/otel-export.py --out - --since 1h --sandbox my-task                # last hour of one sandbox
-bin/otel-export.py --endpoint http://localhost:4318/v1/logs --follow   # live
-bin/otel-export.py --endpoint https://otlp.example.com/v1/logs --header "Authorization=Bearer $TOKEN" --follow
-```
-
-* **Where the events come from:** with the Podman driver, OpenShell 0.1.3 doesn't write the `/var/log/openshell-ocsf.*.log` file its docs describe. The supervisor prints each event as an `OCSF-JSON {...}` line on its container output, so the script reads `podman logs` of every `openshell-supervisor-*` container: all sandboxes, running or stopped. With `--follow` it picks up new sandboxes every 10 seconds. Events only start once the setting is on, and are gone when the sandbox is deleted.
-* **What a record looks like:** one resource per sandbox (`service.name=openshell-sandbox`, `openshell.sandbox.name`, `openshell.sandbox.id`, `container.image.name`). Each event keeps its own time, gets an OTel severity from the OCSF one, has the event's message as body, and carries the whole event flattened as `ocsf.*` attributes (`ocsf.action`, `ocsf.dst_endpoint.domain`, `ocsf.actor.process.name`, ...), plus `event.name`, `server.address`/`server.port` and `process.executable.path`. Filter denials on `ocsf.action = Denied`.
-* **File format:** one OTLP/JSON `ExportLogsServiceRequest` per line, the format of the Collector's file exporter. A Collector reads it back with the [`otlpjsonfile`](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/otlpjsonfilereceiver) receiver.
-* **Don't double-send:** `--follow` starts with all events still in the logs. When restarting a live export, pass e.g. `--since 5m`.
-* **The events say what the agent did:** URLs, hosts and process names. Treat the export like the sandbox's contents when choosing where to send it.
