@@ -5,9 +5,10 @@
 # Based on the official OpenCode image (Alpine), so opencode stays at
 # /usr/local/bin/opencode, the path the openrouter profile allows.
 # Adds git (for git bundles), bash (VS Code terminal), script (pty test) and
-# libstdc++ (needed by VS Code Server on Alpine).
+# libstdc++ (needed by VS Code Server on Alpine) and coreutils (GNU realpath,
+# which `openshell sandbox download` runs with -e; busybox lacks it).
 FROM ghcr.io/anomalyco/opencode:latest
-RUN apk add --no-cache git bash libstdc++ util-linux-misc
+RUN apk add --no-cache git bash libstdc++ util-linux-misc coreutils
 # The base image's entrypoint is `opencode`. Clear it so the command after
 # `--` in `openshell sandbox create` (e.g. `sleep infinity`) runs as is.
 ENTRYPOINT []

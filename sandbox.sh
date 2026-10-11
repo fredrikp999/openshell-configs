@@ -12,8 +12,8 @@
 # --acp runs the agent's Agent Client Protocol server (JSON-RPC over stdin and
 # stdout) instead of the terminal UI. A client spawns this script as its agent
 # process; nothing is printed to stdout except the protocol. Messages go to
-# stderr. OpenCode has `opencode acp` built in; Claude needs an ACP adapter
-# (`claude-code-acp`) in the image.
+# stderr. OpenCode has `opencode acp` built in; for Claude the image has the
+# ACP adapter claude-agent-acp, started by claude-acp-start.
 #
 # The sandbox is created on first use, and reused after that. It runs
 # `sleep infinity` as its main process, so it keeps running when you quit the
@@ -68,7 +68,7 @@ done
 $vscode && $acp && { echo "Use either --vscode or --acp, not both." >&2; exit 1; }
 if $acp; then
   case $agent in
-    claude) cmd="claude-code-acp" ;;
+    claude) cmd="claude-acp-start" ;;
     opencode) cmd="opencode acp" ;;
   esac
 fi
