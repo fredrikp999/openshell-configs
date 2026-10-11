@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Minimal ACP (Agent Client Protocol) client for agents in OpenShell sandboxes.
 
-  ./acp_client.py list
-  ./acp_client.py connect <sandbox> [--agent opencode|claude] [--model M]
+  bin/acp_client.py list
+  bin/acp_client.py connect <sandbox> [--agent opencode|claude] [--model M]
                                     [--cwd DIR] [--timeout SEC] [-v]
 
 `connect` starts the agent's ACP server in the sandbox with
@@ -90,7 +90,7 @@ class AgentError(Exception):
 
 def run_openshell(*args):
     if not shutil.which("openshell"):
-        die("`openshell` not found in PATH. See README 'Install OpenShell'.")
+        die("`openshell` not found in PATH. See docs/setup.md, 'Install OpenShell'.")
     try:
         r = subprocess.run(["openshell"] + list(args), capture_output=True, text=True, timeout=30)
     except subprocess.TimeoutExpired:
@@ -112,16 +112,16 @@ def list_sandboxes():
     out = run_openshell("sandbox", "list")
     print(out, end="")
     if len(out.strip().splitlines()) <= 1:
-        info("No sandboxes. Create one with ./sandbox.sh <claude|opencode> [name].")
+        info("No sandboxes. Create one with bin/sandbox.sh <claude|opencode> [name].")
     else:
-        info("Connect with: ./acp_client.py connect <name>")
+        info("Connect with: bin/acp_client.py connect <name>")
 
 
 def check_sandbox(name):
     found = dict(sandboxes())
     if name not in found:
         names = ", ".join(sorted(found)) or "none"
-        die("no sandbox named '%s' (existing: %s).\nCreate it with ./sandbox.sh <agent> %s"
+        die("no sandbox named '%s' (existing: %s).\nCreate it with bin/sandbox.sh <agent> %s"
             % (name, names, name))
     if found[name] != "Ready":
         die("sandbox '%s' is %s, not Ready. Wait for it, or delete it with "
@@ -215,7 +215,7 @@ class Acp:
             text += ". Last output:\n" + tail
         low = tail.lower()
         if "not found" in low or "no such file" in low or "executable file" in low:
-            text += "\nHint: the agent command is missing from the sandbox image (see README 'ACP')."
+            text += "\nHint: the agent command is missing from the sandbox image (see docs/extras.md, 'ACP')."
         elif code is None or not tail:
             text += "\nHint: check `openshell status`, and try with -v."
         return AgentError(text)
@@ -301,9 +301,9 @@ class RpcError(Exception):
         low = msg.lower()
         if "cannot connect to api" in low or "unable to connect" in low:
             text += ("\nHint: the model's API host is probably blocked by the sandbox policy, or the "
-                     "model is wrong. Try another --model, or check the provider (README 'Network rules').")
+                     "model is wrong. Try another --model, or check the provider (docs/customizing.md, 'Network rules').")
         elif "auth" in low or "401" in low or "api key" in low:
-            text += "\nHint: the provider credential is missing or wrong (README 'Credentials in .env')."
+            text += "\nHint: the provider credential is missing or wrong (docs/setup.md, 'Credentials in .env')."
         return text
 
 
@@ -513,13 +513,13 @@ def connect(args):
 
 EXAMPLES = """\
 Typical use:
-  ./acp_client.py list                          1. see which sandboxes exist
-  ./acp_client.py connect opencode-agent1       2. chat with the agent in one
+  bin/acp_client.py list                          1. see which sandboxes exist
+  bin/acp_client.py connect opencode-agent1       2. chat with the agent in one
 
 A sandbox must exist and be Ready first. Create one with:
-  ./sandbox.sh opencode [name]                  (or: ./sandbox.sh claude [name])
+  bin/sandbox.sh opencode [name]                  (or: bin/sandbox.sh claude [name])
 Then type a prompt at the '>' and press Enter. /help shows the commands.
-See README, section 'ACP (Agent Client Protocol)'.
+See docs/extras.md, section 'ACP (Agent Client Protocol)'.
 """
 
 

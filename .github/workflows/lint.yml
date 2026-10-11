@@ -1,0 +1,13 @@
+# Checks scripts, JSON and YAML on every push and pull request (make lint).
+# The tests (make test) need Podman and an OpenShell gateway, so they run
+# locally only.
+name: lint
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: make lint

@@ -3,7 +3,7 @@
 //
 //   node browser_probe.js <url> <allow|deny> [server command...]
 //
-// The server command defaults to playwright-mcp-start (see Dockerfile.browser).
+// The server command defaults to playwright-mcp-start (see images/claude-browser).
 // allow: the page must load (the result has no error and shows the page).
 // deny:  the page must not load (the browser reports a network error).
 // Exit code 0 if the outcome matches, 1 if not.

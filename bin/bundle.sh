@@ -2,11 +2,11 @@
 # Move code in and out of a sandbox with git bundles. The sandbox never gets
 # git credentials or access to your git host.
 #
-#   ./bundle.sh in  <sandbox> <repo> [--branch NAME] [--base BRANCH]
-#   ./bundle.sh out <sandbox> <repo> [--branch NAME] [--base BRANCH] [--force]
+#   bin/bundle.sh in  <sandbox> <repo> [--branch NAME] [--base BRANCH]
+#   bin/bundle.sh out <sandbox> <repo> [--branch NAME] [--base BRANCH] [--force]
 #
-#   ./bundle.sh in  my-task ./myrepo    # repo into /sandbox/myrepo, branch agent/my-task
-#   ./bundle.sh out my-task ./myrepo    # the agent's commits back as branch agent/my-task
+#   bin/bundle.sh in  my-task ./myrepo    # repo into /sandbox/myrepo, branch agent/my-task
+#   bin/bundle.sh out my-task ./myrepo    # the agent's commits back as branch agent/my-task
 #
 # in:  bundles only the <base> branch of <repo> and uploads it, so other
 #      branches never reach the sandbox. The first time, the repo is created
@@ -22,7 +22,7 @@
 # Requires git in the image (both images in this repo have it).
 set -eu
 
-usage() { sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 [ $# -ge 3 ] || usage
 cmd=$1 sandbox=$2 repo=$3

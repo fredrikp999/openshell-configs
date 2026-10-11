@@ -1,0 +1,16 @@
+#!/bin/sh
+# Trust the OpenShell CA in Chromium, then start Playwright MCP (stdio).
+#
+# OpenShell decrypts HTTPS with a CA it creates for each sandbox, and Chromium
+# only trusts CAs in its own NSS database ($HOME/.pki/nssdb), not the
+# SSL_CERT_FILE bundle. So add the CA there on every start, then start the
+# server. Output goes to stderr: stdout is the MCP connection.
+set -e
+db="$HOME/.pki/nssdb"
+mkdir -p "$db"
+{
+  [ -f "$db/cert9.db" ] || certutil -d "sql:$db" -N --empty-password
+  certutil -d "sql:$db" -D -n openshell 2>/dev/null || true
+  certutil -d "sql:$db" -A -t C,, -n openshell -i /run/openshell-supervisor-ca/material/ca.crt
+} >&2
+exec playwright-mcp --config /etc/playwright-mcp.json "$@"

@@ -14,10 +14,10 @@
 # --claude: also lets Claude Code call both tools (uses your subscription).
 # --keep:   leave the sandbox and the container running afterwards.
 #
-# Requires the claude-sandbox image and the claude provider (see README).
+# Requires the claude-sandbox image and the claude provider (see docs/agents.md).
 set -eu
 
-usage() { sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 dir=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$dir/../.." && pwd)

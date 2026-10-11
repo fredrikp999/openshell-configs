@@ -1,14 +1,14 @@
 #!/bin/sh
 # Start an agent sandbox, either in the terminal or in VS Code.
 #
-#   ./sandbox.sh <claude|opencode> [name] [--vscode|--acp] [--browser] [--workdir DIR] [-- agent args...]
+#   bin/sandbox.sh <claude|opencode> [name] [--vscode|--acp] [--browser] [--workdir DIR] [-- agent args...]
 #
-#   ./sandbox.sh claude                      # Claude in this terminal, sandbox claude-agent1
-#   ./sandbox.sh claude my-task --vscode     # open sandbox my-task in VS Code
-#   ./sandbox.sh opencode oc-task            # OpenCode in this terminal
-#   ./sandbox.sh claude my-task -- -p 'reply with OK'   # pass args to the agent
-#   ./sandbox.sh opencode oc-task --acp      # ACP over stdio, for a UI/client
-#   ./sandbox.sh claude web-task --browser   # Claude with a headless browser
+#   bin/sandbox.sh claude                      # Claude in this terminal, sandbox claude-agent1
+#   bin/sandbox.sh claude my-task --vscode     # open sandbox my-task in VS Code
+#   bin/sandbox.sh opencode oc-task            # OpenCode in this terminal
+#   bin/sandbox.sh claude my-task -- -p 'reply with OK'   # pass args to the agent
+#   bin/sandbox.sh opencode oc-task --acp      # ACP over stdio, for a UI/client
+#   bin/sandbox.sh claude web-task --browser   # Claude with a headless browser
 #
 # --acp runs the agent's Agent Client Protocol server (JSON-RPC over stdin and
 # stdout) instead of the terminal UI. A client spawns this script as its agent
@@ -25,8 +25,8 @@
 # agent or close VS Code, and you can switch between both ways of working.
 # Delete it with `openshell sandbox delete <name>`.
 #
-# Requires the provider and image from the README (claude / claude-sandbox or
-# claude-browser, openrouter / opencode-sandbox).
+# Requires the provider and image from docs/agents.md (claude / claude-sandbox
+# or claude-browser, openrouter / opencode-sandbox).
 set -eu
 
 usage() { sed -n "2,29p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
@@ -80,11 +80,11 @@ if $acp; then
   esac
 fi
 
-policy=$(dirname "$0")/policies/vscode-terminal.yaml
+policy=$(dirname "$0")/../policies/vscode-terminal.yaml
 if $browser; then
   [ "$agent" = claude ] || { echo "--browser is only for claude." >&2; exit 1; }
   image=claude-browser:latest
-  policy=$(dirname "$0")/policies/browser.yaml
+  policy=$(dirname "$0")/../policies/browser.yaml
 fi
 
 phase() { openshell sandbox list 2>/dev/null | awk -v n="$1" '$1==n {print $NF}'; }

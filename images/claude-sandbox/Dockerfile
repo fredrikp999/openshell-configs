@@ -1,13 +1,13 @@
 # Claude Code sandbox image for OpenShell.
 #
-#   podman build -t claude-sandbox:latest -f Dockerfile.claudecode .
+#   podman build -t claude-sandbox:latest images/claude-sandbox    (or: make images)
 #
 # Start it with `-- claude-start` instead of `-- claude`. On first start,
 # claude-start copies /etc/claude-start.json to $HOME/.claude.json (/sandbox,
 # which starts empty), which marks onboarding as completed. Images built on
-# this one (Dockerfile.browser) can replace that file, e.g. to add MCP servers.
-# Onboarding runs a connectivity check that bypasses the OpenShell proxy and is
-# denied, so Claude Code would exit with
+# this one (images/claude-browser) can replace that file, e.g. to add MCP
+# servers. Onboarding runs a connectivity check that bypasses the OpenShell
+# proxy and is denied, so Claude Code would exit with
 # "Failed to connect to api.anthropic.com: EACCES".
 # For ACP (sandbox.sh --acp, acp_client.py --agent claude) use claude-acp-start.
 FROM node:22-slim
@@ -22,18 +22,5 @@ ENV CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
 # path the claude-code-oauth profile allows, instead of the copy bundled in its
 # own node_modules.
 ENV CLAUDE_CODE_EXECUTABLE=/usr/local/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe
-RUN echo '{"hasCompletedOnboarding": true}' > /etc/claude-start.json
-RUN printf '%s\n' \
-      '#!/bin/sh' \
-      '# Skip Claude Code onboarding on first start, then run claude with any args.' \
-      '[ -f "$HOME/.claude.json" ] || cp /etc/claude-start.json "$HOME/.claude.json"' \
-      'exec claude "$@"' \
-      > /usr/local/bin/claude-start \
- && chmod 755 /usr/local/bin/claude-start
-RUN printf '%s\n' \
-      '#!/bin/sh' \
-      '# Skip Claude Code onboarding on first start, then run the ACP adapter.' \
-      '[ -f "$HOME/.claude.json" ] || cp /etc/claude-start.json "$HOME/.claude.json"' \
-      'exec claude-agent-acp "$@"' \
-      > /usr/local/bin/claude-acp-start \
- && chmod 755 /usr/local/bin/claude-acp-start
+COPY claude-start.json /etc/claude-start.json
+COPY --chmod=755 claude-start claude-acp-start /usr/local/bin/

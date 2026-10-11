@@ -1,0 +1,20 @@
+# Troubleshooting
+Start with `openshell logs <sandbox> | grep DENIED` and `openshell sandbox get <sandbox>`.
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `provider 'claude' not found and no provider profile named 'claude' is available` | The profile is imported, but the provider was never created | [Create the provider](agents.md#create-the-provider), then check `openshell provider list` |
+| `provider create --from-existing` finds no credential | `.env` was loaded without exporting the variables | Run the command as `(set -a; . ./.env; openshell provider create ...)` |
+| `custom provider profile '...' already exists` on `lint` or `import` | The profile is already in the gateway | Use `update` instead, see [Update a profile](customizing.md#update-a-profile) |
+| Claude: `Unable to connect to Anthropic services ... Failed to connect to api.anthropic.com: EACCES` | Claude Code's first-run connectivity check bypasses the proxy and is denied | Start with `claude-start`, not `claude` (see [Build the image](agents.md#build-the-image)). Also check the logs for other denied hosts |
+| ACP: `claude-acp-start: command not found` (or `opencode: command not found`) | The sandbox was created from an image without the ACP command, or `--agent` names the wrong agent for the sandbox | Rebuild the image, then `openshell sandbox delete <sandbox>` and create it again; existing sandboxes keep their old image. With `acp_client.py`, leave out `--agent` to detect it |
+| Log line `transparent TCP mapping is expired` | A connection to `api.anthropic.com` bypassed the proxy and was denied | Harmless on its own. Together with the `EACCES` error, see the row above |
+| VS Code: `The terminal process failed to launch: ... forkpty(3) failed` | The sandbox was created without the terminal policy, so it can't open terminals | Check with `openshell policy get <sandbox> --base \| grep pts`. No output: delete the sandbox and create it again with `--policy policies/vscode-terminal.yaml`. `policy set` on a running sandbox doesn't help |
+| VS Code hangs on first connect, `Downloading VS Code server` in the log | The sandbox can't download VS Code Server itself | Set `"remote.SSH.localServerDownload": "always"`, see [VS Code](working-in-sandboxes.md#vs-code) |
+| Sandbox is `Completed` or `Error`, VS Code can't connect | The main process (the agent) exited, and the sandbox stopped with it | Create the sandbox with `--detach -- sleep infinity` and run the agent in a terminal |
+| Browser: `Target crashed` | Chromium's zygote process can't start under OpenShell's syscall filter | Start the server with `playwright-mcp-start`, which uses `/etc/playwright-mcp.json` (`--no-zygote`). See [Browser](extras.md#headless-browser-use) |
+| Browser: `net::ERR_CERT_AUTHORITY_INVALID` | Chromium doesn't trust OpenShell's CA | Start the server with `playwright-mcp-start`, which adds the CA to Chromium's NSS database |
+| Browser: `net::ERR_NETWORK_ACCESS_DENIED` | The site isn't in the policy's `browser_sites` rule | Add it to [policies/browser.yaml](../policies/browser.yaml) and run `openshell policy set` (see [Allowing sites](extras.md#allowing-sites)) |
+| Sandbox stuck in `Provisioning` after `openshell sandbox start` | The restart doesn't finish | Delete the sandbox and create it again |
+| Requests from the agent denied, with a binary path in the log | The binary isn't in the profile's `binaries` list | Add the path to the profile and [update it](customizing.md#update-a-profile) |
+| A sandbox name can't be reused | The old sandbox with that name still exists | `openshell sandbox delete <sandbox>`, then create it again |

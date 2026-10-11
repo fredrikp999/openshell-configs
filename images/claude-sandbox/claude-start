@@ -1,0 +1,4 @@
+#!/bin/sh
+# Skip Claude Code onboarding on first start, then run claude with any args.
+[ -f "$HOME/.claude.json" ] || cp /etc/claude-start.json "$HOME/.claude.json"
+exec claude "$@"

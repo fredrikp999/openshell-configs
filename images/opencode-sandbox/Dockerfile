@@ -1,6 +1,6 @@
 # OpenCode sandbox image for OpenShell, for use with VS Code and a terminal.
 #
-#   podman build -t opencode-sandbox:latest -f Dockerfile.opencode .
+#   podman build -t opencode-sandbox:latest images/opencode-sandbox    (or: make images)
 #
 # Based on the official OpenCode image (Alpine), so opencode stays at
 # /usr/local/bin/opencode, the path the openrouter profile allows.

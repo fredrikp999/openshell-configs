@@ -1,0 +1,6 @@
+{
+  "hasCompletedOnboarding": true,
+  "mcpServers": {
+    "playwright": {"type": "stdio", "command": "playwright-mcp-start", "args": []}
+  }
+}

@@ -12,7 +12,7 @@
 # --claude: also lets Claude Code open both sites (uses your subscription).
 # --keep:   leave the sandbox running afterwards.
 #
-# Requires the claude-browser image and the claude provider (see README).
+# Requires the claude-browser image and the claude provider (see docs/extras.md).
 set -eu
 
 usage() { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }

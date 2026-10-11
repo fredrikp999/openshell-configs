@@ -1,17 +1,18 @@
 #!/bin/sh
 # Import a provider profile and create the provider from the credentials in .env.
 #
-#   ./provider.sh <claude|opencode>
+#   bin/provider.sh <claude|opencode>
 #
-#   ./provider.sh claude      # profile claude-code-oauth, provider claude
-#   ./provider.sh opencode    # profile openrouter, provider openrouter
+#   bin/provider.sh claude      # profile claude-code-oauth, provider claude
+#   bin/provider.sh opencode    # profile openrouter, provider openrouter
 #
-# Safe to run again: the profile is only imported when missing (use the README's
-# "Update a profile" after editing one), and an existing provider is left alone.
+# Safe to run again: the profile is only imported when missing (see "Update a
+# profile" in docs/customizing.md after editing one), and an existing provider
+# is left alone.
 # .env is loaded in a subshell, only for `provider create`.
 set -eu
 
-usage() { sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 [ $# -eq 1 ] || usage
 case $1 in
@@ -20,11 +21,11 @@ case $1 in
   *) usage ;;
 esac
 
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 [ -f .env ] || { echo ".env not found. Run: cp .env.example .env, then fill it in." >&2; exit 1; }
 # .env holds the keys and is run as shell code below, so it must be yours and
 # not readable or writable by anyone else.
-if [ ! -O .env ] || [ -n "$(find .env -perm -004 -o -perm -040 -o -perm -002 -o -perm -020)" ]; then
+if [ -z "$(find .env -user "$(id -u)")" ] || [ -n "$(find .env -perm -004 -o -perm -040 -o -perm -002 -o -perm -020)" ]; then
   echo ".env must be owned by you and not readable or writable by others. Run: chmod 600 .env" >&2
   exit 1
 fi
