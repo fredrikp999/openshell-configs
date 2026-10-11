@@ -69,11 +69,11 @@ podman machine ssh openshell 'mount | grep virtiofs'
 podman system connection default openshell
 brew services restart openshell
 ```
-* Let the VM's clock catch up quickly. By default, chrony in the VM only jumps the clock right after boot; later, e.g. after the Mac has slept, it corrects a gap very slowly. Sandboxes then fail to start with `ContainerExited`, and the supervisor container's log (`podman logs openshell-supervisor-<id>`) says `session token was issued in the future`. This lets chrony jump the clock whenever it's more than 1 s off, and survives restarts of the machine:
+* Keep the VM's clock in step with the Mac's. This applies to any Podman machine on a Mac, not only this one. The VM's clock stands still while the Mac sleeps, and chrony in the VM often doesn't catch up: after the jump it distrusts its time servers (`Jitter ... exceeds maxjitter` in `journalctl -u chronyd`). Podman has no fix for this, and vfkit's own time sync on wake isn't turned on by Podman. Until the clock is right, new sandboxes fail with `ContainerExited`, and the supervisor container's log (`podman logs openshell-supervisor-<id>`) says `session token was issued in the future`: the gateway runs on the Mac and signs with the Mac's clock. [bin/vm-clock.sh](../bin/vm-clock.sh) sets the running machine's clock from the Mac's when they differ by more than a second. Install it as a background job (launchd) that checks every 30 s:
 ```bash
-podman machine ssh openshell "sudo sed -i 's/^makestep 1.0 3\$/makestep 1.0 -1/' /etc/chrony.conf && sudo systemctl restart chronyd"
+bin/vm-clock.sh --install
 ```
-  Check with `podman machine ssh openshell chronyc tracking`: `System time` should be well under a second.
+  It logs its corrections to `~/Library/Logs/openshell-vm-clock.log`. Run `bin/vm-clock.sh` without arguments for a one-off check, and `--uninstall` to remove the job. The job runs the script from where the repo is, so run `--install` again after moving the repo.
 * The new machine has no images yet: `make images`, then check that a sandbox works with `bin/sandbox.sh claude test -- -p 'reply with OK'`, and run `make test`. While a sandbox runs, `podman --connection openshell ps` lists its containers.
 * To go back: make the old machine's connection the default again (`podman system connection list`), stop `openshell`, start the old machine and restart the gateway.
 * Once the new machine works, remove the old one to get its disk space back: `podman machine rm <old machine>`. The disk image of a machine grows but never shrinks on its own.

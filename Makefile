@@ -7,10 +7,13 @@
 #
 # Images are built with Podman; set ENGINE=docker to use Docker.
 ENGINE ?= podman
-# shellcheck from PATH, or else from its official container image.
-SHELLCHECK ?= $(shell command -v shellcheck || echo "$(ENGINE) run --rm -v $(CURDIR):/mnt:ro -w /mnt docker.io/koalaman/shellcheck:stable")
+# shellcheck from PATH, or else from its official container image. The
+# scripts are sent to the container on stdin rather than mounted, so this also
+# works when the Podman machine can't see this folder (docs/isolation.md).
+SHELLCHECK ?= $(shell command -v shellcheck)
+SHELLCHECK_IMAGE := docker.io/koalaman/shellcheck-alpine:stable
 IMAGES := claude-sandbox claude-browser claude-hyperframes opencode-sandbox
-SCRIPTS := bin/sandbox.sh bin/provider.sh bin/bundle.sh bin/watch-denied.sh tests/*/run.sh \
+SCRIPTS := bin/sandbox.sh bin/provider.sh bin/bundle.sh bin/watch-denied.sh bin/vm-clock.sh tests/*/run.sh \
            images/claude-sandbox/claude-start images/claude-sandbox/claude-acp-start \
            images/claude-browser/playwright-mcp-start \
            images/claude-hyperframes/hyperframes-init images/claude-hyperframes/claude-start \
@@ -31,7 +34,12 @@ test:
 	@for t in tests/*/run.sh; do echo "== $$t"; $$t || exit 1; done
 
 lint:
+ifeq ($(SHELLCHECK),)
+	COPYFILE_DISABLE=1 tar -cf - $(SCRIPTS) | $(ENGINE) run --rm -i --entrypoint sh $(SHELLCHECK_IMAGE) \
+	  -c 'mkdir /tmp/src && cd /tmp/src && tar -xf - && shellcheck "$$@"' sh -S warning $(SCRIPTS)
+else
 	$(SHELLCHECK) -S warning $(SCRIPTS)
+endif
 	python3 -m py_compile bin/acp_client.py bin/otel-export.py bin/otel-view.py bin/metrics-view.py
 	node --check tests/browser/browser_probe.js
 	node --check tests/host-mcp/mcp_probe.js
