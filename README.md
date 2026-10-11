@@ -25,6 +25,7 @@ Configs and notes for running AI coding agents (Claude Code, OpenCode) in [NVIDI
 | [Extras](docs/extras.md) | MCP servers on the host, ACP, headless browser use, HyperFrames |
 | [Customizing](docs/customizing.md) | Provider profiles, sandbox policies, network rules |
 | [Logging and metrics](docs/logging.md) | Reading the logs, watching denials live, OCSF JSON, exporting to OpenTelemetry and viewing the events, gateway metrics for Prometheus |
+| [Isolation on macOS](docs/isolation.md) | How well a sandbox is separated from your Mac: the layers, the home folder the Podman machine shares by default, other runtimes compared, and a machine without host mounts |
 | [Troubleshooting](docs/troubleshooting.md) | Symptoms, causes and fixes |
 
 Commands in the docs run from the repo root.
