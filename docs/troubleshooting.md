@@ -1,5 +1,5 @@
 # Troubleshooting
-Start with `openshell logs <sandbox> | grep DENIED` and `openshell sandbox get <sandbox>`. To watch denials live while you reproduce a problem, run `bin/watch-denied.sh <sandbox>` (it hides the known harmless ones).
+Start with `openshell logs <sandbox> | grep DENIED` and `openshell sandbox get <sandbox>`. To watch denials live while you reproduce a problem, run `bin/watch-denied.sh` (all sandboxes, or `--sandbox <sandbox>` for one; it hides the known harmless denials).
 
 | Symptom | Cause | Fix |
 |---|---|---|
