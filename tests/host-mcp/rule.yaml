@@ -1,0 +1,21 @@
+  # Network rule for an MCP server on the host, appended to
+  # policies/vscode-terminal.yaml by run.sh. HOST_IP is replaced with the
+  # address of host.containers.internal in the sandbox.
+  # node is listed for the probe; Claude Code connects with claude.exe.
+  host_mcp:
+    name: host-mcp
+    endpoints:
+      - host: HOST_IP
+        port: PORT
+        path: /mcp
+        protocol: mcp
+        enforcement: enforce
+        mcp:
+          versions: ["2025-03-26", "2025-06-18", "2025-11-25"]
+          allow_all_known_mcp_methods: true
+        rules:
+          - allow:
+              tool: echo
+    binaries:
+      - path: /usr/local/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe
+      - path: /usr/local/bin/node

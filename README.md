@@ -13,6 +13,7 @@ Configs and notes for running AI coding agents (Claude Code, OpenCode) in [NVIDI
 | [sandbox.sh](sandbox.sh) | Starts an agent sandbox, in the terminal or in VS Code |
 | [acp_client.py](acp_client.py) | Minimal ACP client: chat with the agent in a sandbox from the host terminal |
 | [bundle.sh](bundle.sh) | Moves a git repo into a sandbox and the agent's commits back out, with git bundles |
+| [tests/](tests) | Tests, e.g. [tests/host-mcp/run.sh](tests/host-mcp/run.sh) for an MCP server on the host |
 | [.env.example](.env.example) | Template for `.env`, which holds your API key and token (ignored by git) |
 
 ## TL;DR
@@ -60,6 +61,11 @@ ssh openshell-my-task.default
 ./bundle.sh out my-task ./myrepo   # the agent's commits back as branch agent/my-task
 ```
 8. [Approve or reject network rules](#network-rules) when the agent gets blocked.
+
+### MCP servers and ACP
+* **Remote MCP servers** (HTTP): add them in the agent as usual and allow them with a `protocol: mcp` rule, which can limit the methods and tools. Tokens go in a provider, never in the policy. See [Example policy with network rules](#example-policy-with-network-rules).
+* **Local MCP servers** (stdio, e.g. as container images): a sandbox can't run containers, so run the server on the host behind an HTTP bridge and use it like a remote server, by the host's IP. Its secrets stay on the host. See [MCP servers in containers on the host](#mcp-servers-in-containers-on-the-host).
+* **ACP:** to drive the agent from a UI on the host, `./sandbox.sh claude|opencode my-task --acp` runs its ACP server over stdin/stdout, without opening a port. To try it, chat with `./acp_client.py connect my-task`. See [ACP](#acp-agent-client-protocol).
 
 If something fails, see [Troubleshooting](#troubleshooting).
 
@@ -793,6 +799,44 @@ cp policies/example.yaml policies/my-task.yaml   # then edit
 openshell sandbox create --name my-task --from claude-sandbox:latest --provider claude \
   --policy policies/my-task.yaml --detach -- sleep infinity
 ```
+
+### MCP servers in containers on the host
+A sandbox can't run containers, so a stdio MCP server that ships as a container image runs on the host, and the agent uses it over HTTP. OpenShell then sees every request and can filter tools. Over stdio inside the sandbox it can't. The server's secrets also stay in its container.
+
+1. **Run it with an HTTP transport.** Use the server's own HTTP mode if it has one, or put a stdio-to-HTTP bridge such as [supergateway](https://github.com/supercorp-ai/supergateway) in front of it. Bind the port to `127.0.0.1` so only your machine can reach it:
+```bash
+podman run -d --name my-mcp -p 127.0.0.1:8000:8000 my-mcp-image \
+  npx -y supergateway --stdio "my-mcp-server" --outputTransport streamableHttp --port 8000
+```
+   With an image that only contains the server, build a small image with Node.js and supergateway on top of it.
+2. **Find the host's IP in the sandbox** (192.168.127.254 with Podman on macOS):
+```bash
+openshell sandbox exec my-task -- getent hosts host.containers.internal
+```
+3. **Add a rule with that IP as `host`** and the tools you allow, then load it with `openshell policy set` (see [Sandbox policies](#sandbox-policies)):
+```yaml
+  host_mcp:
+    name: host-mcp
+    endpoints:
+      - host: 192.168.127.254
+        port: 8000
+        path: /mcp
+        protocol: mcp
+        enforcement: enforce
+        mcp:
+          versions: ["2025-03-26", "2025-06-18", "2025-11-25"]
+          allow_all_known_mcp_methods: true
+        rules:
+          - allow:
+              tool: echo           # or e.g. "read_*"; every other tool is denied
+    binaries:
+      - path: /usr/local/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe
+```
+4. **Add the server to the agent by IP:** `claude mcp add --transport http my-mcp http://192.168.127.254:8000/mcp`.
+
+* **Use the IP, not `host.containers.internal`.** The name comes from `/etc/hosts` in the sandbox, so a rule with that name never matches (`EACCES`). A URL with the name gets `403 request_authority_mismatch`, because the `Host` header must match the rule.
+* **The server runs outside the sandbox.** Its own actions are only limited by its container, so give it only the mounts and tokens it needs.
+* **Test:** [tests/host-mcp/run.sh](tests/host-mcp/run.sh) runs a test server this way and checks that an allowed tool works and another is denied. `--claude` also checks it with Claude Code.
 
 ### Network rules
 A sandbox starts out mostly locked down. When the agent or another tool tries to reach a host that isn't allowed, the connection is denied and logged, and OpenShell proposes a rule that would allow it. Ask the agent to do what you want to allow (e.g. fetch a web page), then review the proposals. The examples use `opencode-agent1`.
