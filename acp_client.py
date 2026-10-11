@@ -7,7 +7,8 @@
 
 `connect` starts the agent's ACP server in the sandbox with
 `openshell sandbox exec` and talks JSON-RPC over its stdin and stdout. Type a
-prompt and press Enter to send it.
+prompt and press Enter to send it. Without --agent, the agent is picked by
+which ACP command the sandbox's image has.
 
   /help   show the commands        /quit   leave (also Ctrl-D)
   /models [FILTER]   list the models the agent offers (current one marked)
@@ -125,6 +126,23 @@ def check_sandbox(name):
     if found[name] != "Ready":
         die("sandbox '%s' is %s, not Ready. Wait for it, or delete it with "
             "`openshell sandbox delete %s` and create it again." % (name, found[name], name))
+
+
+def detect_agent(name):
+    """Pick the agent whose ACP command exists in the sandbox's image."""
+    probe = " ".join(AGENT_CMD[a][0] for a in sorted(AGENT_CMD))
+    r = subprocess.run(["openshell", "sandbox", "exec", name, "--no-tty", "--no-login-shell",
+                        "--", "sh", "-c", "command -v " + probe],
+                       stdin=subprocess.DEVNULL, capture_output=True, text=True)
+    found = {os.path.basename(l.strip()) for l in r.stdout.splitlines()}
+    agents = [a for a in sorted(AGENT_CMD) if AGENT_CMD[a][0] in found]
+    if len(agents) == 1:
+        return agents[0]
+    if not agents:
+        die("sandbox '%s' has no ACP command (%s). Its image may be older than ACP\n"
+            "support: rebuild the image, then `openshell sandbox delete %s` and create it\n"
+            "again. Or pass --agent." % (name, probe.replace(" ", ", "), name))
+    die("sandbox '%s' has more than one agent (%s). Pass --agent." % (name, ", ".join(agents)))
 
 
 # --- ACP over a subprocess --------------------------------------------------
@@ -403,6 +421,8 @@ def cmd_commands(acp):
 
 def connect(args):
     check_sandbox(args.sandbox)
+    if args.agent is None:
+        args.agent = detect_agent(args.sandbox)
     cmd = ["openshell", "sandbox", "exec", args.sandbox, "--no-tty", "--no-login-shell",
            "--workdir", args.cwd]
     if args.agent == "opencode":
@@ -514,7 +534,8 @@ def main():
                        formatter_class=argparse.RawDescriptionHelpFormatter,
                        epilog=EXAMPLES)
     c.add_argument("sandbox")
-    c.add_argument("--agent", choices=sorted(AGENT_CMD), default="opencode")
+    c.add_argument("--agent", choices=sorted(AGENT_CMD),
+                   help="agent to start (default: detected from the sandbox)")
     c.add_argument("--model", default=os.environ.get("OPENCODE_MODEL", DEFAULT_MODEL),
                    help="OpenCode model (default: $OPENCODE_MODEL or %s)" % DEFAULT_MODEL)
     c.add_argument("--cwd", default="/sandbox", help="working directory inside the sandbox")

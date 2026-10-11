@@ -29,3 +29,12 @@ RUN printf '%s\n' \
       'exec claude "$@"' \
       > /usr/local/bin/claude-start \
  && chmod 755 /usr/local/bin/claude-start
+RUN printf '%s\n' \
+      '#!/bin/sh' \
+      '# Skip Claude Code onboarding on first start, then run the ACP adapter.' \
+      'if [ ! -f "$HOME/.claude.json" ]; then' \
+      '  echo '"'"'{"hasCompletedOnboarding": true}'"'"' > "$HOME/.claude.json"' \
+      'fi' \
+      'exec claude-agent-acp "$@"' \
+      > /usr/local/bin/claude-acp-start \
+ && chmod 755 /usr/local/bin/claude-acp-start
