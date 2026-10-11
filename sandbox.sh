@@ -1,12 +1,19 @@
 #!/bin/sh
 # Start an agent sandbox, either in the terminal or in VS Code.
 #
-#   ./sandbox.sh <claude|opencode> [name] [--vscode] [--workdir DIR] [-- agent args...]
+#   ./sandbox.sh <claude|opencode> [name] [--vscode|--acp] [--workdir DIR] [-- agent args...]
 #
 #   ./sandbox.sh claude                      # Claude in this terminal, sandbox claude-agent1
 #   ./sandbox.sh claude my-task --vscode     # open sandbox my-task in VS Code
 #   ./sandbox.sh opencode oc-task            # OpenCode in this terminal
 #   ./sandbox.sh claude my-task -- -p 'reply with OK'   # pass args to the agent
+#   ./sandbox.sh opencode oc-task --acp      # ACP over stdio, for a UI/client
+#
+# --acp runs the agent's Agent Client Protocol server (JSON-RPC over stdin and
+# stdout) instead of the terminal UI. A client spawns this script as its agent
+# process; nothing is printed to stdout except the protocol. Messages go to
+# stderr. OpenCode has `opencode acp` built in; Claude needs an ACP adapter
+# (`claude-code-acp`) in the image.
 #
 # The sandbox is created on first use, and reused after that. It runs
 # `sleep infinity` as its main process, so it keeps running when you quit the
@@ -17,7 +24,7 @@
 # openrouter / opencode-sandbox).
 set -eu
 
-usage() { sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n "2,22p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 [ $# -ge 1 ] || usage
 agent=$1; shift
@@ -38,15 +45,25 @@ name=$agent-agent1
 case ${1:-} in ''|-*) ;; *) name=$1; shift ;; esac
 
 vscode=false
+acp=false
 workdir=/sandbox
 while [ $# -gt 0 ]; do
   case $1 in
     --vscode) vscode=true; shift ;;
+    --acp) acp=true; shift ;;
     --workdir|-w) workdir=$2; shift 2 ;;
     --) shift; break ;;
     *) usage ;;
   esac
 done
+
+$vscode && $acp && { echo "Use either --vscode or --acp, not both." >&2; exit 1; }
+if $acp; then
+  case $agent in
+    claude) cmd="claude-code-acp" ;;
+    opencode) cmd="opencode acp" ;;
+  esac
+fi
 
 policy=$(dirname "$0")/policies/vscode-terminal.yaml
 
@@ -55,7 +72,7 @@ phase() { openshell sandbox list 2>/dev/null | awk -v n="$1" '$1==n {print $NF}'
 p=$(phase "$name")
 case $p in
   '')
-    echo "Creating sandbox $name ($image, provider $provider)..."
+    echo "Creating sandbox $name ($image, provider $provider)..." >&2
     openshell sandbox create \
       --name "$name" \
       --from "$image" \
@@ -81,6 +98,12 @@ esac
 
 if $vscode; then
   exec openshell sandbox connect "$name" --editor vscode
+elif $acp; then
+  # No pty and no login shell, so nothing but JSON-RPC reaches stdout.
+  # shellcheck disable=SC2086
+  # OpenCode's `acp` has no -m flag, so the model goes in through its config env.
+  exec openshell sandbox exec "$name" --no-tty --no-login-shell --workdir "$workdir" \
+    --env "OPENCODE_CONFIG_CONTENT={\"model\":\"${OPENCODE_MODEL:-openrouter/nvidia/nemotron-3.5-lightning:free}\"}" -- $cmd "$@"
 else
   # $cmd is split on purpose: it holds the agent command and its default args.
   # shellcheck disable=SC2086

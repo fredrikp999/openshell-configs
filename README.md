@@ -416,7 +416,7 @@ openshell sandbox delete my-task
 ### With the script
 [sandbox.sh](sandbox.sh) does steps 1 to 3 in one command. It creates the sandbox on first use and reuses it after that:
 ``` shell
-./sandbox.sh <claude|opencode> [name] [--vscode] [--workdir DIR] [-- agent args...]
+./sandbox.sh <claude|opencode> [name] [--vscode|--acp] [--workdir DIR] [-- agent args...]
 ```
 | Command | What happens |
 |---|---|
@@ -426,11 +426,34 @@ openshell sandbox delete my-task
 | `./sandbox.sh opencode` | OpenCode in this terminal, in sandbox `opencode-agent1` |
 | `./sandbox.sh claude my-task -w /sandbox/myrepo` | Claude starts in `/sandbox/myrepo` |
 | `./sandbox.sh claude my-task -- -p 'reply with OK'` | Passes arguments to the agent (here: a non-interactive smoke test) |
+| `./sandbox.sh opencode my-task --acp` | Runs OpenCode's ACP server on stdin/stdout, for a UI (see [ACP](#acp-agent-client-protocol)) |
 
 * The script uses the image, provider and agent command from the table above. Set the OpenCode model with `OPENCODE_MODEL=...`.
 * **Requirements:** the provider and image from the agent's chapter must exist.
 * **A stopped sandbox** (`Completed` or `Error`) isn't reused. The script says so; delete it with `openshell sandbox delete <name>` and run the script again.
 * For a shell, checking status and deleting, use steps 4 to 6 above.
+
+## ACP (Agent Client Protocol)
+To build a UI that runs on the host and talks to the agent in the sandbox, use [ACP](https://agentclientprotocol.com). ACP is JSON-RPC over the agent's stdin and stdout, so no port is opened in the sandbox: the client starts the agent through the gateway and speaks ACP over the pipes, like the SSH tunnel for VS Code.
+``` shell
+./sandbox.sh opencode my-task --acp
+# which runs:
+openshell sandbox exec my-task --no-tty --no-login-shell --workdir /sandbox -- opencode acp
+```
+* **Client side:** spawn the command above as a subprocess and give its stdin/stdout to an ACP client library (e.g. `@agentclientprotocol/sdk` for TypeScript). Flow: `initialize`, `session/new` (with `cwd` as a path *inside* the sandbox), then `session/prompt`. Keep the process running for the whole session. The agent's stderr is log output; show it separately.
+* **Clean stdout:** `--no-tty` stops a pty from mangling the stream, `--no-login-shell` stops profile scripts from printing before the first message. The script prints its own messages (e.g. "Creating sandbox...") to stderr, so create the sandbox once beforehand if your client is strict.
+* **Keep the sandbox's isolation:** in `initialize`, don't advertise the `fs` and `terminal` client capabilities. Otherwise the agent may ask your UI to read, write and run commands on the *host*. Without them it uses its own tools inside the sandbox. Handle `session/request_permission` in the UI to approve tool use.
+* **OpenCode:** `opencode acp` is built in, so the image needs no changes. It has no `-m` flag, so the script sets the model (`OPENCODE_MODEL`, same default as above) through the `OPENCODE_CONFIG_CONTENT` env var. Without a model, OpenCode picks an `opencode/...` one and fails with "Cannot connect to API", because `opencode.ai` is blocked.
+* **Claude Code:** has no native ACP mode. It needs an adapter such as `@zed-industries/claude-code-acp`. Add `RUN npm install -g @zed-industries/claude-code-acp` to [Dockerfile.claudecode](Dockerfile.claudecode), rebuild, and `--acp` runs `claude-code-acp`. The adapter starts `claude` itself, so check that the process is allowed to use the token in the [profile's `binaries`](#provider-profiles) and [update it](#update-a-profile) if needed. Untested.
+* **Network:** egress rules are unchanged; ACP doesn't open anything.
+* **Fallback:** if the gRPC exec stream misbehaves, use the SSH route (see [By hand](#by-hand)): `ssh openshell-my-task.default opencode acp` (add `-T` to disable the pty).
+* **Example client:** [acp_client.py](acp_client.py) is a minimal client (Python 3, no dependencies) that lists sandboxes and chats with the agent in one:
+``` shell
+./acp_client.py list
+./acp_client.py connect opencode-agent1 [--agent opencode|claude] [--model M] [--cwd /sandbox]
+```
+  Type a prompt and press Enter; `/help` lists the commands, `/models [FILTER]` lists the models the agent offers, `/model ID` switches model for the session, `/commands` lists the agent's own slash commands (e.g. `/init`, `/review`), `/quit` or Ctrl-D exits, and Ctrl-C cancels a running prompt. It checks that the sandbox exists and is `Ready`, prints the agent's text and tool calls, asks permission requests on the terminal, and refuses any `fs/*` or `terminal/*` request from the agent. If the agent fails or exits, it shows the agent's last output with a hint (missing adapter, blocked API host, wrong model). Options: `--timeout SEC` for startup, `-v` for the JSON-RPC traffic and the agent's stderr. Exit codes: 0 ok, 1 agent error, 2 bad usage or sandbox. Use it as a starting point for your UI.
+* **Test it** before building the UI: `printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{}}}' | ./sandbox.sh opencode my-task --acp` should print one JSON response.
 
 ## VS Code
 VS Code connects to a sandbox over SSH with the Remote-SSH extension. OpenShell tunnels the SSH connection through the gateway, so the sandbox doesn't expose any port.
