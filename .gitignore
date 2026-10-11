@@ -6,6 +6,10 @@
 # Git bundles from moving code in and out of sandboxes
 *.bundle
 
+# Log exports (bin/otel-export.py --out, saved logs)
+*.log
+*.otlp.jsonl
+
 # macOS
 .DS_Store
 
