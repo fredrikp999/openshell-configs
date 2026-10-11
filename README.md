@@ -5,7 +5,7 @@ Configs and notes for running AI coding agents (Claude Code, OpenCode) in [NVIDI
 | Path | What it is |
 |---|---|
 | [docs/](docs) | The full documentation, see [Documentation](#documentation) |
-| [bin/](bin) | Scripts you run: [sandbox.sh](bin/sandbox.sh) starts an agent sandbox, [provider.sh](bin/provider.sh) creates a provider from `.env`, [bundle.sh](bin/bundle.sh) moves a git repo in and the agent's commits out, [acp_client.py](bin/acp_client.py) chats with an agent over ACP |
+| [bin/](bin) | Scripts you run: [sandbox.sh](bin/sandbox.sh) starts an agent sandbox, [provider.sh](bin/provider.sh) creates a provider from `.env`, [bundle.sh](bin/bundle.sh) moves a git repo in and the agent's commits out, [watch-denied.sh](bin/watch-denied.sh) streams the denied connections, [acp_client.py](bin/acp_client.py) chats with an agent over ACP |
 | [images/](images) | One folder per sandbox image, named after the image: [claude-sandbox](images/claude-sandbox) (Claude Code), [claude-browser](images/claude-browser) (Claude Code plus a headless browser), [opencode-sandbox](images/opencode-sandbox) (OpenCode) |
 | [providers/](providers) | Provider profiles: [claude-code-oauth.yaml](providers/claude-code-oauth.yaml) (Claude subscription), [openrouter.yaml](providers/openrouter.yaml) (OpenRouter, for OpenCode) |
 | [policies/](policies) | Sandbox policies: [vscode-terminal.yaml](policies/vscode-terminal.yaml) (the default plus terminals, used everywhere), [browser.yaml](policies/browser.yaml) (for the browser image), [example.yaml](policies/example.yaml) (network rules to copy and adapt) |

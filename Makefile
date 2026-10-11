@@ -10,7 +10,7 @@ ENGINE ?= podman
 # shellcheck from PATH, or else from its official container image.
 SHELLCHECK ?= $(shell command -v shellcheck || echo "$(ENGINE) run --rm -v $(CURDIR):/mnt:ro -w /mnt docker.io/koalaman/shellcheck:stable")
 IMAGES := claude-sandbox claude-browser opencode-sandbox
-SCRIPTS := bin/sandbox.sh bin/provider.sh bin/bundle.sh tests/*/run.sh \
+SCRIPTS := bin/sandbox.sh bin/provider.sh bin/bundle.sh bin/watch-denied.sh tests/*/run.sh \
            images/claude-sandbox/claude-start images/claude-sandbox/claude-acp-start \
            images/claude-browser/playwright-mcp-start
 
