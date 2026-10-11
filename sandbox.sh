@@ -1,13 +1,14 @@
 #!/bin/sh
 # Start an agent sandbox, either in the terminal or in VS Code.
 #
-#   ./sandbox.sh <claude|opencode> [name] [--vscode|--acp] [--workdir DIR] [-- agent args...]
+#   ./sandbox.sh <claude|opencode> [name] [--vscode|--acp] [--browser] [--workdir DIR] [-- agent args...]
 #
 #   ./sandbox.sh claude                      # Claude in this terminal, sandbox claude-agent1
 #   ./sandbox.sh claude my-task --vscode     # open sandbox my-task in VS Code
 #   ./sandbox.sh opencode oc-task            # OpenCode in this terminal
 #   ./sandbox.sh claude my-task -- -p 'reply with OK'   # pass args to the agent
 #   ./sandbox.sh opencode oc-task --acp      # ACP over stdio, for a UI/client
+#   ./sandbox.sh claude web-task --browser   # Claude with a headless browser
 #
 # --acp runs the agent's Agent Client Protocol server (JSON-RPC over stdin and
 # stdout) instead of the terminal UI. A client spawns this script as its agent
@@ -15,16 +16,20 @@
 # stderr. OpenCode has `opencode acp` built in; for Claude the image has the
 # ACP adapter claude-agent-acp, started by claude-acp-start.
 #
+# --browser (Claude only) creates the sandbox from the claude-browser image
+# with policies/browser.yaml, which lists the sites the browser may open. It
+# only matters when the sandbox is created.
+#
 # The sandbox is created on first use, and reused after that. It runs
 # `sleep infinity` as its main process, so it keeps running when you quit the
 # agent or close VS Code, and you can switch between both ways of working.
 # Delete it with `openshell sandbox delete <name>`.
 #
-# Requires the provider and image from the README (claude / claude-sandbox,
-# openrouter / opencode-sandbox).
+# Requires the provider and image from the README (claude / claude-sandbox or
+# claude-browser, openrouter / opencode-sandbox).
 set -eu
 
-usage() { sed -n "2,22p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n "2,29p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 [ $# -ge 1 ] || usage
 agent=$1; shift
@@ -54,11 +59,13 @@ case ${1:-} in ''|-*) ;; *) name=$1; shift ;; esac
 
 vscode=false
 acp=false
+browser=false
 workdir=/sandbox
 while [ $# -gt 0 ]; do
   case $1 in
     --vscode) vscode=true; shift ;;
     --acp) acp=true; shift ;;
+    --browser) browser=true; shift ;;
     --workdir|-w) workdir=$2; shift 2 ;;
     --) shift; break ;;
     *) usage ;;
@@ -74,6 +81,11 @@ if $acp; then
 fi
 
 policy=$(dirname "$0")/policies/vscode-terminal.yaml
+if $browser; then
+  [ "$agent" = claude ] || { echo "--browser is only for claude." >&2; exit 1; }
+  image=claude-browser:latest
+  policy=$(dirname "$0")/policies/browser.yaml
+fi
 
 phase() { openshell sandbox list 2>/dev/null | awk -v n="$1" '$1==n {print $NF}'; }
 

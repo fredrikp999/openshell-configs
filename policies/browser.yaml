@@ -1,0 +1,45 @@
+# Sandbox policy for the claude-browser image (Dockerfile.browser): the
+# terminal policy plus what headless Chromium needs, and the sites the browser
+# may open.
+#
+#   openshell sandbox create --from claude-browser:latest --policy policies/browser.yaml ...
+#   ./sandbox.sh claude my-task --browser       # does the same
+#
+# Pages on the sandbox itself (a dev server on localhost or 127.0.0.1) work
+# without a rule. Every other site must be listed under browser_sites, or it
+# fails with net::ERR_NETWORK_ACCESS_DENIED. Edit the list for your task, and
+# change it on a running sandbox with
+#   openshell policy set <sandbox> --policy policies/browser.yaml --wait
+version: 1
+filesystem_policy:
+  include_workdir: true
+  read_only:
+    - /bin
+    - /usr
+    - /lib
+    - /proc
+    - /dev/urandom
+    - /etc
+    - /var/log
+    - /opt                     # the browser, /opt/ms-playwright
+  read_write:
+    - /tmp
+    - /dev/null
+    - /dev/pts
+    - /dev/ptmx
+    - /dev/shm                 # Chromium's shared memory
+landlock:
+  compatibility: best_effort
+network_policies:
+  # The sites the browser may open, and everything their pages load (images,
+  # scripts, fonts from other hosts must be listed too). Only the Chromium
+  # binaries get this rule, not Claude Code or other programs. Any page the
+  # browser opens can send data to its host, e.g. in the URL, so list only
+  # sites you trust with what the agent can see.
+  browser_sites:
+    name: browser-sites
+    endpoints:
+      - host: example.com      # replace with the sites for your task
+        port: 443
+    binaries:
+      - path: /opt/ms-playwright/**

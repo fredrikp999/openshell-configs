@@ -1,0 +1,61 @@
+# Claude Code sandbox image with a headless browser, for OpenShell.
+#
+#   podman build -t claude-sandbox:latest -f Dockerfile.claudecode .
+#   podman build -t claude-browser:latest -f Dockerfile.browser .
+#
+# Adds Playwright MCP (@playwright/mcp) and Playwright's headless Chromium to
+# the claude-sandbox image, and registers the MCP server as `playwright` in
+# Claude Code. The browser runs inside the sandbox, so OpenShell decides which
+# hosts it may reach. Use it with policies/browser.yaml, which lists them.
+FROM localhost/claude-sandbox:latest
+# Browsers in a fixed path outside $HOME, so a network rule can name the
+# Chromium binary (/opt/ms-playwright/**) and the agent can't replace it
+# (/opt is read-only in the sandbox). certutil (libnss3-tools) is for the CA,
+# see playwright-mcp-start below.
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
+RUN npm install -g @playwright/mcp \
+ && node /usr/local/lib/node_modules/@playwright/mcp/node_modules/playwright/cli.js \
+      install --with-deps --only-shell chromium \
+ && apt-get install -y --no-install-recommends libnss3-tools \
+ && rm -rf /var/lib/apt/lists/*
+# Playwright MCP config: headless, profile in memory only (no cookies or
+# logins kept), and --no-zygote. OpenShell's syscall filter makes Chromium's
+# zygote crash ("Target crashed"), even with Chromium's own sandbox off. The
+# OpenShell sandbox is the boundary here.
+RUN printf '%s\n' \
+      '{"browser": {"browserName": "chromium", "isolated": true,' \
+      ' "launchOptions": {"headless": true, "chromiumSandbox": false, "args": ["--no-zygote"]}}}' \
+      > /etc/playwright-mcp.json
+# OpenShell decrypts HTTPS with a CA it creates for each sandbox, and Chromium
+# only trusts CAs in its own NSS database ($HOME/.pki/nssdb), not the
+# SSL_CERT_FILE bundle. So add the CA there on every start, then start the
+# server. Output goes to stderr: stdout is the MCP connection.
+RUN printf '%s\n' \
+      '#!/bin/sh' \
+      '# Trust the OpenShell CA in Chromium, then start Playwright MCP (stdio).' \
+      'set -e' \
+      'db="$HOME/.pki/nssdb"' \
+      'mkdir -p "$db"' \
+      '{' \
+      '  [ -f "$db/cert9.db" ] || certutil -d "sql:$db" -N --empty-password' \
+      '  certutil -d "sql:$db" -D -n openshell 2>/dev/null || true' \
+      '  certutil -d "sql:$db" -A -t C,, -n openshell -i /run/openshell-supervisor-ca/material/ca.crt' \
+      '} >&2' \
+      'exec playwright-mcp --config /etc/playwright-mcp.json "$@"' \
+      > /usr/local/bin/playwright-mcp-start \
+ && chmod 755 /usr/local/bin/playwright-mcp-start
+# Register the server for Claude Code: claude-start copies this file to
+# $HOME/.claude.json on first start.
+RUN printf '%s\n' \
+      '{"hasCompletedOnboarding": true,' \
+      ' "mcpServers": {"playwright": {"type": "stdio", "command": "playwright-mcp-start", "args": []}}}' \
+      > /etc/claude-start.json
+# Tools Claude Code may not use, as managed settings (the agent can't change
+# /etc). browser_run_code_unsafe runs any code in the MCP server's Node.js,
+# browser_file_upload sends local files to a site. This is extra caution, not
+# the boundary: the agent can run code with Bash anyway, and the network rules
+# limit where anything can go.
+RUN mkdir -p /etc/claude-code \
+ && printf '%s\n' \
+      '{"permissions": {"deny": ["mcp__playwright__browser_run_code_unsafe", "mcp__playwright__browser_file_upload"]}}' \
+      > /etc/claude-code/managed-settings.json
