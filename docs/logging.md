@@ -7,7 +7,9 @@ What happens in a sandbox is logged by its OpenShell supervisor: every connectio
 | See what's being blocked, live, across all sandboxes | [`bin/watch-denied.sh`](#watching-denials) |
 | Keep the events, or send them to a log backend | [`bin/otel-export.py`](#export-as-opentelemetry) |
 | Look through exported events in the terminal | [`bin/otel-view.py`](#viewing-the-events) |
-| Monitor the gateway itself | [`bin/metrics-view.py`](#viewing-the-metrics), or [Prometheus](#gateway-metrics) |
+| Monitor the gateway itself | [`bin/metrics-view.py`](#viewing-the-metrics), or [Prometheus](#prometheus) |
+| Send metrics and events to an OpenTelemetry backend together | [observability/collector.yaml](#metrics-as-opentelemetry) |
+| Browse and graph metrics and events locally | [Grafana](#viewing-in-grafana) |
 
 ## Two kinds of logs
 * **The shorthand log** - one human-readable line per event, always on. This is what `openshell logs` shows, and what `bin/watch-denied.sh` reads.
@@ -173,3 +175,47 @@ podman run -d --name prometheus -p 127.0.0.1:9090:9090 \
   -v "$PWD/prometheus.yml:/etc/prometheus/prometheus.yml:ro" docker.io/prom/prometheus:latest
 ```
    Then, on http://localhost:9090: `openshell_server_supervisor_sessions` for connected sandboxes, `sum by (method) (rate(openshell_server_grpc_requests_total[5m]))` for API calls per method, `rate(openshell_server_routed_request_attempts_total{outcome!="success"}[5m])` for failing relays.
+
+### Metrics as OpenTelemetry
+OpenShell's own OTLP export covers traces only, so the metrics reach OTel through a Collector. [observability/collector.yaml](../observability/collector.yaml) scrapes the gateway's metrics endpoint and also takes the events from `bin/otel-export.py`, so one Collector sends both to your backend:
+```bash
+podman run -d --name otel-collector -p 127.0.0.1:4318:4318 \
+  -v "$PWD/observability/collector.yaml:/etc/otelcol-contrib/config.yaml:ro" \
+  docker.io/otel/opentelemetry-collector-contrib:latest
+bin/otel-export.py --endpoint http://localhost:4318/v1/logs --follow
+podman logs -f otel-collector    # a line per batch: "metrics": 14, "log records": 59, ...
+```
+* **Needs** the [metrics endpoint](#gateway-metrics) on port 9464. The Collector scrapes it every 15 seconds at `host.containers.internal:9464`.
+* **Out of the box** everything goes to the `debug` exporter, which only prints to the Collector's log. To send to a backend, uncomment `otlphttp` in the file, set its `endpoint` (the backend's OTLP/HTTP base URL, without `/v1/...`), switch both pipelines to `[otlphttp]`, and pass the token with `podman run -e OTLP_TOKEN ...`.
+* **What arrives:** one resource with `service.name=openshell-gateway` and `service.instance.id=host.containers.internal:9464`. Counters become cumulative sums, gauges stay gauges, `grpc_request_duration_seconds` is a summary and `relay_claim_duration_seconds` a histogram. The scrape adds `up`, `scrape_duration_seconds` and a few more about itself; `up` is a simple "is the gateway reachable" signal.
+* **Port 4318** is also the default of `bin/otel-view.py --listen`; only one of them can have it. Publish the Collector on another port (`-p 127.0.0.1:4320:4318`) and point `--endpoint` there to run both.
+* **To look at it locally**, use [observability/collector-grafana.yaml](../observability/collector-grafana.yaml) instead, see below.
+
+### Viewing in Grafana
+The [grafana/otel-lgtm](https://github.com/grafana/docker-otel-lgtm) image has an OTLP intake, Prometheus, Loki and Grafana in one container. [observability/collector-grafana.yaml](../observability/collector-grafana.yaml) is the Collector config above with that as its backend.
+```bash
+podman network create otel
+podman run -d --name otel-lgtm --network otel -p 127.0.0.1:3000:3000 \
+  docker.io/grafana/otel-lgtm:latest
+podman run -d --name otel-collector --network otel -p 127.0.0.1:4318:4318 \
+  -v "$PWD/observability/collector-grafana.yaml:/etc/otelcol-contrib/config.yaml:ro" \
+  docker.io/otel/opentelemetry-collector-contrib:latest
+bin/otel-export.py --endpoint http://localhost:4318/v1/logs --follow
+```
+Open http://localhost:3000 (no login from your machine). Metrics show up within 15 seconds, events as soon as `bin/otel-export.py` sends them.
+
+* **Metrics:** Explore, data source **Prometheus**, or Drilldown, Metrics to browse them. The names are the gateway's:
+```
+openshell_server_supervisor_sessions                                          # connected sandboxes
+sum by (method) (rate(openshell_server_grpc_requests_total[5m]))              # API calls per method
+rate(openshell_server_routed_request_attempts_total{outcome!="success"}[5m])  # failing relays
+up{job="openshell-gateway"}                                                   # gateway reachable
+```
+* **Events:** Explore, data source **Loki**. Attribute names have `_` instead of `.`:
+```
+{service_name="openshell-sandbox"} | ocsf_action="Denied"
+{service_name="openshell-sandbox"} | openshell_sandbox_name="my-task"
+sum by (openshell_sandbox_name) (count_over_time({service_name="openshell-sandbox"} | ocsf_action="Denied" [1h]))
+```
+* **The two containers share the `otel` network,** so the Collector reaches `otel-lgtm` by name, and the intake needs no host port.
+* **Nothing is kept:** the data is gone when the `otel-lgtm` container is removed. Stop everything with `podman rm -f otel-collector otel-lgtm && podman network rm otel`.

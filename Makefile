@@ -33,5 +33,5 @@ lint:
 	node --check tests/browser/browser_probe.js
 	node --check tests/host-mcp/mcp_probe.js
 	@for f in images/*/*.json; do python3 -m json.tool $$f >/dev/null || { echo "invalid JSON: $$f"; exit 1; }; done
-	@for f in policies/*.yaml providers/*.yaml tests/*/*.yaml; do \
+	@for f in policies/*.yaml providers/*.yaml tests/*/*.yaml observability/*.yaml; do \
 	  ruby -ryaml -e 'YAML.load_file(ARGV[0])' $$f || { echo "invalid YAML: $$f"; exit 1; }; done

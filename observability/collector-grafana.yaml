@@ -1,0 +1,47 @@
+# OpenTelemetry Collector for OpenShell that sends everything to a local
+# Grafana (the grafana/otel-lgtm image: OTLP intake, Prometheus, Loki and
+# Grafana in one container). Same as collector.yaml, with the backend filled
+# in. See docs/logging.md#viewing-in-grafana.
+#
+#   podman network create otel
+#   podman run -d --name otel-lgtm --network otel -p 127.0.0.1:3000:3000 \
+#     docker.io/grafana/otel-lgtm:latest
+#   podman run -d --name otel-collector --network otel -p 127.0.0.1:4318:4318 \
+#     -v "$PWD/observability/collector-grafana.yaml:/etc/otelcol-contrib/config.yaml:ro" \
+#     docker.io/otel/opentelemetry-collector-contrib:latest
+#   bin/otel-export.py --endpoint http://localhost:4318/v1/logs --follow
+#
+# Then open http://localhost:3000. Both containers are on the `otel` network,
+# so the Collector reaches otel-lgtm by name and its intake needs no host port.
+
+receivers:
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: openshell-gateway        # becomes service.name
+          scrape_interval: 15s
+          static_configs:
+            # The host, as seen from a Podman container.
+            - targets: ["host.containers.internal:9464"]
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318               # published on 127.0.0.1 only, see above
+
+processors:
+  batch: {}
+
+exporters:
+  otlphttp:
+    endpoint: http://otel-lgtm:4318          # otel-lgtm on the otel network
+
+service:
+  pipelines:
+    metrics:
+      receivers: [prometheus]
+      processors: [batch]
+      exporters: [otlphttp]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp]

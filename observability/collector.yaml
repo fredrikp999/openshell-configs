@@ -1,0 +1,51 @@
+# OpenTelemetry Collector for OpenShell: the gateway's metrics and the
+# sandboxes' security events, in one OTLP pipeline. See docs/logging.md.
+#
+#   podman run -d --name otel-collector -p 127.0.0.1:4318:4318 \
+#     -v "$PWD/observability/collector.yaml:/etc/otelcol-contrib/config.yaml:ro" \
+#     docker.io/otel/opentelemetry-collector-contrib:latest
+#   bin/otel-export.py --endpoint http://localhost:4318/v1/logs --follow
+#
+# Metrics: scraped from the gateway's Prometheus endpoint (needs
+# OPENSHELL_METRICS_PORT=9464, see docs/logging.md#gateway-metrics).
+# Logs: whatever bin/otel-export.py sends to port 4318.
+#
+# Out of the box everything goes to the debug exporter, which prints a line
+# per batch to `podman logs otel-collector`. To send it to a backend, fill in
+# the otlphttp exporter below and switch the pipelines to it.
+
+receivers:
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: openshell-gateway        # becomes service.name
+          scrape_interval: 15s
+          static_configs:
+            # The host, as seen from a Podman container.
+            - targets: ["host.containers.internal:9464"]
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318               # published on 127.0.0.1 only, see above
+
+processors:
+  batch: {}
+
+exporters:
+  debug:
+    verbosity: basic                         # detailed prints every data point
+  # otlphttp:
+  #   endpoint: https://otlp.example.com     # the backend's OTLP/HTTP base URL
+  #   headers:
+  #     Authorization: "Bearer ${env:OTLP_TOKEN}"   # podman run -e OTLP_TOKEN ...
+
+service:
+  pipelines:
+    metrics:
+      receivers: [prometheus]
+      processors: [batch]
+      exporters: [debug]                     # [otlphttp] for a backend
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]                     # [otlphttp] for a backend

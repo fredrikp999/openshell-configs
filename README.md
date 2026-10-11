@@ -9,6 +9,7 @@ Configs and notes for running AI coding agents (Claude Code, OpenCode) in [NVIDI
 | [images/](images) | One folder per sandbox image, named after the image: [claude-sandbox](images/claude-sandbox) (Claude Code), [claude-browser](images/claude-browser) (Claude Code plus a headless browser), [opencode-sandbox](images/opencode-sandbox) (OpenCode) |
 | [providers/](providers) | Provider profiles: [claude-code-oauth.yaml](providers/claude-code-oauth.yaml) (Claude subscription), [openrouter.yaml](providers/openrouter.yaml) (OpenRouter, for OpenCode) |
 | [policies/](policies) | Sandbox policies: [vscode-terminal.yaml](policies/vscode-terminal.yaml) (the default plus terminals, used everywhere), [browser.yaml](policies/browser.yaml) (for the browser image), [example.yaml](policies/example.yaml) (network rules to copy and adapt) |
+| [observability/](observability) | OpenTelemetry Collector configs that send the gateway metrics and the sandbox events to one OTLP backend: [collector.yaml](observability/collector.yaml) (any backend) and [collector-grafana.yaml](observability/collector-grafana.yaml) (a local Grafana) |
 | [tests/](tests) | One folder per test, each run with its `run.sh`: [host-mcp](tests/host-mcp) (an MCP server on the host), [browser](tests/browser) (the headless browser) |
 | [Makefile](Makefile) | `make images` builds all images in order, `make test` runs the tests, `make lint` checks the files |
 | [.env.example](.env.example) | Template for `.env`, which holds your API key and token (ignored by git) |
@@ -115,7 +116,7 @@ echo 'OPENSHELL_METRICS_PORT=9464' >> ~/.config/openshell/gateway.env
 brew services restart openshell
 bin/metrics-view.py -w   # refreshes every 5 seconds; without -w it prints once
 ```
-* For history and graphs, scrape `http://127.0.0.1:9464/metrics` with Prometheus. See [Gateway metrics](docs/logging.md#gateway-metrics).
+* For history and graphs, scrape `http://127.0.0.1:9464/metrics` with Prometheus, or send the metrics to an OpenTelemetry backend together with the logs, with the Collector configs in [observability/](observability). To browse and graph both locally, see [Viewing in Grafana](docs/logging.md#viewing-in-grafana).
 
 #### Viewing a web page in your browser
 * **What:** [view a web page the agent serves](docs/working-in-sandboxes.md#viewing-a-web-page-from-the-sandbox) in your own browser.
