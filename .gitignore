@@ -10,6 +10,9 @@
 *.log
 *.otlp.jsonl
 
+# The docs as one HTML page (make html)
+openshell-configs.html
+
 # macOS
 .DS_Store
 

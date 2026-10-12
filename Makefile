@@ -8,6 +8,7 @@
 #   make lint       check scripts, Python, JavaScript, JSON, YAML, the doc links and,
 #                   when a gateway is running, the provider profiles
 #   make doctor     check that this machine is ready to run sandboxes
+#   make html       build openshell-configs.html, the docs and examples as one page (needs pandoc)
 #
 # Images are built with Podman; set ENGINE=docker to use Docker.
 ENGINE ?= podman
@@ -25,9 +26,9 @@ SCRIPTS := bin/sandbox.sh bin/provider.sh bin/bundle.sh bin/watch-denied.sh bin/
            images/claude-browser/playwright-mcp-start \
            images/claude-hyperframes/hyperframes-init images/claude-hyperframes/claude-start \
            images/claude-hyperframes/claude-acp-start
-PYTHON := bin/acp_client.py bin/otel-export.py bin/otel-view.py bin/metrics-view.py bin/check-links.py
+PYTHON := bin/acp_client.py bin/otel-export.py bin/otel-view.py bin/metrics-view.py bin/check-links.py bin/build-html.py
 
-.PHONY: images $(IMAGES) update test lint doctor
+.PHONY: images $(IMAGES) update test lint doctor html
 
 images: $(IMAGES)
 
@@ -78,3 +79,6 @@ endif
 
 doctor:
 	@bin/doctor.sh
+
+html:
+	bin/build-html.py
