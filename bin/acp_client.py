@@ -132,7 +132,8 @@ def detect_agent(name):
     """Pick the agent whose ACP command exists in the sandbox's image."""
     probe = " ".join(AGENT_CMD[a][0] for a in sorted(AGENT_CMD))
     r = subprocess.run(["openshell", "sandbox", "exec", name, "--no-tty", "--no-login-shell",
-                        "--", "sh", "-c", "command -v " + probe],
+                        # One name at a time: dash's `command -v a b` stops at the first missing name.
+                        "--", "sh", "-c", 'for c in %s; do command -v "$c"; done' % probe],
                        stdin=subprocess.DEVNULL, capture_output=True, text=True)
     found = {os.path.basename(l.strip()) for l in r.stdout.splitlines()}
     agents = [a for a in sorted(AGENT_CMD) if AGENT_CMD[a][0] in found]
@@ -380,10 +381,11 @@ def model_option(acp):
     return None
 
 
-def cmd_models(acp, flt):
+def cmd_models(acp, flt, agent):
     o = model_option(acp)
     if not o:
-        print("The agent did not offer a model list. Use --model at startup instead.")
+        print("The agent did not offer a model list."
+              + (" Use --model at startup instead." if agent == "opencode" else ""))
         return
     cur = o.get("currentValue")
     rows = [x for x in o.get("options", []) if flt.lower() in (x["value"] + x.get("name", "")).lower()]
@@ -472,7 +474,7 @@ def connect(args):
                 info(HELP)
                 continue
             if text == "/models" or text.startswith("/models "):
-                cmd_models(acp, text[7:].strip())
+                cmd_models(acp, text[7:].strip(), args.agent)
                 continue
             if text == "/model" or text.startswith("/model "):
                 cmd_model(acp, session, text[6:].strip())

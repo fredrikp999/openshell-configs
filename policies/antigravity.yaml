@@ -1,0 +1,81 @@
+# Sandbox policy for the agy-sandbox image (Antigravity CLI): the terminal
+# policy plus the Google hosts agy needs, for the agy binary only.
+#
+#   openshell sandbox create --from agy-sandbox:latest --policy policies/antigravity.yaml ...
+#   bin/sandbox.sh agy my-task                  # does the same
+#
+# Change it on a running sandbox with
+#   openshell policy set <sandbox> --policy policies/antigravity.yaml --wait
+#
+# There is no provider: you log in inside the sandbox, and agy keeps its
+# OAuth tokens (including the long-lived refresh token) in /sandbox. Anything
+# in the sandbox can read them, so every host a rule allows is a place they
+# could be sent. Here that's only these four Google hosts, and only the calls
+# agy makes. Left blocked, and not needed: play.googleapis.com (usage logs),
+# antigravity-unleash.goog (feature flags), www.gstatic.com and agy's update
+# server. Add rules to this sandbox with care, and delete the sandbox (or
+# run /logout in agy) when you're done with it.
+version: 1
+filesystem_policy:
+  include_workdir: true
+  read_only:
+    - /bin
+    - /usr
+    - /lib
+    - /proc
+    - /dev/urandom
+    - /etc
+    - /var/log
+  read_write:
+    - /tmp
+    - /dev/null
+    - /dev/pts
+    - /dev/ptmx
+landlock:
+  compatibility: best_effort
+network_policies:
+  antigravity:
+    name: antigravity
+    endpoints:
+      # Exchanging the login code for tokens, and refreshing the access token.
+      # The login page itself (accounts.google.com) opens in your own browser.
+      - host: oauth2.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow:
+              method: POST
+              path: /token
+      # agy's eligibility check: your account's email and name.
+      - host: www.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow:
+              method: GET
+              path: /oauth2/v2/userinfo
+      # The same check also downloads your account's profile picture.
+      - host: lh3.googleusercontent.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow:
+              method: GET
+              path: "/a/**"
+      # The Code Assist API agy uses for everything else.
+      - host: daily-cloudcode-pa.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow:
+              method: POST
+              path: "/v1internal:*"
+          - allow:
+              method: GET
+              path: "/v1internal/**"
+    binaries:
+      - path: /usr/local/bin/agy

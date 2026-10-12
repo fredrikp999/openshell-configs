@@ -90,12 +90,12 @@ else
   for p in claude openrouter; do
     case " $providers" in
       *" $p "*) ok "provider: $p" ;;
-      *) warn "provider: $p missing (bin/provider.sh $( [ $p = claude ] && echo claude || echo opencode ))" ;;
+      *) warn "provider: $p missing (bin/provider.sh $( [ $p = openrouter ] && echo opencode || echo $p ))" ;;
     esac
   done
 fi
 if command -v podman >/dev/null 2>&1; then
-  for i in claude-sandbox claude-browser claude-hyperframes opencode-sandbox; do
+  for i in claude-sandbox claude-browser claude-hyperframes opencode-sandbox agy-sandbox; do
     if podman image exists "$i:latest" 2>/dev/null; then ok "image: $i"; else warn "image: $i missing (make $i)"; fi
   done
 fi

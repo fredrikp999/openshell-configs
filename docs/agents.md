@@ -1,5 +1,28 @@
 # Agents
-Both agent chapters follow the same steps: profile, provider, image, sandbox.
+The agent chapters follow the same steps: profile, provider, image, sandbox. Antigravity CLI is the exception: it has no provider, and you log in inside the sandbox. The next section explains the difference.
+
+## Two ways to sign in: provider or login in the sandbox
+The agents here use one of two ways to get at your account. Which one an agent can use depends on the agent, not on a choice in this repo.
+
+**Credential in a provider** (Claude Code, OpenCode). You create the credential on the host (`claude setup-token`, an OpenRouter API key) and store it in a provider in the gateway. The sandbox only gets a placeholder in an environment variable, e.g. `CLAUDE_CODE_OAUTH_TOKEN=openshell:resolve:env:...`. When the agent sends a request with the placeholder to a host in the profile, OpenShell's proxy swaps in the real value on the way out. The profile also says which binaries may do that.
+
+**Login in the sandbox** (Antigravity CLI). The agent runs its own OAuth login inside the sandbox and keeps the tokens there, like it would on your Mac. There's no provider; a sandbox policy ([policies/antigravity.yaml](../policies/antigravity.yaml)) opens the Google hosts it needs.
+
+| | Provider (Claude Code, OpenCode) | Login in the sandbox (Antigravity CLI) |
+|---|---|---|
+| Where the secret is | In the gateway. The sandbox has a placeholder that's useless anywhere else | In the sandbox (`/sandbox`), including a long-lived refresh token |
+| What the agent can do with it | Use it through the proxy, only on the hosts in the profile and only from the listed binaries | Read it, and send it anywhere the sandbox can reach |
+| If the sandbox is compromised | The token can't be taken out; nothing to rotate | Assume the token is taken: log out, delete the sandbox, revoke the login in your Google account |
+| Network access | From the provider's profile | From the sandbox policy, which you have to keep narrow |
+| Setup | Once, on the host: create the token or key, `bin/provider.sh` | Once per sandbox: open the login link, paste the code back |
+| New sandboxes | Get the provider with `--provider`, no login | Need a new login each |
+| Token expiry and refresh | You renew it (Claude's token lasts a year, `bin/provider.sh --update`) | `agy` refreshes it itself, through `oauth2.googleapis.com` |
+| Several agents, one account | One provider for any number of sandboxes | One login per sandbox, each revocable on its own |
+| Depends on | The agent accepting a token from the environment (or a header the proxy can fill in) | Nothing beyond the agent's normal login |
+
+**Why Antigravity CLI uses a login in the sandbox:** it has no way to take a token from the environment or a file you hand it; it only uses its own login, stored in its own token storage. A provider would work only with workarounds: a fake Google metadata server in the sandbox that hands `agy` the placeholder (`agy` accepts this with `AGY_ADC_AUTH=1`, tested), and a gateway refresh that needs `agy`'s OAuth client secret taken out of its binary plus your refresh token taken out of the macOS Keychain. That depends on undocumented internals that an update can break, so this repo doesn't do it. Gemini CLI, which does accept a token from the environment, is no option either: Google refuses Google-account logins from it ("This client is no longer supported for Gemini Code Assist for individuals") and points to Antigravity.
+
+**What that means in practice:** treat an Antigravity sandbox as holding a live key to your Google account (with the `cloud-platform` scope). Don't widen its policy for other tasks; use a Claude Code or OpenCode sandbox for work that needs more network access, such as the [browser](extras.md#headless-browser-use) or package registries.
 
 ## Claude Code with a Claude subscription
 Claude Code runs with a Claude subscription (Pro/Max) via an OAuth token, not an API key. The upstream [claude-code.yaml](https://github.com/NVIDIA/OpenShell/blob/main/providers/claude-code.yaml) profile only supports API keys, so this repo has its own profile: [providers/claude-code-oauth.yaml](../providers/claude-code-oauth.yaml). It injects the token as `Authorization: Bearer` only on requests to the endpoints listed in the profile (`api.anthropic.com` and `platform.claude.com`), so the real token never lives inside the sandbox.
@@ -192,3 +215,52 @@ openshell sandbox create \
 * **Binary path** - only `/usr/local/bin/opencode` may use the key. If you install OpenCode elsewhere (e.g. via npm), add that path to the profile and [update it](customizing.md#update-a-profile).
 * **Hosts left blocked** - OpenCode tries `models.opencode.ai` (model list) and `registry.npmjs.org` (update check). Both are denied. OpenCode works without them, so leave them blocked unless you need them.
 * **The sandbox user** is uid 1000 with `HOME=/sandbox`.
+
+## Antigravity CLI with a Google account
+[Antigravity CLI](https://antigravity.google/docs/cli) (`agy`) is Google's coding agent. It uses your Google account and its subscription (e.g. Google AI Pro/Ultra).
+
+Unlike the other agents, there is no provider: you log in **inside the sandbox**, and `agy` keeps its OAuth tokens there. See [Two ways to sign in](#two-ways-to-sign-in-provider-or-login-in-the-sandbox) for how that compares, and [Things to watch for](#things-to-watch-for-2) for what to do about it. Tested with a Google AI subscription: `agy` 1.3.3 in the sandbox signs in, shows the subscription's models and answers prompts.
+
+### Build the image
+[images/agy-sandbox](../images/agy-sandbox/Dockerfile) is `debian:bookworm-slim` with `git`, `ripgrep` and `agy` at `/usr/local/bin/agy`, installed with Google's install script (which checks the download against the release manifest's SHA-512).
+```bash
+podman build -t agy-sandbox:latest images/agy-sandbox
+```
+Or the same with `make agy-sandbox`.
+
+### The policy
+Without a provider, the network access comes from [policies/antigravity.yaml](../policies/antigravity.yaml): the terminal policy plus, for the `agy` binary only:
+* `POST /token` on `oauth2.googleapis.com`, to exchange the login code for tokens and to refresh the access token
+* `GET /oauth2/v2/userinfo` on `www.googleapis.com` and `GET /a/**` on `lh3.googleusercontent.com`, `agy`'s eligibility check (your account's email, name and profile picture)
+* `POST /v1internal:*` and `GET /v1internal/**` on `daily-cloudcode-pa.googleapis.com`, the Code Assist API `agy` uses for everything else
+
+Change it on a running sandbox with `openshell policy set <sandbox> --policy policies/antigravity.yaml --wait`.
+
+### Create the sandbox and log in
+```bash
+bin/sandbox.sh agy my-task
+```
+This creates the sandbox with the image and policy above (no `--provider`) and starts `agy`. By hand:
+```bash
+openshell sandbox create \
+  --name agy-agent1 \
+  --from agy-sandbox:latest \
+  --policy policies/antigravity.yaml \
+  --detach \
+  -- sleep infinity
+
+openshell sandbox exec agy-agent1 --tty --workdir /sandbox -- agy
+```
+On first start, `agy` prints a login URL (it can't open a browser in the sandbox):
+1. Open the URL in your browser on the Mac and sign in with your Google account.
+2. The browser ends up on `antigravity.google` with an authorization code. Copy it.
+3. Paste it into the "authorization code" field under the link in the terminal and press Enter. The login screen is about 26 lines high: in a smaller window the field is out of sight, so make the window taller or scroll down with Shift+↓.
+
+The login stays in the sandbox (`/sandbox`), so you only do this once per sandbox. Non-interactive runs (`bin/sandbox.sh agy my-task -- -p 'reply with OK'`) only work after that; before it, they stop with "authentication required".
+
+### Things to watch for
+* **The tokens are in the sandbox** - including the long-lived refresh token, readable by the agent and by anything else running there. The policy limits where they could be sent to the four Google hosts above. Every rule you add to such a sandbox (another site, a package registry, a [browser](extras.md#headless-browser-use)) is another place they could go, so keep `agy` sandboxes to that policy. When you're done, run `/logout` in `agy` and delete the sandbox. To revoke the login entirely, remove Antigravity under [Third-party access](https://myaccount.google.com/connections) in your Google account.
+* **Hosts left blocked** - `agy` also tries `play.googleapis.com` (usage logs), `antigravity-unleash.goog` (feature flags) and `www.gstatic.com`. They are denied, and `agy` works without them. If a new version needs more, check `openshell logs <sandbox> | grep DENIED` (or [bin/watch-denied.sh](../bin/watch-denied.sh)) and add it to the policy.
+* **No self-update** - `agy` normally updates itself; in the sandbox `/usr` is read-only and the update host isn't allowed, so it skips that. Get a newer version with `make update`, then create a new sandbox (and log in again).
+* **No ACP** - `agy` has no Agent Client Protocol mode, so `bin/sandbox.sh agy ... --acp` and `bin/acp_client.py` don't work with it.
+* **The sandbox user** is uid 1000 with `HOME=/sandbox`; `agy` keeps its settings and conversations in `/sandbox/.gemini/antigravity-cli`.

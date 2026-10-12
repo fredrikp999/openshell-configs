@@ -1,5 +1,5 @@
 # Working in sandboxes
-The examples use `claude-agent1`. Everything works the same for the OpenCode sandboxes.
+The examples use `claude-agent1`. Everything works the same for the OpenCode and Antigravity CLI sandboxes.
 
 ## Start and use a sandbox
 Create a sandbox once, then use it as often as you like: with the agent in your terminal, with VS Code, or both. The sandbox runs `sleep infinity` as its main process, so it keeps running when you quit the agent or close VS Code, and the files stay.
@@ -10,6 +10,7 @@ You can do this by hand or with [bin/sandbox.sh](../bin/sandbox.sh). The values 
 |---|---|---|---|---|
 | Claude Code | `claude-sandbox:latest` | `claude` | `claude-start` | `claude-acp-start` |
 | OpenCode | `opencode-sandbox:latest` | `openrouter` | `opencode -m openrouter/nvidia/nemotron-3.5-lightning:free` | `opencode acp` |
+| Antigravity CLI | `agy-sandbox:latest` | none (policy [antigravity.yaml](../policies/antigravity.yaml)) | `agy` | none |
 
 The examples below use Claude and the sandbox name `my-task`.
 
@@ -78,7 +79,7 @@ openshell sandbox delete my-task
 ### With the script
 [bin/sandbox.sh](../bin/sandbox.sh) does steps 1 to 3 in one command. It creates the sandbox on first use and reuses it after that:
 ```bash
-bin/sandbox.sh <claude|opencode> [name] [--vscode|--acp] [--browser] [--workdir DIR] [-- agent args...]
+bin/sandbox.sh <claude|opencode|agy> [name] [--vscode|--acp] [--browser] [--workdir DIR] [-- agent args...]
 ```
 | Command | What happens |
 |---|---|
@@ -86,6 +87,7 @@ bin/sandbox.sh <claude|opencode> [name] [--vscode|--acp] [--browser] [--workdir 
 | `bin/sandbox.sh claude my-task` | Claude in this terminal, in sandbox `my-task` |
 | `bin/sandbox.sh claude my-task --vscode` | Opens sandbox `my-task` in VS Code; start Claude in its terminal |
 | `bin/sandbox.sh opencode` | OpenCode in this terminal, in sandbox `opencode-agent1` |
+| `bin/sandbox.sh agy` | Antigravity CLI in this terminal, in sandbox `agy-agent1`; log in on first start (see [Antigravity CLI](agents.md#antigravity-cli-with-a-google-account)) |
 | `bin/sandbox.sh claude my-task -w /sandbox/myrepo` | Claude starts in `/sandbox/myrepo` |
 | `bin/sandbox.sh claude my-task -- -p 'reply with OK'` | Passes arguments to the agent (here: a non-interactive smoke test) |
 | `bin/sandbox.sh opencode my-task --acp` | Runs OpenCode's ACP server on stdin/stdout, for a UI (see [ACP](extras.md#acp-agent-client-protocol)) |

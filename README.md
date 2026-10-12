@@ -1,14 +1,14 @@
 # OpenShell configs
-Configs and notes for running AI coding agents (Claude Code, OpenCode) in [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell) sandboxes with Podman, editing their files in VS Code, and moving code in and out.
+Configs and notes for running AI coding agents (Claude Code, OpenCode, Antigravity CLI) in [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell) sandboxes with Podman, editing their files in VS Code, and moving code in and out.
 
 ## Repository layout
 | Path | What it is |
 |---|---|
 | [docs/](docs) | The full documentation, see [Documentation](#documentation) |
 | [bin/](bin) | Scripts you run: [sandbox.sh](bin/sandbox.sh) starts an agent sandbox, [provider.sh](bin/provider.sh) creates a provider with the key from the Keychain (or `.env`), [bundle.sh](bin/bundle.sh) moves a git repo in and the agent's commits out, [watch-denied.sh](bin/watch-denied.sh) shows the denied connections as a live table, [vm-clock.sh](bin/vm-clock.sh) keeps the Podman machine's clock in step with the Mac's after sleep, [doctor.sh](bin/doctor.sh) checks that everything is ready to run sandboxes, [check-links.py](bin/check-links.py) checks the links between the docs, [otel-export.py](bin/otel-export.py) exports the logs as OpenTelemetry and [otel-view.py](bin/otel-view.py) shows them in the terminal, [metrics-view.py](bin/metrics-view.py) shows the gateway metrics, [acp_client.py](bin/acp_client.py) chats with an agent over ACP |
-| [images/](images) | One folder per sandbox image, named after the image: [claude-sandbox](images/claude-sandbox) (Claude Code), [claude-browser](images/claude-browser) (Claude Code plus a headless browser), [claude-hyperframes](images/claude-hyperframes) (that plus HyperFrames, for videos made from HTML), [opencode-sandbox](images/opencode-sandbox) (OpenCode) |
+| [images/](images) | One folder per sandbox image, named after the image: [claude-sandbox](images/claude-sandbox) (Claude Code), [claude-browser](images/claude-browser) (Claude Code plus a headless browser), [claude-hyperframes](images/claude-hyperframes) (that plus HyperFrames, for videos made from HTML), [opencode-sandbox](images/opencode-sandbox) (OpenCode), [agy-sandbox](images/agy-sandbox) (Antigravity CLI) |
 | [providers/](providers) | Provider profiles: [claude-code-oauth.yaml](providers/claude-code-oauth.yaml) (Claude subscription), [openrouter.yaml](providers/openrouter.yaml) (OpenRouter, for OpenCode) |
-| [policies/](policies) | Sandbox policies: [vscode-terminal.yaml](policies/vscode-terminal.yaml) (the default plus terminals, used everywhere), [browser.yaml](policies/browser.yaml) (for the browser image), [hyperframes.yaml](policies/hyperframes.yaml) (for the HyperFrames image), [example.yaml](policies/example.yaml) (network rules to copy and adapt) |
+| [policies/](policies) | Sandbox policies: [vscode-terminal.yaml](policies/vscode-terminal.yaml) (the default plus terminals, used everywhere), [browser.yaml](policies/browser.yaml) (for the browser image), [hyperframes.yaml](policies/hyperframes.yaml) (for the HyperFrames image), [antigravity.yaml](policies/antigravity.yaml) (for Antigravity CLI), [example.yaml](policies/example.yaml) (network rules to copy and adapt) |
 | [observability/](observability) | OpenTelemetry Collector configs that send the gateway metrics and the sandbox events to one OTLP backend: [collector.yaml](observability/collector.yaml) (any backend) and [collector-grafana.yaml](observability/collector-grafana.yaml) (a local Grafana) |
 | [tests/](tests) | One folder per test, each run with its `run.sh`: [host-mcp](tests/host-mcp) (an MCP server on the host), [browser](tests/browser) (the headless browser), [hyperframes](tests/hyperframes) (rendering and the preview) |
 | [Makefile](Makefile) | `make images` builds all images in order, `make test` runs the tests, `make lint` checks the files. See [Makefile](#makefile) |
@@ -20,7 +20,7 @@ Configs and notes for running AI coding agents (Claude Code, OpenCode) in [NVIDI
 | Document | What's in it |
 |---|---|
 | [Setup](docs/setup.md) | Podman, installing OpenShell, credentials in the Keychain, `.env` or another secrets manager |
-| [Agents](docs/agents.md) | Claude Code with a Claude subscription, OpenCode with OpenRouter: profile, provider, image, sandbox |
+| [Agents](docs/agents.md) | Claude Code with a Claude subscription, OpenCode with OpenRouter, Antigravity CLI with a Google account: profile, provider, image, sandbox, and the two ways to sign in (provider or login in the sandbox) compared |
 | [Working in sandboxes](docs/working-in-sandboxes.md) | Starting and using a sandbox, VS Code, getting code and files in and out, viewing a web page, many sandboxes |
 | [Extras](docs/extras.md) | MCP servers on the host, ACP, headless browser use, HyperFrames |
 | [Customizing](docs/customizing.md) | Provider profiles, sandbox policies, network rules |
@@ -36,7 +36,7 @@ OpenShell runs AI coding agents in locked-down sandboxes. Agents get only the ne
 ### Concepts
 * **Gateway** - the local OpenShell server (`https://localhost:17670`) that manages everything below. It runs as a background service and starts sandboxes through a container runtime (here Podman).
 * **Profile** - a template for a type of provider: which credential it needs (e.g. `CLAUDE_CODE_OAUTH_TOKEN`), which hosts it may reach, and which binaries may use it. A YAML file in [providers/](providers/), imported into the gateway. See [Provider profiles](docs/customizing.md#provider-profiles).
-* **Provider** - an instance of a profile that holds your actual key or token, stored in the gateway. OpenShell's network proxy adds the credential to outgoing requests to the allowed hosts, so the agent never sees it.
+* **Provider** - an instance of a profile that holds your actual key or token, stored in the gateway. OpenShell's network proxy adds the credential to outgoing requests to the allowed hosts, so the agent never sees it. Antigravity CLI can't use one and logs in inside the sandbox instead; see [Two ways to sign in](docs/agents.md#two-ways-to-sign-in-provider-or-login-in-the-sandbox) for the trade-offs.
 * **Image** - the container image a sandbox starts from. It must contain the agent, e.g. `claude-sandbox` or `opencode-sandbox`, built from the folders in [images/](images).
 * **Sandbox** - a running, isolated container created from an image, with one or more providers attached, running a main command. The sandbox stops when that command exits.
 * **Policy and rules** - what a sandbox may access. A policy file sets filesystem access, providers add network access, and you approve or reject further network rules as the agent gets blocked. See [Sandbox policies](docs/customizing.md#sandbox-policies).
@@ -44,7 +44,7 @@ OpenShell runs AI coding agents in locked-down sandboxes. Agents get only the ne
 ### Basic steps
 1. [Set up Podman](docs/setup.md#podman) and [install OpenShell](docs/setup.md#install-openshell).
 2. [Store your key or token in the Keychain](docs/setup.md#credentials) (or in `.env`, or another secrets manager).
-3. For an agent ([Claude Code](docs/agents.md#claude-code-with-a-claude-subscription) or [OpenCode](docs/agents.md#opencode-with-openrouter)): import its profile, create a provider (`bin/provider.sh claude` or `bin/provider.sh opencode` does both), build its image (`make images` builds all of them).
+3. For an agent ([Claude Code](docs/agents.md#claude-code-with-a-claude-subscription) or [OpenCode](docs/agents.md#opencode-with-openrouter)): import its profile, create a provider (`bin/provider.sh claude` or `bin/provider.sh opencode` does both), build its image (`make images` builds all of them). [Antigravity CLI](docs/agents.md#antigravity-cli-with-a-google-account) needs only its image; you log in inside the sandbox.
 4. [Start and use a sandbox](docs/working-in-sandboxes.md#start-and-use-a-sandbox), with the agent in your terminal or with VS Code. By hand (for OpenCode: image `opencode-sandbox:latest`, provider `openrouter`, agent `opencode`):
 Once, create a sandbox that keeps running:
 ```bash
@@ -61,7 +61,7 @@ Or with the script, which creates the sandbox on first use. The first line start
 bin/sandbox.sh claude my-task
 bin/sandbox.sh claude my-task --vscode
 ```
-5. In VS Code, start the agent in the integrated terminal (`claude-start` or `opencode`).
+5. In VS Code, start the agent in the integrated terminal (`claude-start`, `opencode` or `agy`).
 6. Open a shell in the sandbox when you need one, with `sandbox exec` or plain SSH:
 ```bash
 openshell sandbox exec my-task --workdir /sandbox -- bash
@@ -144,9 +144,9 @@ The [Makefile](Makefile) builds the images, runs the tests and checks the files.
 
 | Target | What it does |
 |---|---|
-| `make images` | Builds all images in order: `claude-sandbox`, then `claude-browser` (built on it), then `claude-hyperframes` (built on that), and `opencode-sandbox` |
-| `make claude-sandbox`, `make claude-browser`, `make claude-hyperframes`, `make opencode-sandbox` | Builds one image, and the images it's built on |
-| `make update` | Rebuilds all images from scratch, to get the latest Claude Code, OpenCode, HyperFrames and so on, and a newer base image (`node:22-slim`, the OpenCode image) if there is one |
+| `make images` | Builds all images in order: `claude-sandbox`, then `claude-browser` (built on it), then `claude-hyperframes` (built on that), `opencode-sandbox` and `agy-sandbox` |
+| `make claude-sandbox`, `make claude-browser`, `make claude-hyperframes`, `make opencode-sandbox`, `make agy-sandbox` | Builds one image, and the images it's built on |
+| `make update` | Rebuilds all images from scratch, to get the latest Claude Code, OpenCode, Antigravity CLI, HyperFrames and so on, and a newer base image (`node:22-slim`, the OpenCode image) if there is one |
 | `make test` | Runs every `tests/*/run.sh`, in turn: the [headless browser](tests/browser), an [MCP server on the host](tests/host-mcp) and [HyperFrames](tests/hyperframes). Stops at the first failure |
 | `make lint` | Checks the shell scripts with shellcheck, the Python and JavaScript files for syntax errors, the JSON and YAML files, and the links between the docs ([bin/check-links.py](bin/check-links.py)). With a gateway running, it also checks the provider profiles with `openshell provider profile lint` |
 | `make doctor` | Checks that this machine is ready to run sandboxes: free disk space, the Podman machine and default connection, the VM's clock and the [clock job](docs/isolation.md#a-podman-machine-with-minimal-host-mounts), the gateway, the providers and the images. Runs [bin/doctor.sh](bin/doctor.sh), which only reads and changes nothing |
@@ -182,3 +182,4 @@ The [Makefile](Makefile) builds the images, runs the tests and checks the files.
 * [OpenCode image](https://github.com/anomalyco/opencode/pkgs/container/opencode)
 * [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview)
 * [OpenRouter](https://openrouter.ai/)
+* [Antigravity CLI](https://antigravity.google/docs/cli)

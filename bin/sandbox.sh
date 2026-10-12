@@ -1,12 +1,13 @@
 #!/bin/sh
 # Start an agent sandbox, either in the terminal or in VS Code.
 #
-#   bin/sandbox.sh <claude|opencode> [name] [--vscode|--acp] [--browser|--hyperframes]
+#   bin/sandbox.sh <claude|opencode|agy> [name] [--vscode|--acp] [--browser|--hyperframes]
 #                  [--forward PORT] [--workdir DIR] [-- agent args...]
 #
 #   bin/sandbox.sh claude                      # Claude in this terminal, sandbox claude-agent1
 #   bin/sandbox.sh claude my-task --vscode     # open sandbox my-task in VS Code
 #   bin/sandbox.sh opencode oc-task            # OpenCode in this terminal
+#   bin/sandbox.sh agy ag-task                 # Antigravity CLI in this terminal
 #   bin/sandbox.sh claude my-task -- -p 'reply with OK'   # pass args to the agent
 #   bin/sandbox.sh opencode oc-task --acp      # ACP over stdio, for a UI/client
 #   bin/sandbox.sh claude web-task --browser   # Claude with a headless browser
@@ -36,10 +37,13 @@
 # Delete it with `openshell sandbox delete <name>`.
 #
 # Requires the provider and image from docs/agents.md (claude / claude-sandbox,
-# claude-browser or claude-hyperframes, openrouter / opencode-sandbox).
+# claude-browser or claude-hyperframes, openrouter / opencode-sandbox). agy
+# (agy-sandbox) has no provider: you log in inside the sandbox on first start,
+# and policies/antigravity.yaml allows the Google hosts it needs. It has no ACP
+# mode.
 set -eu
 
-usage() { sed -n "2,39p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n "2,43p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 [ $# -ge 1 ] || usage
 agent=$1; shift
@@ -60,6 +64,10 @@ case $agent in
         echo "OPENCODE_MODEL '$model' is not a valid model id." >&2; exit 1 ;;
     esac
     set_cmd() { cmd="opencode -m $model"; } ;;
+  agy)
+    image=agy-sandbox:latest
+    provider=
+    set_cmd() { cmd="agy"; } ;;
   *) usage ;;
 esac
 set_cmd
@@ -91,10 +99,14 @@ if $acp; then
   case $agent in
     claude) cmd="claude-acp-start" ;;
     opencode) cmd="opencode acp" ;;
+    agy) echo "agy has no ACP mode." >&2; exit 1 ;;
   esac
 fi
 
 policy=$(dirname "$0")/../policies/vscode-terminal.yaml
+if [ "$agent" = agy ]; then
+  policy=$(dirname "$0")/../policies/antigravity.yaml
+fi
 if $browser; then
   [ "$agent" = claude ] || { echo "--browser is only for claude." >&2; exit 1; }
   image=claude-browser:latest
@@ -116,11 +128,11 @@ phase() { openshell sandbox list 2>/dev/null | awk -v n="$1" '$1==n {print $NF}'
 p=$(phase "$name")
 case $p in
   '')
-    echo "Creating sandbox $name ($image, provider $provider)..." >&2
+    echo "Creating sandbox $name ($image, provider ${provider:-none})..." >&2
     openshell sandbox create \
       --name "$name" \
       --from "$image" \
-      --provider "$provider" \
+      ${provider:+--provider "$provider"} \
       --policy "$policy" \
       --detach \
       -- sleep infinity >/dev/null
