@@ -1,7 +1,7 @@
 #!/bin/sh
 # Start an agent sandbox, either in the terminal or in VS Code.
 #
-#   bin/sandbox.sh <claude|opencode|agy> [name] [--vscode|--acp] [--browser|--hyperframes|--node]
+#   bin/sandbox.sh <claude|opencode|agy> [name] [--vscode|--acp] [--browser|--hyperframes|--node|--python]
 #                  [--forward PORT] [--workdir DIR] [-- agent args...]
 #
 #   bin/sandbox.sh claude                      # Claude in this terminal, sandbox claude-agent1
@@ -35,6 +35,10 @@
 # can `npm install`. agy's login tokens are in the sandbox and node can read
 # them, so use it only for work that needs npm; see docs/agents.md.
 #
+# --python (agy only) is the same with the agy-python image and
+# policies/agy-python.yaml: Python and pip, with read-only access to PyPI. The
+# same warning applies; see docs/agents.md.
+#
 # --forward PORT forwards 127.0.0.1:PORT on this machine to the same port in
 # the sandbox (in the background, if not already forwarded), so you can open
 # what the agent serves there, e.g. the HyperFrames preview.
@@ -51,7 +55,7 @@
 # (bin/sandbox.sh agy <name>) before using --acp.
 set -eu
 
-usage() { sed -n "2,51p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n "2,55p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 [ $# -ge 1 ] || usage
 agent=$1; shift
@@ -88,6 +92,7 @@ acp=false
 browser=false
 hyperframes=false
 node=false
+python=false
 forward=
 workdir=/sandbox
 while [ $# -gt 0 ]; do
@@ -97,6 +102,7 @@ while [ $# -gt 0 ]; do
     --browser) browser=true; shift ;;
     --hyperframes) hyperframes=true; shift ;;
     --node) node=true; shift ;;
+    --python) python=true; shift ;;
     --forward) forward=$2; shift 2 ;;
     --workdir|-w) workdir=$2; shift 2 ;;
     --) shift; break ;;
@@ -139,6 +145,12 @@ if $node; then
   $hyperframes && { echo "Use either --node or --hyperframes, not both." >&2; exit 1; }
   image=agy-node:latest
   policy=$(dirname "$0")/../policies/agy-node.yaml
+fi
+if $python; then
+  [ "$agent" = agy ] || { echo "--python is only for agy." >&2; exit 1; }
+  $hyperframes || $node && { echo "Use only one of --python, --node and --hyperframes." >&2; exit 1; }
+  image=agy-python:latest
+  policy=$(dirname "$0")/../policies/agy-python.yaml
 fi
 case $forward in
   '') ;;
