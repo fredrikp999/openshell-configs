@@ -6,13 +6,13 @@
 # Builds on claude-hyperframes for its Node.js 22, headless Chromium with
 # Playwright MCP, FFmpeg, fonts and the HyperFrames CLI (`npx hyperframes` finds the global install, so
 # it needs no registry). Adds agy, installed like in images/agy-sandbox, its
-# community ACP adapter, and Python 3 from Debian (no pip: PyPI isn't allowed
-# by the policy). Claude Code is still in the image but has no provider here.
+# community ACP adapter, and Python 3 from Debian with pip and venv (PyPI is allowed
+# read-only by the policy; Debian's pip wants a venv: python -m venv .venv). Claude Code is still in the image but has no provider here.
 # Use it with policies/agy-hyperframes.yaml (bin/sandbox.sh agy NAME --hyperframes).
 FROM localhost/claude-hyperframes:latest
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends curl python3 python-is-python3 \
+ && apt-get install -y --no-install-recommends curl python3 python3-pip python3-venv python-is-python3 \
  && curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- --dir /usr/local/bin \
  && npm install -g google-antigravity-acp@2.0.1 \
  && rm -rf /root/.gemini /root/.cache /root/.config /root/.npm \

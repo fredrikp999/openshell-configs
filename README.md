@@ -103,7 +103,7 @@ Not needed for the basic steps above. Each one gives the agent more reach, so ad
 * **What:** Claude Code makes videos with [HyperFrames](https://hyperframes.heygen.com) in the sandbox, with its skills, FFmpeg and headless Chromium, and you watch and edit in HyperFrames Studio in your own browser.
 * **How:** `make claude-hyperframes`, then `bin/sandbox.sh claude my-video --hyperframes --forward 3102`, ask for the preview on port 3102, and open http://127.0.0.1:3102.
 * **What limits it:** [policies/hyperframes.yaml](policies/hyperframes.yaml) allows only read-only access to the script and font CDNs and the HyperFrames registry. The Studio page runs in your browser, outside the sandbox (see below).
-* **With Antigravity CLI:** `bin/sandbox.sh agy my-video --hyperframes` uses the `agy-hyperframes` image (HyperFrames and Python 3 too). Its policy lets the processes that can read agy's login tokens reach the CDNs, so use it for that work only.
+* **With Antigravity CLI:** `bin/sandbox.sh agy my-video --hyperframes` uses the `agy-hyperframes` image (HyperFrames and Python 3 with pip from PyPI too). Its policy lets the processes that can read agy's login tokens reach the CDNs, so use it for that work only.
 * See [HyperFrames](docs/extras.md#hyperframes).
 
 #### Logs and OpenTelemetry

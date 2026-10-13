@@ -1,6 +1,7 @@
 # Sandbox policy for the agy-hyperframes image: Antigravity CLI plus
 # HyperFrames. It is policies/antigravity.yaml (the four Google hosts, for the
-# agy binary only) plus the CDN and font rules of policies/hyperframes.yaml.
+# agy binary only) plus the CDN and font rules of policies/hyperframes.yaml and
+# read-only access to PyPI for Python (pip).
 #
 #   bin/sandbox.sh agy my-video --hyperframes --forward 3102
 #
@@ -113,3 +114,15 @@ network_policies:
               path: "/heygen-com/hyperframes/**"
     binaries:
       - path: /usr/local/bin/node
+
+  # Python packages with pip (pypi.org for the index, files.pythonhosted.org
+  # for the files). Read-only, but a GET can carry data in its URL, and a
+  # package's setup script runs with access to the tokens.
+  pypi:
+    name: pypi
+    endpoints:
+      - { host: pypi.org, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+      - { host: files.pythonhosted.org, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+    binaries:
+      - path: /usr/bin/python3
+      - path: /usr/bin/python3.*
