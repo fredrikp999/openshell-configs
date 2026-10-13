@@ -17,7 +17,8 @@
 # stdout) instead of the terminal UI. A client spawns this script as its agent
 # process; nothing is printed to stdout except the protocol. Messages go to
 # stderr. OpenCode has `opencode acp` built in; for Claude the image has the
-# ACP adapter claude-agent-acp, started by claude-acp-start.
+# ACP adapter claude-agent-acp, started by claude-acp-start; for agy the image
+# has the community adapter google-antigravity-acp, started by agy-acp-start.
 #
 # --browser (Claude only) creates the sandbox from the claude-browser image
 # with policies/browser.yaml, which lists the sites the browser may open. It
@@ -39,11 +40,11 @@
 # Requires the provider and image from docs/agents.md (claude / claude-sandbox,
 # claude-browser or claude-hyperframes, openrouter / opencode-sandbox). agy
 # (agy-sandbox) has no provider: you log in inside the sandbox on first start,
-# and policies/antigravity.yaml allows the Google hosts it needs. It has no ACP
-# mode.
+# and policies/antigravity.yaml allows the Google hosts it needs. Log in once
+# (bin/sandbox.sh agy <name>) before using --acp.
 set -eu
 
-usage() { sed -n "2,43p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n "2,44p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 [ $# -ge 1 ] || usage
 agent=$1; shift
@@ -99,7 +100,7 @@ if $acp; then
   case $agent in
     claude) cmd="claude-acp-start" ;;
     opencode) cmd="opencode acp" ;;
-    agy) echo "agy has no ACP mode." >&2; exit 1 ;;
+    agy) cmd="agy-acp-start" ;;
   esac
 fi
 

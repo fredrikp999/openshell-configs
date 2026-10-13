@@ -2,7 +2,7 @@
 """Minimal ACP (Agent Client Protocol) client for agents in OpenShell sandboxes.
 
   bin/acp_client.py list
-  bin/acp_client.py connect <sandbox> [--agent opencode|claude] [--model M]
+  bin/acp_client.py connect <sandbox> [--agent opencode|claude|agy] [--model M]
                                     [--cwd DIR] [--timeout SEC] [-v]
 
 `connect` starts the agent's ACP server in the sandbox with
@@ -40,6 +40,7 @@ DEFAULT_MODEL = "openrouter/nvidia/nemotron-3.5-lightning:free"
 AGENT_CMD = {
     "opencode": ["opencode", "acp"],
     "claude": ["claude-acp-start"],
+    "agy": ["agy-acp-start"],
 }
 INIT_TIMEOUT = 60  # seconds to wait for initialize / session/new
 
@@ -112,7 +113,7 @@ def list_sandboxes():
     out = run_openshell("sandbox", "list")
     print(out, end="")
     if len(out.strip().splitlines()) <= 1:
-        info("No sandboxes. Create one with bin/sandbox.sh <claude|opencode> [name].")
+        info("No sandboxes. Create one with bin/sandbox.sh <claude|opencode|agy> [name].")
     else:
         info("Connect with: bin/acp_client.py connect <name>")
 

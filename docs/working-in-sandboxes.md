@@ -10,7 +10,7 @@ You can do this by hand or with [bin/sandbox.sh](../bin/sandbox.sh). The values 
 |---|---|---|---|---|
 | Claude Code | `claude-sandbox:latest` | `claude` | `claude-start` | `claude-acp-start` |
 | OpenCode | `opencode-sandbox:latest` | `openrouter` | `opencode -m openrouter/nvidia/nemotron-3.5-lightning:free` | `opencode acp` |
-| Antigravity CLI | `agy-sandbox:latest` | none (policy [antigravity.yaml](../policies/antigravity.yaml)) | `agy` | none |
+| Antigravity CLI | `agy-sandbox:latest` | none (policy [antigravity.yaml](../policies/antigravity.yaml)) | `agy` | `agy-acp-start` (community adapter) |
 
 The examples below use Claude and the sandbox name `my-task`.
 
@@ -92,6 +92,7 @@ bin/sandbox.sh <claude|opencode|agy> [name] [--vscode|--acp] [--browser] [--work
 | `bin/sandbox.sh claude my-task -- -p 'reply with OK'` | Passes arguments to the agent (here: a non-interactive smoke test) |
 | `bin/sandbox.sh opencode my-task --acp` | Runs OpenCode's ACP server on stdin/stdout, for a UI (see [ACP](extras.md#acp-agent-client-protocol)) |
 | `bin/sandbox.sh claude my-task --acp` | The same for Claude Code, through the ACP adapter |
+| `bin/sandbox.sh agy my-task --acp` | The same for Antigravity CLI, through a community ACP adapter (log in first) |
 | `bin/sandbox.sh claude my-task --browser` | Claude with a headless browser: image `claude-browser`, policy [policies/browser.yaml](../policies/browser.yaml) (see [Browser](extras.md#headless-browser-use)). Only matters when the sandbox is created |
 
 * The script uses the image, provider and agent command from the table above. Set the OpenCode model with `OPENCODE_MODEL=...`.
