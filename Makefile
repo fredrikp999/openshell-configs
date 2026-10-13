@@ -1,7 +1,7 @@
 # Build the images, run the tests and check the files.
 #
 #   make images     build all images (claude-sandbox, then claude-browser, then claude-hyperframes)
-#   make claude-sandbox | claude-browser | claude-hyperframes | opencode-sandbox | agy-sandbox | agy-hyperframes
+#   make claude-sandbox | claude-browser | claude-hyperframes | opencode-sandbox | agy-sandbox | agy-hyperframes | agy-node
 #                   one image
 #   make update     rebuild all images from scratch, with the latest agents and base images
 #   make test       run all tests (needs the images and the claude provider)
@@ -17,16 +17,16 @@ ENGINE ?= podman
 # works when the Podman machine can't see this folder (docs/isolation.md).
 SHELLCHECK ?= $(shell command -v shellcheck)
 SHELLCHECK_IMAGE := docker.io/koalaman/shellcheck-alpine:stable
-IMAGES := claude-sandbox claude-browser claude-hyperframes opencode-sandbox agy-sandbox agy-hyperframes
+IMAGES := claude-sandbox claude-browser claude-hyperframes opencode-sandbox agy-sandbox agy-hyperframes agy-node
 # Images built FROM a registry image, as opposed to FROM one of ours.
-BASE_IMAGES := claude-sandbox opencode-sandbox agy-sandbox
+BASE_IMAGES := claude-sandbox opencode-sandbox agy-sandbox agy-node
 SCRIPTS := bin/sandbox.sh bin/provider.sh bin/bundle.sh bin/watch-denied.sh bin/vm-clock.sh bin/doctor.sh \
            tests/*/run.sh \
            images/claude-sandbox/claude-start images/claude-sandbox/claude-acp-start \
            images/claude-browser/playwright-mcp-start \
            images/claude-hyperframes/hyperframes-init images/claude-hyperframes/claude-start \
            images/claude-hyperframes/claude-acp-start \
-           images/agy-sandbox/agy-acp-start images/agy-hyperframes/agy-init images/agy-hyperframes/agy-start \
+           images/agy-sandbox/agy-acp-start images/agy-node/agy-acp-start images/agy-hyperframes/agy-init images/agy-hyperframes/agy-start \
            images/agy-hyperframes/agy-acp-start
 PYTHON := bin/acp_client.py bin/otel-export.py bin/otel-view.py bin/metrics-view.py bin/check-links.py bin/build-html.py
 

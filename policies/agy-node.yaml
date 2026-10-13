@@ -1,0 +1,88 @@
+# Sandbox policy for the agy-node image: Antigravity CLI that can install npm
+# packages. It is policies/antigravity.yaml (the four Google hosts, for the agy
+# binary only) plus read-only access to registry.npmjs.org for node, the
+# process that npm runs as.
+#
+#   bin/sandbox.sh agy my-task --node
+#
+# agy's login tokens (including the long-lived refresh token) live in /sandbox
+# and are readable by everything in the sandbox, including node and the install
+# scripts of the packages it installs. A GET to the registry can carry data in
+# its URL, and a package's install script can read the tokens, so this sandbox
+# is less locked down than a plain agy one. Use it for work that needs npm only,
+# consider `npm install --ignore-scripts`, run /logout in agy and delete the
+# sandbox when you are done. Change the rules on a running sandbox with
+#   openshell policy set <sandbox> --policy policies/agy-node.yaml --wait
+version: 1
+filesystem_policy:
+  include_workdir: true
+  read_only:
+    - /bin
+    - /usr
+    - /lib
+    - /proc
+    - /dev/urandom
+    - /etc
+    - /var/log
+  read_write:
+    - /tmp
+    - /dev/null
+    - /dev/pts
+    - /dev/ptmx
+landlock:
+  compatibility: best_effort
+network_policies:
+  antigravity:
+    name: antigravity
+    endpoints:
+      # Exchanging the login code for tokens, and refreshing the access token.
+      # The login page itself (accounts.google.com) opens in your own browser.
+      - host: oauth2.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow:
+              method: POST
+              path: /token
+      # agy's eligibility check: your account's email and name.
+      - host: www.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow:
+              method: GET
+              path: /oauth2/v2/userinfo
+      # The same check also downloads your account's profile picture.
+      - host: lh3.googleusercontent.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow:
+              method: GET
+              path: "/a/**"
+      # The Code Assist API agy uses for everything else.
+      - host: daily-cloudcode-pa.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow:
+              method: POST
+              path: "/v1internal:*"
+          - allow:
+              method: GET
+              path: "/v1internal/**"
+    binaries:
+      - path: /usr/local/bin/agy
+
+  # Package installs with npm. npm is a Node.js script, so the process that
+  # connects is the node binary, not npm.
+  npm_registry:
+    name: npm-registry
+    endpoints:
+      - { host: registry.npmjs.org, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+    binaries:
+      - path: /usr/local/bin/node

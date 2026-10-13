@@ -1,0 +1,5 @@
+#!/bin/sh
+# Run the ACP adapter around agy. -b pins the agy binary the policy allows.
+# The adapter makes agy auto-approve tool permissions by default; set
+# AGY_ACP_ASK=1 to pass --no-skip-permissions.
+exec google-antigravity-acp -b /usr/local/bin/agy ${AGY_ACP_ASK:+--no-skip-permissions} "$@"

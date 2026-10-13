@@ -1,7 +1,7 @@
 #!/bin/sh
 # Start an agent sandbox, either in the terminal or in VS Code.
 #
-#   bin/sandbox.sh <claude|opencode|agy> [name] [--vscode|--acp] [--browser|--hyperframes]
+#   bin/sandbox.sh <claude|opencode|agy> [name] [--vscode|--acp] [--browser|--hyperframes|--node]
 #                  [--forward PORT] [--workdir DIR] [-- agent args...]
 #
 #   bin/sandbox.sh claude                      # Claude in this terminal, sandbox claude-agent1
@@ -30,6 +30,11 @@
 # policies/agy-hyperframes.yaml, which lets node and Chromium reach the CDNs
 # while agy's login tokens are in the sandbox; see docs/agents.md.
 #
+# --node (agy only) creates the sandbox from the agy-node image with
+# policies/agy-node.yaml, which lets node reach registry.npmjs.org so the agent
+# can `npm install`. agy's login tokens are in the sandbox and node can read
+# them, so use it only for work that needs npm; see docs/agents.md.
+#
 # --forward PORT forwards 127.0.0.1:PORT on this machine to the same port in
 # the sandbox (in the background, if not already forwarded), so you can open
 # what the agent serves there, e.g. the HyperFrames preview.
@@ -46,7 +51,7 @@
 # (bin/sandbox.sh agy <name>) before using --acp.
 set -eu
 
-usage() { sed -n "2,47p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n "2,51p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 [ $# -ge 1 ] || usage
 agent=$1; shift
@@ -82,6 +87,7 @@ vscode=false
 acp=false
 browser=false
 hyperframes=false
+node=false
 forward=
 workdir=/sandbox
 while [ $# -gt 0 ]; do
@@ -90,6 +96,7 @@ while [ $# -gt 0 ]; do
     --acp) acp=true; shift ;;
     --browser) browser=true; shift ;;
     --hyperframes) hyperframes=true; shift ;;
+    --node) node=true; shift ;;
     --forward) forward=$2; shift 2 ;;
     --workdir|-w) workdir=$2; shift 2 ;;
     --) shift; break ;;
@@ -126,6 +133,12 @@ if $hyperframes; then
     image=claude-hyperframes:latest
     policy=$(dirname "$0")/../policies/hyperframes.yaml
   fi
+fi
+if $node; then
+  [ "$agent" = agy ] || { echo "--node is only for agy." >&2; exit 1; }
+  $hyperframes && { echo "Use either --node or --hyperframes, not both." >&2; exit 1; }
+  image=agy-node:latest
+  policy=$(dirname "$0")/../policies/agy-node.yaml
 fi
 case $forward in
   '') ;;
