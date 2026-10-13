@@ -300,8 +300,11 @@ class RpcError(Exception):
         text = "%s failed: %s (code %s)" % (self.method, msg, self.err.get("code", "?"))
         if data:
             text += " " + json.dumps(data)
-        low = msg.lower()
-        if "cannot connect to api" in low or "unable to connect" in low:
+        low = (msg + " " + (json.dumps(data) if data else "")).lower()
+        if "exited before emitting init event" in low:
+            text += ("\nHint: agy probably isn't logged in in this sandbox. Log in once with "
+                     "`bin/sandbox.sh agy <sandbox>` (docs/agents.md, 'Antigravity CLI').")
+        elif "cannot connect to api" in low or "unable to connect" in low:
             text += ("\nHint: the model's API host is probably blocked by the sandbox policy, or the "
                      "model is wrong. Try another --model, or check the provider (docs/customizing.md, 'Network rules').")
         elif "auth" in low or "401" in low or "api key" in low:
