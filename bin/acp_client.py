@@ -140,6 +140,10 @@ def detect_agent(name):
     agents = [a for a in sorted(AGENT_CMD) if AGENT_CMD[a][0] in found]
     if len(agents) == 1:
         return agents[0]
+    if agents == ["agy", "claude"]:
+        # agy-hyperframes is built on the Claude image, so it has both commands;
+        # no Claude image has agy.
+        return "agy"
     if not agents:
         die("sandbox '%s' has no ACP command (%s). Its image may be older than ACP\n"
             "support: rebuild the image, then `openshell sandbox delete %s` and create it\n"

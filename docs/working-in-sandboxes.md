@@ -12,6 +12,8 @@ You can do this by hand or with [bin/sandbox.sh](../bin/sandbox.sh). The values 
 | OpenCode | `opencode-sandbox:latest` | `openrouter` | `opencode -m openrouter/nvidia/nemotron-3.5-lightning:free` | `opencode acp` |
 | Antigravity CLI | `agy-sandbox:latest` | none (policy [antigravity.yaml](../policies/antigravity.yaml)) | `agy` | `agy-acp-start` (community adapter) |
 
+The variants (`claude-browser`, `claude-hyperframes`, `agy-hyperframes`, `agy-node`, `agy-python`) have the ACP command of the agent they are built on.
+
 The examples below use Claude and the sandbox name `my-task`.
 
 ### By hand
