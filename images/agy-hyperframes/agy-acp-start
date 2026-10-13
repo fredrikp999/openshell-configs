@@ -1,5 +1,5 @@
 #!/bin/sh
-# Prepare HyperFrames, then run the ACP adapter around agy (see
-# images/agy-sandbox/agy-acp-start). hyperframes-init prints to stderr only.
-hyperframes-init
+# Prepare the sandbox (agy-init), then run the ACP adapter around agy (see
+# images/agy-sandbox/agy-acp-start).
+agy-init
 exec google-antigravity-acp -b /usr/local/bin/agy ${AGY_ACP_ASK:+--no-skip-permissions} "$@"

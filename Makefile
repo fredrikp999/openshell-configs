@@ -26,7 +26,7 @@ SCRIPTS := bin/sandbox.sh bin/provider.sh bin/bundle.sh bin/watch-denied.sh bin/
            images/claude-browser/playwright-mcp-start \
            images/claude-hyperframes/hyperframes-init images/claude-hyperframes/claude-start \
            images/claude-hyperframes/claude-acp-start \
-           images/agy-sandbox/agy-acp-start images/agy-hyperframes/agy-start \
+           images/agy-sandbox/agy-acp-start images/agy-hyperframes/agy-init images/agy-hyperframes/agy-start \
            images/agy-hyperframes/agy-acp-start
 PYTHON := bin/acp_client.py bin/otel-export.py bin/otel-view.py bin/metrics-view.py bin/check-links.py bin/build-html.py
 

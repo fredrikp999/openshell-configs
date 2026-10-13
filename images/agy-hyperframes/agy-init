@@ -1,0 +1,9 @@
+#!/bin/sh
+# Prepare an agy-hyperframes sandbox: HyperFrames (skills, OpenShell CA for
+# Chromium), then register Playwright MCP with agy on first start. Output goes
+# to stderr, so stdout stays clean for ACP.
+hyperframes-init
+{
+  agy mcp list 2>/dev/null | grep -q '^playwright ' \
+    || agy mcp add playwright playwright-mcp-start
+} >&2

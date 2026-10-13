@@ -1,4 +1,4 @@
 #!/bin/sh
-# Prepare HyperFrames (CA for Chromium), then run agy with any args.
-hyperframes-init
+# Prepare the sandbox (agy-init), then run agy with any args.
+agy-init
 exec agy "$@"
