@@ -24,9 +24,11 @@
 # with policies/browser.yaml, which lists the sites the browser may open. It
 # only matters when the sandbox is created.
 #
-# --hyperframes (Claude only) is the same with the claude-hyperframes image and
-# policies/hyperframes.yaml: HyperFrames, FFmpeg and its skills on top of the
-# browser.
+# --hyperframes (Claude and agy) is the same with the claude-hyperframes image
+# and policies/hyperframes.yaml: HyperFrames, FFmpeg and its skills on top of the
+# browser. For agy it is the agy-hyperframes image (HyperFrames and Python) with
+# policies/agy-hyperframes.yaml, which lets node and Chromium reach the CDNs
+# while agy's login tokens are in the sandbox; see docs/agents.md.
 #
 # --forward PORT forwards 127.0.0.1:PORT on this machine to the same port in
 # the sandbox (in the background, if not already forwarded), so you can open
@@ -44,7 +46,7 @@
 # (bin/sandbox.sh agy <name>) before using --acp.
 set -eu
 
-usage() { sed -n "2,44p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n "2,47p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 [ $# -ge 1 ] || usage
 agent=$1; shift
@@ -114,10 +116,16 @@ if $browser; then
   policy=$(dirname "$0")/../policies/browser.yaml
 fi
 if $hyperframes; then
-  [ "$agent" = claude ] || { echo "--hyperframes is only for claude." >&2; exit 1; }
+  case $agent in claude|agy) ;; *) echo "--hyperframes is only for claude and agy." >&2; exit 1 ;; esac
   $browser && { echo "Use either --browser or --hyperframes, not both." >&2; exit 1; }
-  image=claude-hyperframes:latest
-  policy=$(dirname "$0")/../policies/hyperframes.yaml
+  if [ "$agent" = agy ]; then
+    image=agy-hyperframes:latest
+    policy=$(dirname "$0")/../policies/agy-hyperframes.yaml
+    $acp || cmd="agy-start"
+  else
+    image=claude-hyperframes:latest
+    policy=$(dirname "$0")/../policies/hyperframes.yaml
+  fi
 fi
 case $forward in
   '') ;;

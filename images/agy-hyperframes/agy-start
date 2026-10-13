@@ -1,0 +1,4 @@
+#!/bin/sh
+# Prepare HyperFrames (CA for Chromium), then run agy with any args.
+hyperframes-init
+exec agy "$@"

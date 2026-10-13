@@ -1,7 +1,7 @@
 # Build the images, run the tests and check the files.
 #
 #   make images     build all images (claude-sandbox, then claude-browser, then claude-hyperframes)
-#   make claude-sandbox | claude-browser | claude-hyperframes | opencode-sandbox | agy-sandbox
+#   make claude-sandbox | claude-browser | claude-hyperframes | opencode-sandbox | agy-sandbox | agy-hyperframes
 #                   one image
 #   make update     rebuild all images from scratch, with the latest agents and base images
 #   make test       run all tests (needs the images and the claude provider)
@@ -17,7 +17,7 @@ ENGINE ?= podman
 # works when the Podman machine can't see this folder (docs/isolation.md).
 SHELLCHECK ?= $(shell command -v shellcheck)
 SHELLCHECK_IMAGE := docker.io/koalaman/shellcheck-alpine:stable
-IMAGES := claude-sandbox claude-browser claude-hyperframes opencode-sandbox agy-sandbox
+IMAGES := claude-sandbox claude-browser claude-hyperframes opencode-sandbox agy-sandbox agy-hyperframes
 # Images built FROM a registry image, as opposed to FROM one of ours.
 BASE_IMAGES := claude-sandbox opencode-sandbox agy-sandbox
 SCRIPTS := bin/sandbox.sh bin/provider.sh bin/bundle.sh bin/watch-denied.sh bin/vm-clock.sh bin/doctor.sh \
@@ -26,7 +26,8 @@ SCRIPTS := bin/sandbox.sh bin/provider.sh bin/bundle.sh bin/watch-denied.sh bin/
            images/claude-browser/playwright-mcp-start \
            images/claude-hyperframes/hyperframes-init images/claude-hyperframes/claude-start \
            images/claude-hyperframes/claude-acp-start \
-           images/agy-sandbox/agy-acp-start
+           images/agy-sandbox/agy-acp-start images/agy-hyperframes/agy-start \
+           images/agy-hyperframes/agy-acp-start
 PYTHON := bin/acp_client.py bin/otel-export.py bin/otel-view.py bin/metrics-view.py bin/check-links.py bin/build-html.py
 
 .PHONY: images $(IMAGES) update test lint doctor html
@@ -41,6 +42,7 @@ $(IMAGES):
 # claude-browser is built FROM claude-sandbox, claude-hyperframes FROM claude-browser.
 claude-browser: claude-sandbox
 claude-hyperframes: claude-browser
+agy-hyperframes: claude-hyperframes
 
 # Without the cache, so `npm install` and the like fetch the latest versions,
 # and with a newer base image if the registry has one. The variables are passed

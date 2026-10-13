@@ -1,0 +1,115 @@
+# Sandbox policy for the agy-hyperframes image: Antigravity CLI plus
+# HyperFrames. It is policies/antigravity.yaml (the four Google hosts, for the
+# agy binary only) plus the CDN and font rules of policies/hyperframes.yaml.
+#
+#   bin/sandbox.sh agy my-video --hyperframes --forward 3102
+#
+# The login tokens of agy (including the long-lived refresh token) live in
+# /sandbox and are readable by everything in the sandbox, including the node
+# and Chromium processes that the HyperFrames rules allow to reach the CDNs
+# below. Those rules are read-only, but a GET can carry data in its URL. So this
+# sandbox is less locked down than a plain agy one: use it for HyperFrames work
+# only, run /logout in agy and delete the sandbox when you are done, and keep
+# the host list short. Find more needed hosts with
+#   openshell logs <sandbox> | grep DENIED
+# and change the rules on a running sandbox with
+#   openshell policy set <sandbox> --policy policies/agy-hyperframes.yaml --wait
+version: 1
+filesystem_policy:
+  include_workdir: true
+  read_only:
+    - /bin
+    - /usr
+    - /lib
+    - /proc
+    - /dev/urandom
+    - /etc
+    - /var/log
+    - /opt                     # the browser
+  read_write:
+    - /tmp
+    - /dev/null
+    - /dev/pts
+    - /dev/ptmx
+    - /dev/shm                 # Chromium's shared memory
+landlock:
+  compatibility: best_effort
+network_policies:
+  antigravity:
+    name: antigravity
+    endpoints:
+      # Exchanging the login code for tokens, and refreshing the access token.
+      # The login page itself (accounts.google.com) opens in your own browser.
+      - host: oauth2.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow:
+              method: POST
+              path: /token
+      # agy's eligibility check: your account's email and name.
+      - host: www.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow:
+              method: GET
+              path: /oauth2/v2/userinfo
+      # The same check also downloads your account's profile picture.
+      - host: lh3.googleusercontent.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow:
+              method: GET
+              path: "/a/**"
+      # The Code Assist API agy uses for everything else.
+      - host: daily-cloudcode-pa.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow:
+              method: POST
+              path: "/v1internal:*"
+          - allow:
+              method: GET
+              path: "/v1internal/**"
+    binaries:
+      - path: /usr/local/bin/agy
+
+  # Libraries and fonts that compositions reference, loaded by Chromium.
+  hyperframes_browser:
+    name: hyperframes-browser
+    endpoints:
+      - { host: cdn.jsdelivr.net, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+      - { host: unpkg.com, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+      - { host: cdnjs.cloudflare.com, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+      - { host: fonts.googleapis.com, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+      - { host: fonts.gstatic.com, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+    binaries:
+      - path: /opt/ms-playwright/**
+
+  # The HyperFrames CLI: fonts it embeds while compiling, libraries it checks,
+  # and the block registry and docs (`hyperframes add`, `catalog`, `docs`).
+  hyperframes_cli:
+    name: hyperframes-cli
+    endpoints:
+      - { host: cdn.jsdelivr.net, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+      - { host: fonts.googleapis.com, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+      - { host: fonts.gstatic.com, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+      - { host: hyperframes.heygen.com, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+      # The block registry, only from the HyperFrames repo.
+      - host: raw.githubusercontent.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow:
+              method: GET
+              path: "/heygen-com/hyperframes/**"
+    binaries:
+      - path: /usr/local/bin/node
