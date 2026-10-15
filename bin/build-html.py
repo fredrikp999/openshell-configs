@@ -283,6 +283,10 @@ svg.dg .life { stroke:var(--border); stroke-width:1.5; stroke-dasharray:3 4; }
 svg.dg .cross { stroke:var(--bad); stroke-width:3; stroke-linecap:round; }
 svg.dg .dot { fill:var(--fg); }
 svg.dg .mk { fill:var(--muted); }
+svg.dg .num { fill:var(--accent); }
+svg.dg text.n { fill:#fff; font-size:11px; font-weight:700; text-anchor:middle; }
+ol.legend { margin:.5rem 0 1.5rem; padding-left:1.4rem; font-size:15px; }
+ol.legend li { margin:.3rem 0; }
 .cards { display:grid; gap:1rem; margin:1rem 0; }
 .cards.three { grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); }
 .card { border:1px solid var(--border); border-radius:8px; padding:.75rem 1rem; background:var(--bg); min-width:0; }

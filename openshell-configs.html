@@ -95,6 +95,10 @@ svg.dg .life { stroke:var(--border); stroke-width:1.5; stroke-dasharray:3 4; }
 svg.dg .cross { stroke:var(--bad); stroke-width:3; stroke-linecap:round; }
 svg.dg .dot { fill:var(--fg); }
 svg.dg .mk { fill:var(--muted); }
+svg.dg .num { fill:var(--accent); }
+svg.dg text.n { fill:#fff; font-size:11px; font-weight:700; text-anchor:middle; }
+ol.legend { margin:.5rem 0 1.5rem; padding-left:1.4rem; font-size:15px; }
+ol.legend li { margin:.3rem 0; }
 .cards { display:grid; gap:1rem; margin:1rem 0; }
 .cards.three { grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); }
 .card { border:1px solid var(--border); border-radius:8px; padding:.75rem 1rem; background:var(--bg); min-width:0; }
@@ -202,7 +206,7 @@ td div.sourceCode { margin:.2rem 0; }
 <body>
 <nav>
 <p class="brand">OpenShell configs</p>
-<p class="meta">Built from <a href="https://github.com/fredrikp999/openshell-configs">github.com/fredrikp999/openshell-configs</a> at commit b5bda40 2026-10-15</p>
+<p class="meta">Built from <a href="https://github.com/fredrikp999/openshell-configs">github.com/fredrikp999/openshell-configs</a> at commit 3664d1c 2026-10-15</p>
 <div class="theme" role="group" aria-label="Color theme">
 <button type="button" data-theme="auto" title="Follow the system setting">Auto</button>
 <button type="button" data-theme="light">Light</button>
@@ -508,72 +512,54 @@ td div.sourceCode { margin:.2rem 0; }
 <p>OpenShell runs an AI coding agent inside a <strong>sandbox</strong>: a container where the filesystem is restricted, the only way out is a policy-checking proxy, and API keys exist only as placeholders. A <strong>gateway</strong> on your machine manages the sandboxes, the credentials and the policies.</p>
 
 <figure class="diagram">
-<svg class="dg" viewBox="0 0 900 540" role="img" aria-label="Architecture: the openshell CLI talks to the gateway, which creates sandboxes in a Podman VM; each sandbox has a supervisor, Landlock, the agent and a proxy; the proxy lets only allowed hosts through.">
+<svg class="dg" viewBox="0 0 900 340" role="img" aria-label="You give commands to the gateway with the openshell CLI, an editor or a browser. The gateway creates a sandbox. In the sandbox the agent sends every request to the policy proxy, which lets requests to allowed hosts through, adding the real key, and blocks everything else.">
 <defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs>
-<rect class="zone" x="6" y="6" width="888" height="418" rx="14"/>
-<text class="s" x="22" y="28">Your computer</text>
-<!-- left column -->
-<rect class="box" x="26" y="70" width="170" height="64" rx="8"/>
-<text class="b" x="111" y="97" text-anchor="middle">openshell CLI</text>
-<text class="s" x="111" y="117" text-anchor="middle">sandbox · policy · provider</text>
-<rect class="box" x="26" y="170" width="170" height="64" rx="8"/>
-<text class="b" x="111" y="197" text-anchor="middle">VS Code / ssh</text>
-<text class="s" x="111" y="217" text-anchor="middle">editor, shell, ACP clients</text>
-<rect class="box" x="26" y="270" width="170" height="64" rx="8"/>
-<text class="b" x="111" y="297" text-anchor="middle">Your browser</text>
-<text class="s" x="111" y="317" text-anchor="middle">pages the agent serves</text>
-<path class="arrow" marker-end="url(#a1)" d="M196 102H250"/>
-<path class="arrow" marker-end="url(#a1)" d="M196 202H250"/>
-<path class="arrow" marker-end="url(#a1)" d="M196 302H250"/>
-<text class="s" x="223" y="94" text-anchor="middle">gRPC</text>
-<text class="s" x="223" y="194" text-anchor="middle">SSH</text>
-<text class="s" x="223" y="294" text-anchor="middle">forward</text>
+<text class="b" x="90" y="24" text-anchor="middle">You</text>
+<text class="b" x="340" y="24" text-anchor="middle">Gateway</text>
+<text class="b" x="630" y="24" text-anchor="middle">Sandbox</text>
+<text class="b" x="840" y="24" text-anchor="middle">The internet</text>
+<!-- you -->
+<rect class="box" x="10" y="52" width="160" height="56" rx="8"/><text class="b" x="90" y="76" text-anchor="middle">openshell CLI</text><text class="s" x="90" y="94" text-anchor="middle">create, policy, logs…</text>
+<rect class="box" x="10" y="132" width="160" height="56" rx="8"/><text class="b" x="90" y="156" text-anchor="middle">VS Code / ssh</text><text class="s" x="90" y="174" text-anchor="middle">work inside the sandbox</text>
+<rect class="box" x="10" y="212" width="160" height="56" rx="8"/><text class="b" x="90" y="236" text-anchor="middle">Your browser</text><text class="s" x="90" y="254" text-anchor="middle">pages the agent serves</text>
+<path class="arrow" marker-end="url(#a1)" d="M170 80H238"/>
+<path class="arrow" marker-end="url(#a1)" d="M170 160H238"/>
+<path class="arrow" marker-end="url(#a1)" d="M170 240H238"/>
 <!-- gateway -->
-<rect class="box acc" x="250" y="56" width="220" height="318" rx="10"/>
-<text class="b" x="360" y="82" text-anchor="middle">Gateway</text>
-<text class="s m" x="360" y="100" text-anchor="middle">https://localhost:17670</text>
-<rect class="chip" x="264" y="116" width="192" height="42" rx="6"/>
-<text class="t" x="360" y="134" text-anchor="middle">Providers</text><text class="s" x="360" y="150" text-anchor="middle">the real keys and tokens</text>
-<rect class="chip" x="264" y="168" width="192" height="42" rx="6"/>
-<text class="t" x="360" y="186" text-anchor="middle">Profiles</text><text class="s" x="360" y="202" text-anchor="middle">what a provider may reach</text>
-<rect class="chip" x="264" y="220" width="192" height="42" rx="6"/>
-<text class="t" x="360" y="238" text-anchor="middle">Policies and rules</text><text class="s" x="360" y="254" text-anchor="middle">versioned, per sandbox</text>
-<rect class="chip" x="264" y="272" width="192" height="42" rx="6"/>
-<text class="t" x="360" y="290" text-anchor="middle">Settings, logs, metrics</text><text class="s" x="360" y="306" text-anchor="middle">gateway-wide or per sandbox</text>
-<rect class="chip" x="264" y="324" width="192" height="40" rx="6"/>
-<text class="t" x="360" y="342" text-anchor="middle">Compute driver</text><text class="s" x="360" y="357" text-anchor="middle">Podman · Docker · MicroVM · K8s</text>
-<!-- VM -->
-<rect class="zone vm" x="552" y="36" width="330" height="372" rx="12"/>
-<text class="s" x="568" y="58">Podman machine (Linux VM)</text>
-<path class="arrow" marker-end="url(#a1)" d="M456 344H576"/>
-<text class="s" x="512" y="336" text-anchor="middle">Podman API</text>
-<rect class="box" x="572" y="70" width="294" height="262" rx="10"/>
-<text class="b" x="719" y="92" text-anchor="middle">Sandbox: a container from your image</text>
-<rect class="chip" x="588" y="104" width="262" height="40" rx="6"/>
-<text class="t" x="719" y="122" text-anchor="middle">Supervisor</text><text class="s" x="719" y="137" text-anchor="middle">starts the agent, enforces the policy</text>
-<rect class="chip" x="588" y="156" width="262" height="40" rx="6"/>
-<text class="t" x="719" y="174" text-anchor="middle">Landlock + syscall filter</text><text class="s" x="719" y="189" text-anchor="middle">only the paths in the policy are reachable</text>
-<rect class="chip" x="588" y="208" width="262" height="40" rx="6"/>
-<text class="t" x="719" y="226" text-anchor="middle">Agent process</text><text class="s" x="719" y="241" text-anchor="middle">claude · opencode · agy. Sees placeholders only</text>
-<rect class="chip acc" x="588" y="270" width="262" height="48" rx="6"/>
-<text class="b" x="719" y="289" text-anchor="middle">Policy proxy</text><text class="s" x="719" y="306" text-anchor="middle">checks every connection, adds credentials</text>
-<path class="arrow" marker-end="url(#a1)" d="M719 248V268"/>
-<path class="arrow dash" marker-end="url(#a1)" d="M588 124H470"/>
-<text class="s" x="529" y="116" text-anchor="middle">session</text>
-<text class="s" x="719" y="372" text-anchor="middle">…one sandbox per task, side by side in the same VM</text>
-<!-- outside -->
-<path class="arrow ok" marker-end="url(#a1)" d="M690 318V470"/>
-<path class="arrow bad" d="M810 318V450"/>
-<path class="cross" d="M802 442l16 16m0-16l-16 16"/>
-<rect class="box okbox" x="560" y="470" width="260" height="56" rx="8"/>
-<text class="b" x="690" y="494" text-anchor="middle">Allowed hosts</text>
-<text class="s" x="690" y="512" text-anchor="middle">provider endpoints + approved rules</text>
-<rect class="box badbox" x="780" y="462" width="110" height="1" rx="0" opacity="0"/>
-<text class="s" x="822" y="494">everything</text>
-<text class="s" x="822" y="510">else: denied</text>
+<rect class="box acc" x="240" y="36" width="200" height="262" rx="10"/>
+<text class="s m" x="340" y="58" text-anchor="middle">localhost:17670</text>
+<rect class="chip" x="254" y="72" width="172" height="52" rx="6"/><text class="t" x="340" y="94" text-anchor="middle">Providers</text><text class="s" x="340" y="111" text-anchor="middle">hold the real keys</text>
+<rect class="chip" x="254" y="136" width="172" height="52" rx="6"/><text class="t" x="340" y="158" text-anchor="middle">Policies and rules</text><text class="s" x="340" y="175" text-anchor="middle">what each sandbox may do</text>
+<rect class="chip" x="254" y="200" width="172" height="52" rx="6"/><text class="t" x="340" y="222" text-anchor="middle">Sandbox manager</text><text class="s" x="340" y="239" text-anchor="middle">starts them in Podman</text>
+<text class="s" x="340" y="280" text-anchor="middle">settings · logs · metrics</text>
+<!-- gateway -> sandbox -->
+<path class="arrow" marker-end="url(#a1)" d="M440 226H528"/>
+<text class="s" x="484" y="246" text-anchor="middle">creates</text>
+<!-- sandbox -->
+<rect class="box" x="530" y="36" width="200" height="262" rx="10"/>
+<text class="s" x="630" y="58" text-anchor="middle">a container in the Podman VM</text>
+<rect class="chip" x="544" y="72" width="172" height="52" rx="6"/><text class="t" x="630" y="94" text-anchor="middle">Supervisor</text><text class="s" x="630" y="111" text-anchor="middle">enforces the policy</text>
+<rect class="chip" x="544" y="148" width="172" height="52" rx="6"/><text class="t" x="630" y="170" text-anchor="middle">Agent</text><text class="s" x="630" y="187" text-anchor="middle">sees only placeholders</text>
+<rect class="chip acc" x="544" y="228" width="172" height="56" rx="6"/><text class="b" x="630" y="252" text-anchor="middle">Policy proxy</text><text class="s" x="630" y="270" text-anchor="middle">checks every request</text>
+<path class="arrow" marker-end="url(#a1)" d="M630 200V226"/>
+<!-- internet -->
+<path class="arrow ok" marker-end="url(#a1)" d="M716 242L786 200"/>
+<path class="arrow bad" d="M716 270L782 292"/>
+<path class="cross" d="M782 282l14 14m0-14l-14 14"/>
+<rect class="box okbox" x="788" y="160" width="104" height="80" rx="8"/><text class="b" x="840" y="186" text-anchor="middle">Allowed</text><text class="b" x="840" y="202" text-anchor="middle">hosts</text><text class="s" x="840" y="222" text-anchor="middle">+ the real key</text>
+<rect class="box badbox" x="800" y="256" width="92" height="56" rx="8"/><text class="b" x="846" y="282" text-anchor="middle">Everything</text><text class="b" x="846" y="298" text-anchor="middle">else</text>
+<!-- numbers -->
+<circle class="num" cx="205" cy="68" r="10"/><text class="n" x="205" y="72">1</text><circle class="num" cx="484" cy="208" r="10"/><text class="n" x="484" y="212">2</text><circle class="num" cx="702" cy="174" r="10"/><text class="n" x="702" y="178">3</text><circle class="num" cx="760" cy="208" r="10"/><text class="n" x="760" y="212">4</text><circle class="num" cx="758" cy="306" r="10"/><text class="n" x="758" y="310">5</text>
 </svg>
-<figcaption>The gateway is the control plane; each sandbox's supervisor connects out to it, so nothing needs to listen on the sandbox. All of the agent's network traffic goes through the policy proxy.</figcaption>
+<figcaption>The gateway is the control plane. The sandbox only talks out through its policy proxy; nothing needs to listen on the sandbox.</figcaption>
 </figure>
+<ol class="legend">
+<li><strong>You talk to the gateway</strong> with the <code>openshell</code> CLI, an editor over SSH, or a forwarded port. You never talk to a sandbox directly.</li>
+<li><strong>The gateway creates the sandbox</strong> from an image, with a policy and providers attached, through Podman (or Docker, a MicroVM, Kubernetes).</li>
+<li><strong>The agent works inside it</strong>, limited to the paths in the policy. Its API key is only a placeholder.</li>
+<li><strong>Every outgoing request goes through the policy proxy.</strong> If the host, program and request are allowed, the proxy adds the real key and sends it on.</li>
+<li><strong>Everything else is refused</strong> and logged, so you can review it and approve a rule if it was legitimate.</li>
+</ol>
 
 <div class="table-wrap"><table>
 <thead><tr><th>Part</th><th>What it does</th><th>Look at it</th></tr></thead>
