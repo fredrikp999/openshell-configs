@@ -202,7 +202,7 @@ td div.sourceCode { margin:.2rem 0; }
 <body>
 <nav>
 <p class="brand">OpenShell configs</p>
-<p class="meta">Built from <a href="https://github.com/fredrikp999/openshell-configs">github.com/fredrikp999/openshell-configs</a> at commit 3041405 2026-10-15</p>
+<p class="meta">Built from <a href="https://github.com/fredrikp999/openshell-configs">github.com/fredrikp999/openshell-configs</a> at commit b5bda40 2026-10-15</p>
 <div class="theme" role="group" aria-label="Color theme">
 <button type="button" data-theme="auto" title="Follow the system setting">Auto</button>
 <button type="button" data-theme="light">Light</button>
@@ -590,50 +590,56 @@ td div.sourceCode { margin:.2rem 0; }
 <p>Four things combine into a sandbox. A <strong>profile</strong> is a template, a <strong>provider</strong> is an instance of it that holds a secret, the <strong>image</strong> contains the agent, and the <strong>policy</strong> sets filesystem access and extra network rules.</p>
 
 <figure class="diagram">
-<svg class="dg" viewBox="0 0 900 440" role="img" aria-label="A profile file is imported into the gateway; a provider is created from it with your token; a sandbox is created from an image with providers and a policy attached.">
+<svg class="dg" viewBox="0 0 900 450" role="img" aria-label="Left to right: files and inputs on the left feed objects in the gateway and the slots of a sandbox. The profile file is imported as a profile, the provider is created from the profile type and your token, and the sandbox is created from a main command, the provider, an image and a policy file.">
 <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs>
-<text class="s" x="26" y="26">You write or download</text>
-<rect class="box" x="26" y="40" width="190" height="56" rx="8"/>
-<text class="b" x="121" y="64" text-anchor="middle">Profile YAML</text><text class="s" x="121" y="82" text-anchor="middle">credentials · endpoints · binaries</text>
-<rect class="box" x="26" y="300" width="190" height="56" rx="8"/>
-<text class="b" x="121" y="324" text-anchor="middle">Policy YAML</text><text class="s" x="121" y="342" text-anchor="middle">filesystem + network rules</text>
-<rect class="box" x="26" y="220" width="190" height="56" rx="8"/>
-<text class="b" x="121" y="244" text-anchor="middle">Image</text><text class="s" x="121" y="262" text-anchor="middle">a container image with the agent</text>
-<rect class="box" x="26" y="130" width="190" height="56" rx="8"/>
-<text class="b" x="121" y="154" text-anchor="middle">Your token or key</text><text class="s" x="121" y="172" text-anchor="middle">only on the host, once</text>
-<!-- gateway -->
-<rect class="box acc" x="290" y="20" width="250" height="236" rx="10"/>
-<text class="b" x="415" y="46" text-anchor="middle">Gateway</text>
-<rect class="chip" x="310" y="62" width="210" height="52" rx="6"/>
-<text class="t" x="415" y="84" text-anchor="middle">Profile</text><text class="s m" x="415" y="102" text-anchor="middle">id: claude-code-oauth</text>
-<rect class="chip" x="310" y="158" width="210" height="70" rx="6"/>
-<text class="t" x="415" y="180" text-anchor="middle">Provider “claude”</text><text class="s m" x="415" y="198" text-anchor="middle">type: claude-code-oauth</text><text class="s" x="415" y="216" text-anchor="middle">holds the token</text>
-<path class="arrow" marker-end="url(#a2)" d="M415 114V156"/>
-<text class="s m" x="425" y="140">--type</text>
-<path class="arrow" marker-end="url(#a2)" d="M216 68H308"/>
-<text class="s m" x="262" y="60" text-anchor="middle">profile import</text>
-<path class="arrow" marker-end="url(#a2)" d="M216 160C250 175 270 190 308 192"/>
-<text class="s m" x="240" y="204" text-anchor="middle">provider create</text>
-<text class="s m" x="240" y="218" text-anchor="middle">--from-existing</text>
-<!-- sandbox -->
-<rect class="box" x="640" y="20" width="240" height="388" rx="10"/>
-<text class="b" x="760" y="46" text-anchor="middle">Sandbox “my-task”</text>
-<rect class="chip" x="656" y="64" width="208" height="56" rx="6"/>
-<text class="t" x="760" y="86" text-anchor="middle">Providers</text><text class="s m" x="760" y="106" text-anchor="middle">--provider claude</text>
-<rect class="chip" x="656" y="136" width="208" height="56" rx="6"/>
-<text class="t" x="760" y="158" text-anchor="middle">Image</text><text class="s m" x="760" y="178" text-anchor="middle">--from claude-sandbox:latest</text>
-<rect class="chip" x="656" y="208" width="208" height="56" rx="6"/>
-<text class="t" x="760" y="230" text-anchor="middle">Policy</text><text class="s m" x="760" y="250" text-anchor="middle">--policy policies/x.yaml</text>
-<rect class="chip" x="656" y="280" width="208" height="56" rx="6"/>
-<text class="t" x="760" y="302" text-anchor="middle">Main command</text><text class="s m" x="760" y="322" text-anchor="middle">-- sleep infinity</text>
-<rect class="chip acc" x="656" y="348" width="208" height="46" rx="6"/>
-<text class="t" x="760" y="368" text-anchor="middle">Approved rules</text><text class="s" x="760" y="384" text-anchor="middle">added later, per sandbox</text>
-<path class="arrow" marker-end="url(#a2)" d="M520 193C580 160 600 110 654 94"/>
-<path class="arrow" marker-end="url(#a2)" d="M216 248C400 270 560 190 654 166"/>
-<path class="arrow" marker-end="url(#a2)" d="M216 330C440 340 570 260 654 238"/>
-<text class="s" x="26" y="420">Creating a sandbox needs all four; the sandbox keeps running until its main command exits.</text>
+<text class="b" x="100" y="22" text-anchor="middle">What you bring</text>
+<text class="b" x="440" y="22" text-anchor="middle">Stored in the gateway</text>
+<text class="b" x="795" y="22" text-anchor="middle">The sandbox</text>
+<!-- gateway panel -->
+<rect class="zone vm" x="320" y="34" width="240" height="212" rx="12"/>
+<!-- sandbox panel -->
+<rect class="box" x="690" y="34" width="200" height="372" rx="12"/>
+<!-- row 1 -->
+<rect class="box" x="10" y="56" width="180" height="62" rx="8"/>
+<text class="b" x="100" y="82" text-anchor="middle">Profile file</text><text class="s" x="100" y="100" text-anchor="middle">credentials, hosts, programs</text>
+<path class="arrow" marker-end="url(#a2)" d="M190 87H338"/>
+<text class="s m" x="264" y="79" text-anchor="middle">① profile import</text>
+<rect class="chip acc" x="340" y="56" width="200" height="62" rx="8"/>
+<text class="b" x="440" y="82" text-anchor="middle">Profile</text><text class="s m" x="440" y="100" text-anchor="middle">id: claude-code-oauth</text>
+<rect class="chip" x="706" y="56" width="168" height="62" rx="8"/>
+<text class="t" x="790" y="82" text-anchor="middle">Main command</text><text class="s m" x="790" y="100" text-anchor="middle">-- sleep infinity</text>
+<!-- profile -> provider -->
+<path class="arrow" marker-end="url(#a2)" d="M440 118V162"/>
+<text class="s m" x="452" y="144">--type</text>
+<!-- row 2 -->
+<rect class="box" x="10" y="164" width="180" height="62" rx="8"/>
+<text class="b" x="100" y="190" text-anchor="middle">Your token</text><text class="s" x="100" y="208" text-anchor="middle">in an env var, once</text>
+<path class="arrow" marker-end="url(#a2)" d="M190 195H338"/>
+<text class="s m" x="264" y="179" text-anchor="middle">② provider create</text>
+<text class="s m" x="264" y="191" text-anchor="middle" dy="-0">--from-existing</text>
+<rect class="chip acc" x="340" y="164" width="200" height="62" rx="8"/>
+<text class="b" x="440" y="190" text-anchor="middle">Provider “claude”</text><text class="s" x="440" y="208" text-anchor="middle">holds the real token</text>
+<path class="arrow" marker-end="url(#a2)" d="M540 195H704"/>
+<text class="s m" x="622" y="187" text-anchor="middle">③ --provider claude</text>
+<rect class="chip" x="706" y="164" width="168" height="62" rx="8"/>
+<text class="t" x="790" y="190" text-anchor="middle">Provider</text><text class="s" x="790" y="208" text-anchor="middle">credentials via the proxy</text>
+<!-- row 3 -->
+<rect class="box" x="10" y="270" width="180" height="62" rx="8"/>
+<text class="b" x="100" y="296" text-anchor="middle">Image</text><text class="s" x="100" y="314" text-anchor="middle">has the agent installed</text>
+<path class="arrow" marker-end="url(#a2)" d="M190 301H704"/>
+<text class="s m" x="447" y="293" text-anchor="middle">③ --from claude-sandbox:latest</text>
+<rect class="chip" x="706" y="270" width="168" height="62" rx="8"/>
+<text class="t" x="790" y="296" text-anchor="middle">Filesystem</text><text class="s" x="790" y="314" text-anchor="middle">what the container runs</text>
+<!-- row 4 -->
+<rect class="box" x="10" y="344" width="180" height="62" rx="8"/>
+<text class="b" x="100" y="370" text-anchor="middle">Policy file</text><text class="s" x="100" y="388" text-anchor="middle">paths + network rules</text>
+<path class="arrow" marker-end="url(#a2)" d="M190 375H704"/>
+<text class="s m" x="447" y="367" text-anchor="middle">③ --policy policies/vscode-terminal.yaml</text>
+<rect class="chip" x="706" y="344" width="168" height="50" rx="8"/>
+<text class="t" x="790" y="366" text-anchor="middle">Policy</text><text class="s" x="790" y="382" text-anchor="middle">fixed at start</text>
+<text class="s" x="10" y="432">① and ② are done once and shared. ③ is openshell sandbox create, once per sandbox; approved rules are added to that sandbox later.</text>
 </svg>
-<figcaption>Profiles and providers live in the gateway and are shared: create a provider once, attach it to any number of sandboxes. Policy, image and approved rules belong to one sandbox.</figcaption>
+<figcaption>Read it left to right and in order: ① import the profile, ② create a provider from it with your token, ③ create a sandbox that combines a provider, an image and a policy. Profiles and providers are shared by every sandbox; the image, policy and approved rules belong to one.</figcaption>
 </figure>
 
 <div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Import the profile (once), and create a provider from it with your token</span></span>
