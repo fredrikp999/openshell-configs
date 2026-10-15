@@ -36,6 +36,8 @@ def github_url():
 
 GITHUB = github_url()
 
+# Written as HTML, with diagrams; shown first, after the README.
+CONCEPTS = "docs/concepts.html"
 DOCS = ["README.md", "docs/setup.md", "docs/agents.md", "docs/working-in-sandboxes.md",
         "docs/extras.md", "docs/customizing.md", "docs/logging.md", "docs/isolation.md",
         "docs/troubleshooting.md"]
@@ -62,6 +64,7 @@ def file_anchor(path):
 
 
 DOC_KEYS = {p: doc_key(p) for p in DOCS}
+DOC_KEYS[CONCEPTS] = "concepts"
 FILES = {posixpath.join(d, f) for _, d, fs in FILE_GROUPS for f in fs}
 DIRS = {d: posixpath.join(d, fs[0]) for _, d, fs in FILE_GROUPS}
 DIR_SECTIONS = {"policies": "group-policies", "providers": "group-provider-profiles"}
@@ -112,6 +115,28 @@ def convert_doc(doc):
     return title, h2s, out
 
 
+def convert_fragment(path, key):
+    """A hand-written HTML page (docs/concepts.html) with inline SVG diagrams.
+
+    <pre data-lang="bash"> blocks are syntax-highlighted like the code in the
+    Markdown docs; ids get the page prefix; links between docs are resolved.
+    """
+    out = open(os.path.join(REPO, path), encoding="utf-8").read()
+
+    def code(m):
+        text = html.unescape(m.group(2)).rstrip("\n")
+        md = "````%s\n%s\n````\n" % (m.group(1), text)
+        return re.sub(r'\bid="[^"]+"', "", run(["pandoc", "-f", "gfm", "-t", "html5", "--wrap=none"], md))
+    out = re.sub(r'<pre data-lang="(\w+)">(.*?)</pre>', code, out, flags=re.S)
+    out = re.sub(r'<(h[12]) id="concepts--([^"]+)"', r'<\1 id="%s--\2"' % key, out)
+    out = re.sub(r'href="([^"]+)"', lambda m: 'href="%s"' % html.escape(
+        resolve(html.unescape(m.group(1)), path) if not m.group(1).startswith("#") else m.group(1),
+        quote=True), out)
+    out = out.replace("<table>", '<div class="table-wrap"><table>').replace("</table>", "</table></div>")
+    title = re.sub(r"<[^>]+>", "", re.search(r"<h1[^>]*>(.*?)</h1>", out, re.S).group(1))
+    return title, re.findall(r'<h2 id="([^"]+)">(.*?)</h2>', out, re.S), out
+
+
 def lang_of(path):
     name = os.path.basename(path)
     if name == "Dockerfile":
@@ -146,8 +171,8 @@ def highlight_css():
 commit = run(["git", "-C", REPO, "log", "-1", "--format=%h %cs"], "").strip()
 
 sections, toc = [], []
-for doc in DOCS:
-    title, h2s, body = convert_doc(doc)
+for doc in [DOCS[0], CONCEPTS] + DOCS[1:]:
+    title, h2s, body = (convert_fragment(doc, "concepts") if doc == CONCEPTS else convert_doc(doc))
     key = DOC_KEYS[doc]
     sections.append('<section class="doc" id="doc-%s"><p class="path"><a href="%s/blob/main/%s" '
                     'target="_blank" rel="noopener">%s</a></p>\n%s</section>'
@@ -173,14 +198,17 @@ for label, d, names in FILE_GROUPS:
 
 CSS = """
 :root { --bg:#ffffff; --fg:#1f2328; --muted:#59636e; --border:#d1d9e0; --code-bg:#f6f8fa;
-        --link:#0969da; --side-bg:#f6f8fa; --accent:#0969da; }
+        --link:#0969da; --side-bg:#f6f8fa; --accent:#0969da;
+        --ok:#1a7f37; --bad:#cf222e; --acc-bg:#ddf4ff; --ok-bg:#dafbe1; --bad-bg:#ffebe9; --note-bg:#fff8c5; }
 /* Dark: chosen with the switch, or Auto and the system is dark. */
 :root[data-theme="dark"] { --bg:#0d1117; --fg:#e6edf3; --muted:#9198a1; --border:#3d444d; --code-bg:#151b23;
-        --link:#4493f8; --side-bg:#010409; --accent:#4493f8; color-scheme:dark; }
+        --link:#4493f8; --side-bg:#010409; --accent:#4493f8; color-scheme:dark;
+        --ok:#3fb950; --bad:#f85149; --acc-bg:#0c2d4d; --ok-bg:#0f2f1b; --bad-bg:#3d1a1c; --note-bg:#2e2a10; }
 :root[data-theme="dark"] code span { filter: brightness(1.45) saturate(0.9); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) { --bg:#0d1117; --fg:#e6edf3; --muted:#9198a1; --border:#3d444d; --code-bg:#151b23;
-          --link:#4493f8; --side-bg:#010409; --accent:#4493f8; color-scheme:dark; }
+          --link:#4493f8; --side-bg:#010409; --accent:#4493f8; color-scheme:dark;
+          --ok:#3fb950; --bad:#f85149; --acc-bg:#0c2d4d; --ok-bg:#0f2f1b; --bad-bg:#3d1a1c; --note-bg:#2e2a10; }
   :root:not([data-theme]) code span { filter: brightness(1.45) saturate(0.9); }
 }
 .theme { display:flex; gap:2px; margin:0 0 1rem; padding:2px; border:1px solid var(--border);
@@ -219,13 +247,51 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fo
        background:var(--code-bg); padding:.15em .35em; border-radius:5px; }
 pre { background:var(--code-bg); border:1px solid var(--border); border-radius:6px; padding:.9rem 1rem;
       overflow-x:auto; line-height:1.45; }
-pre code { background:none; padding:0; font-size:13px; }
+pre code { background:none; padding:0; font-size:13px; white-space:pre; }
 div.sourceCode { margin:1rem 0; }
 .table-wrap { overflow-x:auto; margin:1rem 0; }
 table { border-collapse:collapse; font-size:14px; }
 th, td { border:1px solid var(--border); padding:.4rem .7rem; text-align:left; vertical-align:top; }
 th { background:var(--code-bg); }
 blockquote { margin:1rem 0; padding:0 1rem; color:var(--muted); border-left:.25em solid var(--border); }
+/* Diagrams on the Concepts page */
+figure.diagram { margin:1.25rem 0 1.75rem; padding:1rem; border:1px solid var(--border); border-radius:8px;
+                 background:var(--bg); }
+figure.diagram figcaption { margin-top:.6rem; font-size:14px; color:var(--muted); }
+svg.dg { display:block; width:100%; height:auto; }
+svg.dg text { fill:var(--fg); font:13px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+svg.dg text.b { font-weight:600; }
+svg.dg text.s { fill:var(--muted); font-size:11.5px; }
+svg.dg text.m { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11px; }
+svg.dg text.ok-t { fill:var(--ok); font-size:11.5px; font-weight:600; }
+svg.dg text.bad-t { fill:var(--bad); font-size:11.5px; font-weight:600; }
+svg.dg .box { fill:var(--code-bg); stroke:var(--border); stroke-width:1.5; }
+svg.dg .chip { fill:var(--bg); stroke:var(--border); stroke-width:1.2; }
+svg.dg .acc { fill:var(--acc-bg); stroke:var(--accent); }
+svg.dg .okbox { fill:var(--ok-bg); stroke:var(--ok); }
+svg.dg .badbox { fill:var(--bad-bg); stroke:var(--bad); }
+svg.dg .note { fill:var(--note-bg); stroke:var(--border); }
+svg.dg .zone { fill:none; stroke:var(--border); stroke-width:1.5; stroke-dasharray:6 5; }
+svg.dg .zone.vm { fill:var(--side-bg); }
+svg.dg .ring { stroke:var(--border); stroke-width:1.5; }
+svg.dg .r1 { fill:var(--side-bg); } svg.dg .r2 { fill:var(--code-bg); } svg.dg .r3 { fill:var(--side-bg); }
+svg.dg .r4 { fill:var(--acc-bg); stroke:var(--accent); } svg.dg .r5 { fill:var(--bg); stroke:var(--fg); }
+svg.dg .arrow { fill:none; stroke:var(--muted); stroke-width:1.8; }
+svg.dg .arrow.ok { stroke:var(--ok); } svg.dg .arrow.bad { stroke:var(--bad); }
+svg.dg .dash { stroke-dasharray:6 4; }
+svg.dg .life { stroke:var(--border); stroke-width:1.5; stroke-dasharray:3 4; }
+svg.dg .cross { stroke:var(--bad); stroke-width:3; stroke-linecap:round; }
+svg.dg .dot { fill:var(--fg); }
+svg.dg .mk { fill:var(--muted); }
+.cards { display:grid; gap:1rem; margin:1rem 0; }
+.cards.three { grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); }
+.card { border:1px solid var(--border); border-radius:8px; padding:.75rem 1rem; background:var(--bg); min-width:0; }
+.card .tag { font-size:12px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; color:var(--accent); }
+.card p { margin:.4rem 0; font-size:14px; }
+.card div.sourceCode { margin:.5rem 0; }
+.card pre { font-size:12px; }
+.note-line { color:var(--muted); }
+td div.sourceCode { margin:.2rem 0; }
 @media (max-width: 900px) {
   nav { position:static; width:auto; border-right:none; border-bottom:1px solid var(--border); }
   main { margin-left:0; padding:1.25rem; }

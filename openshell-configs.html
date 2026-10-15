@@ -10,14 +10,17 @@ try { const t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark'
 </script>
 <style>
 :root { --bg:#ffffff; --fg:#1f2328; --muted:#59636e; --border:#d1d9e0; --code-bg:#f6f8fa;
-        --link:#0969da; --side-bg:#f6f8fa; --accent:#0969da; }
+        --link:#0969da; --side-bg:#f6f8fa; --accent:#0969da;
+        --ok:#1a7f37; --bad:#cf222e; --acc-bg:#ddf4ff; --ok-bg:#dafbe1; --bad-bg:#ffebe9; --note-bg:#fff8c5; }
 /* Dark: chosen with the switch, or Auto and the system is dark. */
 :root[data-theme="dark"] { --bg:#0d1117; --fg:#e6edf3; --muted:#9198a1; --border:#3d444d; --code-bg:#151b23;
-        --link:#4493f8; --side-bg:#010409; --accent:#4493f8; color-scheme:dark; }
+        --link:#4493f8; --side-bg:#010409; --accent:#4493f8; color-scheme:dark;
+        --ok:#3fb950; --bad:#f85149; --acc-bg:#0c2d4d; --ok-bg:#0f2f1b; --bad-bg:#3d1a1c; --note-bg:#2e2a10; }
 :root[data-theme="dark"] code span { filter: brightness(1.45) saturate(0.9); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) { --bg:#0d1117; --fg:#e6edf3; --muted:#9198a1; --border:#3d444d; --code-bg:#151b23;
-          --link:#4493f8; --side-bg:#010409; --accent:#4493f8; color-scheme:dark; }
+          --link:#4493f8; --side-bg:#010409; --accent:#4493f8; color-scheme:dark;
+          --ok:#3fb950; --bad:#f85149; --acc-bg:#0c2d4d; --ok-bg:#0f2f1b; --bad-bg:#3d1a1c; --note-bg:#2e2a10; }
   :root:not([data-theme]) code span { filter: brightness(1.45) saturate(0.9); }
 }
 .theme { display:flex; gap:2px; margin:0 0 1rem; padding:2px; border:1px solid var(--border);
@@ -56,13 +59,51 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fo
        background:var(--code-bg); padding:.15em .35em; border-radius:5px; }
 pre { background:var(--code-bg); border:1px solid var(--border); border-radius:6px; padding:.9rem 1rem;
       overflow-x:auto; line-height:1.45; }
-pre code { background:none; padding:0; font-size:13px; }
+pre code { background:none; padding:0; font-size:13px; white-space:pre; }
 div.sourceCode { margin:1rem 0; }
 .table-wrap { overflow-x:auto; margin:1rem 0; }
 table { border-collapse:collapse; font-size:14px; }
 th, td { border:1px solid var(--border); padding:.4rem .7rem; text-align:left; vertical-align:top; }
 th { background:var(--code-bg); }
 blockquote { margin:1rem 0; padding:0 1rem; color:var(--muted); border-left:.25em solid var(--border); }
+/* Diagrams on the Concepts page */
+figure.diagram { margin:1.25rem 0 1.75rem; padding:1rem; border:1px solid var(--border); border-radius:8px;
+                 background:var(--bg); }
+figure.diagram figcaption { margin-top:.6rem; font-size:14px; color:var(--muted); }
+svg.dg { display:block; width:100%; height:auto; }
+svg.dg text { fill:var(--fg); font:13px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+svg.dg text.b { font-weight:600; }
+svg.dg text.s { fill:var(--muted); font-size:11.5px; }
+svg.dg text.m { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11px; }
+svg.dg text.ok-t { fill:var(--ok); font-size:11.5px; font-weight:600; }
+svg.dg text.bad-t { fill:var(--bad); font-size:11.5px; font-weight:600; }
+svg.dg .box { fill:var(--code-bg); stroke:var(--border); stroke-width:1.5; }
+svg.dg .chip { fill:var(--bg); stroke:var(--border); stroke-width:1.2; }
+svg.dg .acc { fill:var(--acc-bg); stroke:var(--accent); }
+svg.dg .okbox { fill:var(--ok-bg); stroke:var(--ok); }
+svg.dg .badbox { fill:var(--bad-bg); stroke:var(--bad); }
+svg.dg .note { fill:var(--note-bg); stroke:var(--border); }
+svg.dg .zone { fill:none; stroke:var(--border); stroke-width:1.5; stroke-dasharray:6 5; }
+svg.dg .zone.vm { fill:var(--side-bg); }
+svg.dg .ring { stroke:var(--border); stroke-width:1.5; }
+svg.dg .r1 { fill:var(--side-bg); } svg.dg .r2 { fill:var(--code-bg); } svg.dg .r3 { fill:var(--side-bg); }
+svg.dg .r4 { fill:var(--acc-bg); stroke:var(--accent); } svg.dg .r5 { fill:var(--bg); stroke:var(--fg); }
+svg.dg .arrow { fill:none; stroke:var(--muted); stroke-width:1.8; }
+svg.dg .arrow.ok { stroke:var(--ok); } svg.dg .arrow.bad { stroke:var(--bad); }
+svg.dg .dash { stroke-dasharray:6 4; }
+svg.dg .life { stroke:var(--border); stroke-width:1.5; stroke-dasharray:3 4; }
+svg.dg .cross { stroke:var(--bad); stroke-width:3; stroke-linecap:round; }
+svg.dg .dot { fill:var(--fg); }
+svg.dg .mk { fill:var(--muted); }
+.cards { display:grid; gap:1rem; margin:1rem 0; }
+.cards.three { grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); }
+.card { border:1px solid var(--border); border-radius:8px; padding:.75rem 1rem; background:var(--bg); min-width:0; }
+.card .tag { font-size:12px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; color:var(--accent); }
+.card p { margin:.4rem 0; font-size:14px; }
+.card div.sourceCode { margin:.5rem 0; }
+.card pre { font-size:12px; }
+.note-line { color:var(--muted); }
+td div.sourceCode { margin:.2rem 0; }
 @media (max-width: 900px) {
   nav { position:static; width:auto; border-right:none; border-bottom:1px solid var(--border); }
   main { margin-left:0; padding:1.25rem; }
@@ -161,14 +202,14 @@ blockquote { margin:1rem 0; padding:0 1rem; color:var(--muted); border-left:.25e
 <body>
 <nav>
 <p class="brand">OpenShell configs</p>
-<p class="meta">Built from <a href="https://github.com/fredrikp999/openshell-configs">github.com/fredrikp999/openshell-configs</a> at commit ea5bee2 2026-10-12</p>
+<p class="meta">Built from <a href="https://github.com/fredrikp999/openshell-configs">github.com/fredrikp999/openshell-configs</a> at commit 3041405 2026-10-15</p>
 <div class="theme" role="group" aria-label="Color theme">
 <button type="button" data-theme="auto" title="Follow the system setting">Auto</button>
 <button type="button" data-theme="light">Light</button>
 <button type="button" data-theme="dark">Dark</button>
 </div>
 <h3>Documentation</h3>
-<ul><li><a href="#doc-readme">OpenShell configs</a><ul><li><a href="#readme--repository-layout">Repository layout</a></li><li><a href="#readme--documentation">Documentation</a></li><li><a href="#readme--tldr">TL;DR</a></li><li><a href="#readme--makefile">Makefile</a></li><li><a href="#readme--references">References</a></li></ul></li><li><a href="#doc-setup">Setup</a><ul><li><a href="#setup--podman">Podman</a></li><li><a href="#setup--install-openshell">Install OpenShell</a></li><li><a href="#setup--credentials">Credentials</a></li></ul></li><li><a href="#doc-agents">Agents</a><ul><li><a href="#agents--two-ways-to-sign-in-provider-or-login-in-the-sandbox">Two ways to sign in: provider or login in the sandbox</a></li><li><a href="#agents--claude-code-with-a-claude-subscription">Claude Code with a Claude subscription</a></li><li><a href="#agents--opencode-with-openrouter">OpenCode with OpenRouter</a></li><li><a href="#agents--antigravity-cli-with-a-google-account">Antigravity CLI with a Google account</a></li></ul></li><li><a href="#doc-working-in-sandboxes">Working in sandboxes</a><ul><li><a href="#working-in-sandboxes--start-and-use-a-sandbox">Start and use a sandbox</a></li><li><a href="#working-in-sandboxes--vs-code">VS Code</a></li><li><a href="#working-in-sandboxes--getting-code-in-and-out">Getting code in and out</a></li><li><a href="#working-in-sandboxes--viewing-a-web-page-from-the-sandbox">Viewing a web page from the sandbox</a></li><li><a href="#working-in-sandboxes--many-sandboxes-in-parallel">Many sandboxes in parallel</a></li></ul></li><li><a href="#doc-extras">Extras: MCP servers, ACP, a headless browser and HyperFrames</a><ul><li><a href="#extras--mcp-servers-in-containers-on-the-host">MCP servers in containers on the host</a></li><li><a href="#extras--acp-agent-client-protocol">ACP (Agent Client Protocol)</a></li><li><a href="#extras--headless-browser-use">Headless browser use</a></li><li><a href="#extras--hyperframes">HyperFrames</a></li></ul></li><li><a href="#doc-customizing">Customizing</a><ul><li><a href="#customizing--provider-profiles">Provider profiles</a></li><li><a href="#customizing--sandbox-policies">Sandbox policies</a></li></ul></li><li><a href="#doc-logging">Logging and metrics</a><ul><li><a href="#logging--two-kinds-of-logs">Two kinds of logs</a></li><li><a href="#logging--reading-the-logs">Reading the logs</a></li><li><a href="#logging--watching-denials">Watching denials</a></li><li><a href="#logging--ocsf-json">OCSF JSON</a></li><li><a href="#logging--export-as-opentelemetry">Export as OpenTelemetry</a></li><li><a href="#logging--viewing-the-events">Viewing the events</a></li><li><a href="#logging--gateway-metrics">Gateway metrics</a></li></ul></li><li><a href="#doc-isolation">Isolation on macOS</a><ul><li><a href="#isolation--the-layers">The layers</a></li><li><a href="#isolation--where-its-weak">Where it's weak</a></li><li><a href="#isolation--compared-to-the-alternatives">Compared to the alternatives</a></li><li><a href="#isolation--a-podman-machine-with-minimal-host-mounts">A Podman machine with minimal host mounts</a></li></ul></li><li><a href="#doc-troubleshooting">Troubleshooting</a></li></ul>
+<ul><li><a href="#doc-readme">OpenShell configs</a><ul><li><a href="#readme--repository-layout">Repository layout</a></li><li><a href="#readme--documentation">Documentation</a></li><li><a href="#readme--tldr">TL;DR</a></li><li><a href="#readme--makefile">Makefile</a></li><li><a href="#readme--references">References</a></li></ul></li><li><a href="#doc-concepts">OpenShell concepts</a><ul><li><a href="#concepts--big-picture">The big picture</a></li><li><a href="#concepts--objects">How the objects fit together</a></li><li><a href="#concepts--lifecycle">Sandbox lifecycle</a></li><li><a href="#concepts--credentials">Credentials never enter the sandbox</a></li><li><a href="#concepts--access">What a sandbox may access</a></li><li><a href="#concepts--decision">How a connection is decided</a></li><li><a href="#concepts--rule-anatomy">Anatomy of a network rule</a></li><li><a href="#concepts--change-policy">Changing network access while it runs</a></li><li><a href="#concepts--filesystem">Filesystem policy</a></li><li><a href="#concepts--reaching">Reaching a sandbox</a></li><li><a href="#concepts--observability">Seeing what happens</a></li><li><a href="#concepts--isolation">Layers of isolation</a></li><li><a href="#concepts--cheat-sheet">Feature cheat sheet</a></li></ul></li><li><a href="#doc-setup">Setup</a><ul><li><a href="#setup--podman">Podman</a></li><li><a href="#setup--install-openshell">Install OpenShell</a></li><li><a href="#setup--credentials">Credentials</a></li></ul></li><li><a href="#doc-agents">Agents</a><ul><li><a href="#agents--two-ways-to-sign-in-provider-or-login-in-the-sandbox">Two ways to sign in: provider or login in the sandbox</a></li><li><a href="#agents--claude-code-with-a-claude-subscription">Claude Code with a Claude subscription</a></li><li><a href="#agents--opencode-with-openrouter">OpenCode with OpenRouter</a></li><li><a href="#agents--antigravity-cli-with-a-google-account">Antigravity CLI with a Google account</a></li></ul></li><li><a href="#doc-working-in-sandboxes">Working in sandboxes</a><ul><li><a href="#working-in-sandboxes--start-and-use-a-sandbox">Start and use a sandbox</a></li><li><a href="#working-in-sandboxes--vs-code">VS Code</a></li><li><a href="#working-in-sandboxes--getting-code-in-and-out">Getting code in and out</a></li><li><a href="#working-in-sandboxes--viewing-a-web-page-from-the-sandbox">Viewing a web page from the sandbox</a></li><li><a href="#working-in-sandboxes--many-sandboxes-in-parallel">Many sandboxes in parallel</a></li></ul></li><li><a href="#doc-extras">Extras: MCP servers, ACP, a headless browser and HyperFrames</a><ul><li><a href="#extras--mcp-servers-in-containers-on-the-host">MCP servers in containers on the host</a></li><li><a href="#extras--acp-agent-client-protocol">ACP (Agent Client Protocol)</a></li><li><a href="#extras--headless-browser-use">Headless browser use</a></li><li><a href="#extras--hyperframes">HyperFrames</a></li></ul></li><li><a href="#doc-customizing">Customizing</a><ul><li><a href="#customizing--provider-profiles">Provider profiles</a></li><li><a href="#customizing--sandbox-policies">Sandbox policies</a></li></ul></li><li><a href="#doc-logging">Logging and metrics</a><ul><li><a href="#logging--two-kinds-of-logs">Two kinds of logs</a></li><li><a href="#logging--reading-the-logs">Reading the logs</a></li><li><a href="#logging--watching-denials">Watching denials</a></li><li><a href="#logging--ocsf-json">OCSF JSON</a></li><li><a href="#logging--export-as-opentelemetry">Export as OpenTelemetry</a></li><li><a href="#logging--viewing-the-events">Viewing the events</a></li><li><a href="#logging--gateway-metrics">Gateway metrics</a></li></ul></li><li><a href="#doc-isolation">Isolation on macOS</a><ul><li><a href="#isolation--the-layers">The layers</a></li><li><a href="#isolation--where-its-weak">Where it's weak</a></li><li><a href="#isolation--compared-to-the-alternatives">Compared to the alternatives</a></li><li><a href="#isolation--a-podman-machine-with-minimal-host-mounts">A Podman machine with minimal host mounts</a></li></ul></li><li><a href="#doc-troubleshooting">Troubleshooting</a></li></ul>
 <h3>Example files</h3>
 <ul><li><a href="#group-policies">Policies</a><ul><li><a href="#file-policies-vscode-terminal-yaml"><code>vscode-terminal.yaml</code></a></li><li><a href="#file-policies-example-yaml"><code>example.yaml</code></a></li><li><a href="#file-policies-browser-yaml"><code>browser.yaml</code></a></li><li><a href="#file-policies-hyperframes-yaml"><code>hyperframes.yaml</code></a></li><li><a href="#file-policies-antigravity-yaml"><code>antigravity.yaml</code></a></li></ul></li><li><a href="#group-provider-profiles">Provider profiles</a><ul><li><a href="#file-providers-claude-code-oauth-yaml"><code>claude-code-oauth.yaml</code></a></li><li><a href="#file-providers-openrouter-yaml"><code>openrouter.yaml</code></a></li></ul></li><li><a href="#group-image-claude-sandbox">Image: claude-sandbox</a><ul><li><a href="#file-images-claude-sandbox-dockerfile"><code>Dockerfile</code></a></li><li><a href="#file-images-claude-sandbox-claude-start"><code>claude-start</code></a></li><li><a href="#file-images-claude-sandbox-claude-acp-start"><code>claude-acp-start</code></a></li><li><a href="#file-images-claude-sandbox-claude-start-json"><code>claude-start.json</code></a></li></ul></li><li><a href="#group-image-opencode-sandbox">Image: opencode-sandbox</a><ul><li><a href="#file-images-opencode-sandbox-dockerfile"><code>Dockerfile</code></a></li></ul></li></ul>
 </nav>
@@ -195,7 +236,7 @@ blockquote { margin:1rem 0; padding:0 1rem; color:var(--muted); border-left:.25e
 </tr>
 <tr>
 <td><a href="https://github.com/fredrikp999/openshell-configs/tree/main/images" target="_blank" rel="noopener">images/</a></td>
-<td>One folder per sandbox image, named after the image: <a href="#file-images-claude-sandbox-dockerfile">claude-sandbox</a> (Claude Code), <a href="https://github.com/fredrikp999/openshell-configs/tree/main/images/claude-browser" target="_blank" rel="noopener">claude-browser</a> (Claude Code plus a headless browser), <a href="https://github.com/fredrikp999/openshell-configs/tree/main/images/claude-hyperframes" target="_blank" rel="noopener">claude-hyperframes</a> (that plus HyperFrames, for videos made from HTML), <a href="#file-images-opencode-sandbox-dockerfile">opencode-sandbox</a> (OpenCode), <a href="https://github.com/fredrikp999/openshell-configs/tree/main/images/agy-sandbox" target="_blank" rel="noopener">agy-sandbox</a> (Antigravity CLI)</td>
+<td>One folder per sandbox image, named after the image: <a href="#file-images-claude-sandbox-dockerfile">claude-sandbox</a> (Claude Code), <a href="https://github.com/fredrikp999/openshell-configs/tree/main/images/claude-browser" target="_blank" rel="noopener">claude-browser</a> (Claude Code plus a headless browser), <a href="https://github.com/fredrikp999/openshell-configs/tree/main/images/claude-hyperframes" target="_blank" rel="noopener">claude-hyperframes</a> (that plus HyperFrames, for videos made from HTML), <a href="#file-images-opencode-sandbox-dockerfile">opencode-sandbox</a> (OpenCode), <a href="https://github.com/fredrikp999/openshell-configs/tree/main/images/agy-sandbox" target="_blank" rel="noopener">agy-sandbox</a> (Antigravity CLI, plus a community ACP adapter), <a href="https://github.com/fredrikp999/openshell-configs/tree/main/images/agy-hyperframes" target="_blank" rel="noopener">agy-hyperframes</a> (that plus HyperFrames and the browser), <a href="https://github.com/fredrikp999/openshell-configs/tree/main/images/agy-node" target="_blank" rel="noopener">agy-node</a> (Antigravity CLI that can install npm packages), <a href="https://github.com/fredrikp999/openshell-configs/tree/main/images/agy-python" target="_blank" rel="noopener">agy-python</a> (Antigravity CLI with Python that can install from PyPI)</td>
 </tr>
 <tr>
 <td><a href="#group-provider-profiles">providers/</a></td>
@@ -203,7 +244,7 @@ blockquote { margin:1rem 0; padding:0 1rem; color:var(--muted); border-left:.25e
 </tr>
 <tr>
 <td><a href="#group-policies">policies/</a></td>
-<td>Sandbox policies: <a href="#file-policies-vscode-terminal-yaml">vscode-terminal.yaml</a> (the default plus terminals, used everywhere), <a href="#file-policies-browser-yaml">browser.yaml</a> (for the browser image), <a href="#file-policies-hyperframes-yaml">hyperframes.yaml</a> (for the HyperFrames image), <a href="#file-policies-antigravity-yaml">antigravity.yaml</a> (for Antigravity CLI), <a href="#file-policies-example-yaml">example.yaml</a> (network rules to copy and adapt)</td>
+<td>Sandbox policies: <a href="#file-policies-vscode-terminal-yaml">vscode-terminal.yaml</a> (the default plus terminals, used everywhere), <a href="#file-policies-browser-yaml">browser.yaml</a> (for the browser image), <a href="#file-policies-hyperframes-yaml">hyperframes.yaml</a> (for the HyperFrames image), <a href="#file-policies-antigravity-yaml">antigravity.yaml</a> (for Antigravity CLI), <a href="https://github.com/fredrikp999/openshell-configs/blob/main/policies/agy-hyperframes.yaml" target="_blank" rel="noopener">agy-hyperframes.yaml</a> (for Antigravity CLI with HyperFrames), <a href="https://github.com/fredrikp999/openshell-configs/blob/main/policies/agy-node.yaml" target="_blank" rel="noopener">agy-node.yaml</a> (for Antigravity CLI with npm), <a href="https://github.com/fredrikp999/openshell-configs/blob/main/policies/agy-python.yaml" target="_blank" rel="noopener">agy-python.yaml</a> (for Antigravity CLI with PyPI), <a href="#file-policies-example-yaml">example.yaml</a> (network rules to copy and adapt)</td>
 </tr>
 <tr>
 <td><a href="https://github.com/fredrikp999/openshell-configs/tree/main/observability" target="_blank" rel="noopener">observability/</a></td>
@@ -326,7 +367,7 @@ blockquote { margin:1rem 0; padding:0 1rem; color:var(--muted); border-left:.25e
 <ul>
 <li><strong>Remote MCP servers</strong> (HTTP): add them in the agent as usual and allow them with a <code>protocol: mcp</code> rule, which can limit the methods and tools. Tokens go in a provider, never in the policy. See <a href="#customizing--example-policy-with-network-rules">Example policy with network rules</a>.</li>
 <li><strong>Local MCP servers</strong> (stdio, e.g. as container images): a sandbox can't run containers, so run the server on the host behind an HTTP bridge and use it like a remote server, by the host's IP. Its secrets stay on the host. See <a href="#extras--mcp-servers-in-containers-on-the-host">MCP servers in containers on the host</a>.</li>
-<li><strong>ACP:</strong> to drive the agent from a UI on the host, <code>bin/sandbox.sh claude|opencode my-task --acp</code> runs its ACP server over stdin/stdout, without opening a port. To try it, chat with <code>bin/acp_client.py connect my-task</code>. See <a href="#extras--acp-agent-client-protocol">ACP</a>.</li>
+<li><strong>ACP:</strong> to drive the agent from a UI on the host, <code>bin/sandbox.sh claude|opencode|agy my-task --acp</code> runs its ACP server over stdin/stdout, without opening a port. agy has no ACP mode of its own, so its image carries a <a href="#extras--acp-agent-client-protocol">community adapter</a>; log in to the sandbox once first. To try it, chat with <code>bin/acp_client.py connect my-task</code>. See <a href="#extras--acp-agent-client-protocol">ACP</a>.</li>
 </ul>
 <h4 id="readme--headless-browser-use">Headless browser use</h4>
 <ul>
@@ -342,6 +383,7 @@ blockquote { margin:1rem 0; padding:0 1rem; color:var(--muted); border-left:.25e
 <li><strong>What:</strong> Claude Code makes videos with <a href="https://hyperframes.heygen.com" target="_blank" rel="noopener">HyperFrames</a> in the sandbox, with its skills, FFmpeg and headless Chromium, and you watch and edit in HyperFrames Studio in your own browser.</li>
 <li><strong>How:</strong> <code>make claude-hyperframes</code>, then <code>bin/sandbox.sh claude my-video --hyperframes --forward 3102</code>, ask for the preview on port 3102, and open <a href="http://127.0.0.1:3102" target="_blank" rel="noopener">http://127.0.0.1:3102</a>.</li>
 <li><strong>What limits it:</strong> <a href="#file-policies-hyperframes-yaml">policies/hyperframes.yaml</a> allows only read-only access to the script and font CDNs and the HyperFrames registry. The Studio page runs in your browser, outside the sandbox (see below).</li>
+<li><strong>With Antigravity CLI:</strong> <code>bin/sandbox.sh agy my-video --hyperframes</code> uses the <code>agy-hyperframes</code> image (HyperFrames and a browser too). Its policy lets the processes that can read agy's login tokens reach the CDNs, so use it for that work only.</li>
 <li>See <a href="#extras--hyperframes">HyperFrames</a>.</li>
 </ul>
 <h4 id="readme--logs-and-opentelemetry">Logs and OpenTelemetry</h4>
@@ -392,10 +434,10 @@ blockquote { margin:1rem 0; padding:0 1rem; color:var(--muted); border-left:.25e
 <tbody>
 <tr>
 <td><code>make images</code></td>
-<td>Builds all images in order: <code>claude-sandbox</code>, then <code>claude-browser</code> (built on it), then <code>claude-hyperframes</code> (built on that), <code>opencode-sandbox</code> and <code>agy-sandbox</code></td>
+<td>Builds all images in order: <code>claude-sandbox</code>, then <code>claude-browser</code> (built on it), then <code>claude-hyperframes</code> (built on that), <code>agy-hyperframes</code> (built on that), <code>opencode-sandbox</code>, <code>agy-sandbox</code>, <code>agy-node</code> and <code>agy-python</code> (built on <code>agy-sandbox</code>)</td>
 </tr>
 <tr>
-<td><code>make claude-sandbox</code>, <code>make claude-browser</code>, <code>make claude-hyperframes</code>, <code>make opencode-sandbox</code>, <code>make agy-sandbox</code></td>
+<td><code>make claude-sandbox</code>, <code>make claude-browser</code>, <code>make claude-hyperframes</code>, <code>make opencode-sandbox</code>, <code>make agy-sandbox</code>, <code>make agy-hyperframes</code>, <code>make agy-node</code>, <code>make agy-python</code></td>
 <td>Builds one image, and the images it's built on</td>
 </tr>
 <tr>
@@ -412,7 +454,7 @@ blockquote { margin:1rem 0; padding:0 1rem; color:var(--muted); border-left:.25e
 </tr>
 <tr>
 <td><code>make html</code></td>
-<td>Builds <code>openshell-configs.html</code>: the README, the docs and the example files (policies, provider profiles, the <code>claude-sandbox</code> and <code>opencode-sandbox</code> images) as one standalone page, with a sidebar and a light/dark switch. Runs <a href="https://github.com/fredrikp999/openshell-configs/blob/main/bin/build-html.py" target="_blank" rel="noopener">bin/build-html.py</a>, which needs <code>pandoc</code> (<code>brew install pandoc</code>). The file is ignored by git</td>
+<td>Builds <code>openshell-configs.html</code>: the README, the docs and the example files (policies, provider profiles, the <code>claude-sandbox</code> and <code>opencode-sandbox</code> images) as one standalone page, with a sidebar and a light/dark switch, and a Concepts chapter with diagrams of the OpenShell architecture, credentials, policies and features (<a href="#doc-concepts">docs/concepts.html</a>, only in the HTML page). Runs <a href="https://github.com/fredrikp999/openshell-configs/blob/main/bin/build-html.py" target="_blank" rel="noopener">bin/build-html.py</a>, which needs <code>pandoc</code> (<code>brew install pandoc</code>). The file is ignored by git</td>
 </tr>
 <tr>
 <td><code>make doctor</code></td>
@@ -457,6 +499,627 @@ blockquote { margin:1rem 0; padding:0 1rem; color:var(--muted); border-left:.25e
 <li><a href="https://openrouter.ai/" target="_blank" rel="noopener">OpenRouter</a></li>
 <li><a href="https://antigravity.google/docs/cli" target="_blank" rel="noopener">Antigravity CLI</a></li>
 </ul>
+</section>
+<section class="doc" id="doc-concepts"><p class="path"><a href="https://github.com/fredrikp999/openshell-configs/blob/main/docs/concepts.html" target="_blank" rel="noopener">docs/concepts.html</a></p>
+<h1 id="concepts--top">OpenShell concepts</h1>
+<p>A visual tour of how OpenShell works: the parts, how a request from an agent is checked, and which setting controls what. Every command on this page is an <code>openshell</code> command; the helper scripts in <code>bin/</code> are left out, so you see what OpenShell itself does. Diagrams follow the page's light/dark theme.</p>
+
+<h2 id="concepts--big-picture">The big picture</h2>
+<p>OpenShell runs an AI coding agent inside a <strong>sandbox</strong>: a container where the filesystem is restricted, the only way out is a policy-checking proxy, and API keys exist only as placeholders. A <strong>gateway</strong> on your machine manages the sandboxes, the credentials and the policies.</p>
+
+<figure class="diagram">
+<svg class="dg" viewBox="0 0 900 540" role="img" aria-label="Architecture: the openshell CLI talks to the gateway, which creates sandboxes in a Podman VM; each sandbox has a supervisor, Landlock, the agent and a proxy; the proxy lets only allowed hosts through.">
+<defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="zone" x="6" y="6" width="888" height="418" rx="14"/>
+<text class="s" x="22" y="28">Your computer</text>
+<!-- left column -->
+<rect class="box" x="26" y="70" width="170" height="64" rx="8"/>
+<text class="b" x="111" y="97" text-anchor="middle">openshell CLI</text>
+<text class="s" x="111" y="117" text-anchor="middle">sandbox · policy · provider</text>
+<rect class="box" x="26" y="170" width="170" height="64" rx="8"/>
+<text class="b" x="111" y="197" text-anchor="middle">VS Code / ssh</text>
+<text class="s" x="111" y="217" text-anchor="middle">editor, shell, ACP clients</text>
+<rect class="box" x="26" y="270" width="170" height="64" rx="8"/>
+<text class="b" x="111" y="297" text-anchor="middle">Your browser</text>
+<text class="s" x="111" y="317" text-anchor="middle">pages the agent serves</text>
+<path class="arrow" marker-end="url(#a1)" d="M196 102H250"/>
+<path class="arrow" marker-end="url(#a1)" d="M196 202H250"/>
+<path class="arrow" marker-end="url(#a1)" d="M196 302H250"/>
+<text class="s" x="223" y="94" text-anchor="middle">gRPC</text>
+<text class="s" x="223" y="194" text-anchor="middle">SSH</text>
+<text class="s" x="223" y="294" text-anchor="middle">forward</text>
+<!-- gateway -->
+<rect class="box acc" x="250" y="56" width="220" height="318" rx="10"/>
+<text class="b" x="360" y="82" text-anchor="middle">Gateway</text>
+<text class="s m" x="360" y="100" text-anchor="middle">https://localhost:17670</text>
+<rect class="chip" x="264" y="116" width="192" height="42" rx="6"/>
+<text class="t" x="360" y="134" text-anchor="middle">Providers</text><text class="s" x="360" y="150" text-anchor="middle">the real keys and tokens</text>
+<rect class="chip" x="264" y="168" width="192" height="42" rx="6"/>
+<text class="t" x="360" y="186" text-anchor="middle">Profiles</text><text class="s" x="360" y="202" text-anchor="middle">what a provider may reach</text>
+<rect class="chip" x="264" y="220" width="192" height="42" rx="6"/>
+<text class="t" x="360" y="238" text-anchor="middle">Policies and rules</text><text class="s" x="360" y="254" text-anchor="middle">versioned, per sandbox</text>
+<rect class="chip" x="264" y="272" width="192" height="42" rx="6"/>
+<text class="t" x="360" y="290" text-anchor="middle">Settings, logs, metrics</text><text class="s" x="360" y="306" text-anchor="middle">gateway-wide or per sandbox</text>
+<rect class="chip" x="264" y="324" width="192" height="40" rx="6"/>
+<text class="t" x="360" y="342" text-anchor="middle">Compute driver</text><text class="s" x="360" y="357" text-anchor="middle">Podman · Docker · MicroVM · K8s</text>
+<!-- VM -->
+<rect class="zone vm" x="552" y="36" width="330" height="372" rx="12"/>
+<text class="s" x="568" y="58">Podman machine (Linux VM)</text>
+<path class="arrow" marker-end="url(#a1)" d="M456 344H576"/>
+<text class="s" x="512" y="336" text-anchor="middle">Podman API</text>
+<rect class="box" x="572" y="70" width="294" height="262" rx="10"/>
+<text class="b" x="719" y="92" text-anchor="middle">Sandbox: a container from your image</text>
+<rect class="chip" x="588" y="104" width="262" height="40" rx="6"/>
+<text class="t" x="719" y="122" text-anchor="middle">Supervisor</text><text class="s" x="719" y="137" text-anchor="middle">starts the agent, enforces the policy</text>
+<rect class="chip" x="588" y="156" width="262" height="40" rx="6"/>
+<text class="t" x="719" y="174" text-anchor="middle">Landlock + syscall filter</text><text class="s" x="719" y="189" text-anchor="middle">only the paths in the policy are reachable</text>
+<rect class="chip" x="588" y="208" width="262" height="40" rx="6"/>
+<text class="t" x="719" y="226" text-anchor="middle">Agent process</text><text class="s" x="719" y="241" text-anchor="middle">claude · opencode · agy. Sees placeholders only</text>
+<rect class="chip acc" x="588" y="270" width="262" height="48" rx="6"/>
+<text class="b" x="719" y="289" text-anchor="middle">Policy proxy</text><text class="s" x="719" y="306" text-anchor="middle">checks every connection, adds credentials</text>
+<path class="arrow" marker-end="url(#a1)" d="M719 248V268"/>
+<path class="arrow dash" marker-end="url(#a1)" d="M588 124H470"/>
+<text class="s" x="529" y="116" text-anchor="middle">session</text>
+<text class="s" x="719" y="372" text-anchor="middle">…one sandbox per task, side by side in the same VM</text>
+<!-- outside -->
+<path class="arrow ok" marker-end="url(#a1)" d="M690 318V470"/>
+<path class="arrow bad" d="M810 318V450"/>
+<path class="cross" d="M802 442l16 16m0-16l-16 16"/>
+<rect class="box okbox" x="560" y="470" width="260" height="56" rx="8"/>
+<text class="b" x="690" y="494" text-anchor="middle">Allowed hosts</text>
+<text class="s" x="690" y="512" text-anchor="middle">provider endpoints + approved rules</text>
+<rect class="box badbox" x="780" y="462" width="110" height="1" rx="0" opacity="0"/>
+<text class="s" x="822" y="494">everything</text>
+<text class="s" x="822" y="510">else: denied</text>
+</svg>
+<figcaption>The gateway is the control plane; each sandbox's supervisor connects out to it, so nothing needs to listen on the sandbox. All of the agent's network traffic goes through the policy proxy.</figcaption>
+</figure>
+
+<div class="table-wrap"><table>
+<thead><tr><th>Part</th><th>What it does</th><th>Look at it</th></tr></thead>
+<tbody>
+<tr><td><strong>Gateway</strong></td><td>The server that stores providers, profiles, policies and settings, and starts sandboxes through a compute driver. Runs as a background service.</td><td><code>openshell status</code><br><code>openshell gateway list</code><br><code>openshell doctor</code></td></tr>
+<tr><td><strong>Compute driver</strong></td><td>Where sandboxes run: Podman, Docker, a MicroVM or Kubernetes. Chosen in the gateway's config.</td><td><code>openshell gateway info</code></td></tr>
+<tr><td><strong>Sandbox</strong></td><td>One isolated container with an agent in it, a policy and attached providers.</td><td><code>openshell sandbox list</code><br><code>openshell sandbox get my-task</code></td></tr>
+<tr><td><strong>Supervisor</strong></td><td>The OpenShell process inside each sandbox. Applies the policy, runs the proxy, logs every decision, and relays <code>exec</code>, SSH and port forwards from the gateway.</td><td><code>openshell logs my-task --source sandbox</code></td></tr>
+<tr><td><strong>Interactive view</strong></td><td>A terminal UI over sandboxes, logs and rules.</td><td><code>openshell term</code></td></tr>
+</tbody>
+</table></div>
+
+<h2 id="concepts--objects">How the objects fit together</h2>
+<p>Four things combine into a sandbox. A <strong>profile</strong> is a template, a <strong>provider</strong> is an instance of it that holds a secret, the <strong>image</strong> contains the agent, and the <strong>policy</strong> sets filesystem access and extra network rules.</p>
+
+<figure class="diagram">
+<svg class="dg" viewBox="0 0 900 440" role="img" aria-label="A profile file is imported into the gateway; a provider is created from it with your token; a sandbox is created from an image with providers and a policy attached.">
+<defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs>
+<text class="s" x="26" y="26">You write or download</text>
+<rect class="box" x="26" y="40" width="190" height="56" rx="8"/>
+<text class="b" x="121" y="64" text-anchor="middle">Profile YAML</text><text class="s" x="121" y="82" text-anchor="middle">credentials · endpoints · binaries</text>
+<rect class="box" x="26" y="300" width="190" height="56" rx="8"/>
+<text class="b" x="121" y="324" text-anchor="middle">Policy YAML</text><text class="s" x="121" y="342" text-anchor="middle">filesystem + network rules</text>
+<rect class="box" x="26" y="220" width="190" height="56" rx="8"/>
+<text class="b" x="121" y="244" text-anchor="middle">Image</text><text class="s" x="121" y="262" text-anchor="middle">a container image with the agent</text>
+<rect class="box" x="26" y="130" width="190" height="56" rx="8"/>
+<text class="b" x="121" y="154" text-anchor="middle">Your token or key</text><text class="s" x="121" y="172" text-anchor="middle">only on the host, once</text>
+<!-- gateway -->
+<rect class="box acc" x="290" y="20" width="250" height="236" rx="10"/>
+<text class="b" x="415" y="46" text-anchor="middle">Gateway</text>
+<rect class="chip" x="310" y="62" width="210" height="52" rx="6"/>
+<text class="t" x="415" y="84" text-anchor="middle">Profile</text><text class="s m" x="415" y="102" text-anchor="middle">id: claude-code-oauth</text>
+<rect class="chip" x="310" y="158" width="210" height="70" rx="6"/>
+<text class="t" x="415" y="180" text-anchor="middle">Provider “claude”</text><text class="s m" x="415" y="198" text-anchor="middle">type: claude-code-oauth</text><text class="s" x="415" y="216" text-anchor="middle">holds the token</text>
+<path class="arrow" marker-end="url(#a2)" d="M415 114V156"/>
+<text class="s m" x="425" y="140">--type</text>
+<path class="arrow" marker-end="url(#a2)" d="M216 68H308"/>
+<text class="s m" x="262" y="60" text-anchor="middle">profile import</text>
+<path class="arrow" marker-end="url(#a2)" d="M216 160C250 175 270 190 308 192"/>
+<text class="s m" x="240" y="204" text-anchor="middle">provider create</text>
+<text class="s m" x="240" y="218" text-anchor="middle">--from-existing</text>
+<!-- sandbox -->
+<rect class="box" x="640" y="20" width="240" height="388" rx="10"/>
+<text class="b" x="760" y="46" text-anchor="middle">Sandbox “my-task”</text>
+<rect class="chip" x="656" y="64" width="208" height="56" rx="6"/>
+<text class="t" x="760" y="86" text-anchor="middle">Providers</text><text class="s m" x="760" y="106" text-anchor="middle">--provider claude</text>
+<rect class="chip" x="656" y="136" width="208" height="56" rx="6"/>
+<text class="t" x="760" y="158" text-anchor="middle">Image</text><text class="s m" x="760" y="178" text-anchor="middle">--from claude-sandbox:latest</text>
+<rect class="chip" x="656" y="208" width="208" height="56" rx="6"/>
+<text class="t" x="760" y="230" text-anchor="middle">Policy</text><text class="s m" x="760" y="250" text-anchor="middle">--policy policies/x.yaml</text>
+<rect class="chip" x="656" y="280" width="208" height="56" rx="6"/>
+<text class="t" x="760" y="302" text-anchor="middle">Main command</text><text class="s m" x="760" y="322" text-anchor="middle">-- sleep infinity</text>
+<rect class="chip acc" x="656" y="348" width="208" height="46" rx="6"/>
+<text class="t" x="760" y="368" text-anchor="middle">Approved rules</text><text class="s" x="760" y="384" text-anchor="middle">added later, per sandbox</text>
+<path class="arrow" marker-end="url(#a2)" d="M520 193C580 160 600 110 654 94"/>
+<path class="arrow" marker-end="url(#a2)" d="M216 248C400 270 560 190 654 166"/>
+<path class="arrow" marker-end="url(#a2)" d="M216 330C440 340 570 260 654 238"/>
+<text class="s" x="26" y="420">Creating a sandbox needs all four; the sandbox keeps running until its main command exits.</text>
+</svg>
+<figcaption>Profiles and providers live in the gateway and are shared: create a provider once, attach it to any number of sandboxes. Policy, image and approved rules belong to one sandbox.</figcaption>
+</figure>
+
+<div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Import the profile (once), and create a provider from it with your token</span></span>
+<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider profile lint   <span class="at">-f</span> providers/claude-code-oauth.yaml</span>
+<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider profile import <span class="at">-f</span> providers/claude-code-oauth.yaml</span>
+<span ><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider create <span class="at">--name</span> claude <span class="at">--type</span> claude-code-oauth <span class="at">--from-existing</span></span>
+<span ><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span ><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Create a sandbox from an image, with the provider and a policy</span></span>
+<span ><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox create <span class="at">--name</span> my-task <span class="at">--from</span> claude-sandbox:latest <span class="dt">\</span></span>
+<span ><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">--provider</span> claude <span class="at">--policy</span> policies/vscode-terminal.yaml <span class="dt">\</span></span>
+<span ><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">--detach</span> <span class="at">--</span> sleep infinity</span>
+<span ><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span ><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. See what exists</span></span>
+<span ><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider profile list</span>
+<span ><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider list</span>
+<span ><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox list</span></code></pre></div>
+
+
+<h2 id="concepts--lifecycle">Sandbox lifecycle</h2>
+<figure class="diagram">
+<svg class="dg" viewBox="0 0 900 330" role="img" aria-label="Lifecycle: create leads to Ready; Ready can be stopped and started again, can end as Completed or Error when the main process exits, and any state can be deleted.">
+<defs><marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs>
+<circle class="dot" cx="40" cy="120" r="7"/>
+<path class="arrow" marker-end="url(#a3)" d="M47 120H108"/>
+<text class="s m" x="78" y="108" text-anchor="middle">create</text>
+<rect class="box" x="110" y="92" width="130" height="56" rx="10"/>
+<text class="t" x="175" y="125" text-anchor="middle">starting</text>
+<path class="arrow" marker-end="url(#a3)" d="M240 120H318"/>
+<rect class="box okbox" x="320" y="82" width="170" height="76" rx="10"/>
+<text class="b" x="405" y="112" text-anchor="middle">Ready</text>
+<text class="s" x="405" y="132" text-anchor="middle">main command running</text>
+<text class="s" x="405" y="147" text-anchor="middle">files in /sandbox kept</text>
+<!-- stop/start -->
+<path class="arrow" marker-end="url(#a3)" d="M470 82C520 50 560 50 600 50"/>
+<text class="s m" x="540" y="36" text-anchor="middle">stop</text>
+<path class="arrow" marker-end="url(#a3)" d="M600 78C570 78 520 82 490 100"/>
+<text class="s m" x="560" y="94" text-anchor="middle">start</text>
+<rect class="box" x="602" y="28" width="170" height="64" rx="10"/>
+<text class="t" x="687" y="56" text-anchor="middle">stopped</text><text class="s" x="687" y="74" text-anchor="middle">workspace preserved</text>
+<!-- exits -->
+<path class="arrow" marker-end="url(#a3)" d="M490 140C540 160 560 168 600 168"/>
+<text class="s" x="530" y="188" text-anchor="middle">main command exits</text>
+<rect class="box badbox" x="602" y="134" width="170" height="64" rx="10"/>
+<text class="t" x="687" y="162" text-anchor="middle">Completed / Error</text><text class="s" x="687" y="180" text-anchor="middle">not reusable: delete it</text>
+<!-- delete -->
+<path class="arrow dash" marker-end="url(#a3)" d="M405 158V242"/>
+<text class="s m" x="415" y="200">delete</text>
+<path class="arrow dash" marker-end="url(#a3)" d="M687 198V266H492"/>
+<rect class="box" x="320" y="244" width="170" height="44" rx="10" stroke-dasharray="5 4"/>
+<text class="t" x="405" y="271" text-anchor="middle">gone</text>
+<text class="s" x="26" y="318">While Ready you can run commands in it, connect an editor, copy files and forward ports (see “Reaching a sandbox” below).</text>
+</svg>
+<figcaption>A sandbox lives as long as its main command. Running <code>sleep infinity</code> keeps it alive between agent sessions; <code>--restart-policy</code> controls what happens when the command exits.</figcaption>
+</figure>
+
+<div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox create <span class="at">--name</span> my-task <span class="at">--from</span> claude-sandbox:latest <span class="dt">\</span></span>
+<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">--provider</span> claude <span class="at">--detach</span> <span class="at">--</span> sleep infinity</span>
+<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox list                      <span class="co"># wait for Ready</span></span>
+<span ><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox exec my-task <span class="at">--workdir</span> /sandbox <span class="at">--</span> bash</span>
+<span ><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox stop  my-task             <span class="co"># keeps the workspace</span></span>
+<span ><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox start my-task</span>
+<span ><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox delete my-task</span></code></pre></div>
+
+
+<h2 id="concepts--credentials">Credentials never enter the sandbox</h2>
+<p>The agent gets an environment variable that looks like a key but is a placeholder (<code>openshell:…</code>). The real value stays in the gateway. When the agent sends a request, the proxy checks it, and only then swaps the placeholder for the real credential.</p>
+
+<figure class="diagram">
+<svg class="dg" viewBox="0 0 900 420" role="img" aria-label="Sequence: the gateway gives the agent a placeholder and the proxy the real token; the agent sends a request with the placeholder; the proxy checks host, binary and method, replaces the placeholder with the real token and forwards it to the API.">
+<defs><marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="box" x="30" y="16" width="150" height="44" rx="8"/><text class="b" x="105" y="43" text-anchor="middle">Gateway</text>
+<rect class="box" x="250" y="16" width="150" height="44" rx="8"/><text class="b" x="325" y="43" text-anchor="middle">Agent</text>
+<rect class="box acc" x="470" y="16" width="150" height="44" rx="8"/><text class="b" x="545" y="43" text-anchor="middle">Policy proxy</text>
+<rect class="box" x="710" y="16" width="160" height="44" rx="8"/><text class="b" x="790" y="43" text-anchor="middle">api.anthropic.com</text>
+<path class="life" d="M105 60V410M325 60V410M545 60V410M790 60V410"/>
+<!-- 1 -->
+<path class="arrow dash" marker-end="url(#a4)" d="M105 98H323"/>
+<text class="s" x="214" y="90" text-anchor="middle">① env var = placeholder</text>
+<path class="arrow dash" marker-end="url(#a4)" d="M105 142H543"/>
+<text class="s" x="324" y="134" text-anchor="middle">① the real token is made available to the proxy only</text>
+<!-- 2 -->
+<path class="arrow" marker-end="url(#a4)" d="M325 192H543"/>
+<text class="s" x="434" y="170" text-anchor="middle">② HTTPS request</text>
+<text class="s m" x="434" y="184" text-anchor="middle">Bearer openshell:…</text>
+<!-- 3 -->
+<rect class="note" x="556" y="206" width="226" height="64" rx="6"/>
+<text class="s" x="572" y="226">③ checks, in order:</text>
+<text class="s" x="572" y="241">host:port in the profile's endpoints?</text>
+<text class="s" x="572" y="255">binary on the list? method + path ok?</text>
+<!-- 4 -->
+<path class="arrow ok" marker-end="url(#a4)" d="M545 306H788"/>
+<text class="s" x="666" y="284" text-anchor="middle">④ forwarded with the real token</text>
+<text class="s m" x="666" y="298" text-anchor="middle">Bearer sk-ant-…</text>
+<!-- 5 -->
+<path class="arrow" marker-end="url(#a4)" d="M788 346H547"/>
+<path class="arrow" marker-end="url(#a4)" d="M545 366H327"/>
+<text class="s" x="666" y="340" text-anchor="middle">⑤ response</text>
+<text class="s bad-t" x="30" y="408">Not allowed: the connection is refused and logged as DENIED. The real token is never sent.</text>
+</svg>
+<figcaption>The real token is never in the sandbox's environment variables or files, so an agent that is tricked into printing its environment leaks only the placeholder.</figcaption>
+</figure>
+
+<p>The profile defines this contract. This excerpt of <code>claude-code-oauth</code> says which secret, where it goes, and who may use it:</p>
+<div class="sourceCode" ><pre class="sourceCode yaml"><code class="sourceCode yaml"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">id</span><span class="kw">:</span><span class="at"> claude-code-oauth</span></span>
+<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">credentials</span><span class="kw">:</span></span>
+<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> oauth_token</span></span>
+<span ><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">env_vars</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">CLAUDE_CODE_OAUTH_TOKEN</span><span class="kw">]</span><span class="co">   # read once from the host by --from-existing</span></span>
+<span ><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">auth_style</span><span class="kw">:</span><span class="at"> bearer</span><span class="co">                    # sent as &quot;Authorization: Bearer ...&quot;</span></span>
+<span ><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">header_name</span><span class="kw">:</span><span class="at"> authorization</span></span>
+<span ><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">endpoints</span><span class="kw">:</span><span class="co">                                # the credential is added ONLY on these</span></span>
+<span ><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">host</span><span class="kw">:</span><span class="at"> api.anthropic.com</span></span>
+<span ><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">port</span><span class="kw">:</span><span class="at"> </span><span class="dv">443</span></span>
+<span ><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">protocol</span><span class="kw">:</span><span class="at"> rest</span></span>
+<span ><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">access</span><span class="kw">:</span><span class="at"> read-write</span></span>
+<span ><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">enforcement</span><span class="kw">:</span><span class="at"> enforce</span></span>
+<span ><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fu">binaries</span><span class="kw">:</span><span class="co">                                 # only these programs may use it</span></span>
+<span ><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> /usr/local/lib/node_modules/@anthropic-ai/**</span></span></code></pre></div>
+
+<div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider profile describe claude-code-oauth</span>
+<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider list</span>
+<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider update claude <span class="at">--from-existing</span>   <span class="co"># rotate the token</span></span></code></pre></div>
+
+
+<h2 id="concepts--access">What a sandbox may access</h2>
+<p>Access comes from three sources, added together. Filesystem rules are fixed when the sandbox starts; network access can change while it runs.</p>
+
+<div class="cards three">
+<div class="card"><div class="tag">1 · Policy file: filesystem</div><p>Which paths processes may read or write. Enforced by Landlock in the kernel.</p><div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox create <span class="dt">\</span></span>
+<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">--policy</span> policies/vscode-terminal.yaml ...</span></code></pre></div>
+<p class="note-line"><strong>Fixed at creation.</strong> Changing it means a new sandbox.</p></div>
+<div class="card"><div class="tag">2 · Providers: hosts + credentials</div><p>Each attached provider allows the hosts in its profile and adds its credential to requests to them.</p><div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox create <span class="dt">\</span></span>
+<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">--provider</span> claude <span class="at">--provider</span> github-ro ...</span>
+<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox provider <span class="at">--help</span></span></code></pre></div>
+<p class="note-line"><strong>Set by the attached providers.</strong> Editing a profile affects new sandboxes.</p></div>
+<div class="card"><div class="tag">3 · Network rules: extra hosts</div><p>Per-binary rules in the policy's <code>network_policies</code>, and rules you approve after a denial.</p><div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy set my-task <span class="dt">\</span></span>
+<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">--policy</span> policies/x.yaml <span class="at">--wait</span></span>
+<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> rule approve my-task <span class="at">--chunk-id</span> ID</span></code></pre></div>
+<p class="note-line"><strong>Live.</strong> Applies to a running sandbox, without a restart.</p></div>
+</div>
+
+<div class="table-wrap"><table>
+<thead><tr><th>You want to change…</th><th>Where</th><th>Takes effect</th></tr></thead>
+<tbody>
+<tr><td>Readable / writable paths</td><td><code>filesystem_policy</code> in the policy file</td><td>Next sandbox (<code>delete</code> + <code>create --policy</code>)</td></tr>
+<tr><td>Hosts a provider may reach, its credential</td><td>The provider profile (<code>openshell provider profile update</code>)</td><td>Sandboxes created after the update</td></tr>
+<tr><td>Extra hosts for one sandbox</td><td><code>network_policies</code> (<code>openshell policy set</code> / <code>policy update</code>) or <code>openshell rule approve</code></td><td>Immediately (hot reload)</td></tr>
+<tr><td>Logging and other behaviour</td><td><code>openshell settings set</code></td><td>Within seconds</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="concepts--decision">How a connection is decided</h2>
+<p>Every connection from inside the sandbox goes through the proxy. It asks the same questions in the same order, and the first “no” ends the connection.</p>
+
+<figure class="diagram">
+<svg class="dg" viewBox="0 0 900 600" role="img" aria-label="Flow chart: host and port allowed? binary listed? inspected protocol? deny rule matches? allow rule matches? Any failure is denied; otherwise allowed.">
+<defs><marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="box acc" x="40" y="12" width="360" height="44" rx="22"/>
+<text class="b" x="220" y="40" text-anchor="middle">A process in the sandbox opens a connection</text>
+<!-- q1 -->
+<path class="arrow" marker-end="url(#a5)" d="M220 56V86"/>
+<rect class="box" x="40" y="88" width="360" height="56" rx="8"/>
+<text class="t" x="220" y="112" text-anchor="middle">Is host:port allowed by an attached provider's</text>
+<text class="t" x="220" y="130" text-anchor="middle">endpoints or by a network_policies rule?</text>
+<path class="arrow bad" marker-end="url(#a5)" d="M400 116H470"/><text class="s bad-t" x="435" y="108" text-anchor="middle">no</text>
+<!-- q2 -->
+<path class="arrow" marker-end="url(#a5)" d="M220 144V174"/><text class="s ok-t" x="232" y="164">yes</text>
+<rect class="box" x="40" y="176" width="360" height="56" rx="8"/>
+<text class="t" x="220" y="200" text-anchor="middle">Is the program that opened it (by its real path)</text>
+<text class="t" x="220" y="218" text-anchor="middle">on that endpoint's binaries list?</text>
+<path class="arrow bad" marker-end="url(#a5)" d="M400 204H470"/><text class="s bad-t" x="435" y="196" text-anchor="middle">no</text>
+<!-- q3 -->
+<path class="arrow" marker-end="url(#a5)" d="M220 232V262"/><text class="s ok-t" x="232" y="252">yes</text>
+<rect class="box" x="40" y="264" width="360" height="56" rx="8"/>
+<text class="t" x="220" y="288" text-anchor="middle">Does the endpoint inspect requests</text>
+<text class="t" x="220" y="306" text-anchor="middle">(protocol: rest or mcp)?</text>
+<path class="arrow ok" marker-end="url(#a5)" d="M400 292H470"/><text class="s" x="435" y="284" text-anchor="middle">no</text>
+<!-- q4 -->
+<path class="arrow" marker-end="url(#a5)" d="M220 320V350"/><text class="s ok-t" x="232" y="340">yes</text>
+<rect class="box" x="40" y="352" width="360" height="56" rx="8"/>
+<text class="t" x="220" y="376" text-anchor="middle">Does a deny_rules entry match the request</text>
+<text class="t" x="220" y="394" text-anchor="middle">(method, path, MCP method or tool)?</text>
+<path class="arrow bad" marker-end="url(#a5)" d="M400 380H470"/><text class="s bad-t" x="435" y="372" text-anchor="middle">yes</text>
+<!-- q5 -->
+<path class="arrow" marker-end="url(#a5)" d="M220 408V438"/><text class="s ok-t" x="232" y="428">no</text>
+<rect class="box" x="40" y="440" width="360" height="56" rx="8"/>
+<text class="t" x="220" y="464" text-anchor="middle">Does an allow rule or an access preset</text>
+<text class="t" x="220" y="482" text-anchor="middle">(read-only, read-write) match it?</text>
+<path class="arrow bad" marker-end="url(#a5)" d="M400 468H470"/><text class="s bad-t" x="435" y="460" text-anchor="middle">no</text>
+<path class="arrow ok" marker-end="url(#a5)" d="M220 496V526"/><text class="s ok-t" x="232" y="516">yes</text>
+<rect class="box okbox" x="40" y="528" width="360" height="56" rx="8"/>
+<text class="b" x="220" y="553" text-anchor="middle">ALLOWED</text>
+<text class="s" x="220" y="570" text-anchor="middle">credential added if the host is in a provider's profile</text>
+<!-- outcomes -->
+<rect class="box badbox" x="472" y="94" width="150" height="44" rx="8"/><text class="b" x="547" y="121" text-anchor="middle">DENIED</text>
+<rect class="box badbox" x="472" y="182" width="150" height="44" rx="8"/><text class="b" x="547" y="209" text-anchor="middle">DENIED</text>
+<rect class="box okbox" x="472" y="270" width="150" height="44" rx="8"/><text class="b" x="547" y="293" text-anchor="middle">ALLOWED</text><text class="s" x="547" y="307" text-anchor="middle">any request (L4 only)</text>
+<rect class="box badbox" x="472" y="358" width="150" height="44" rx="8"/><text class="b" x="547" y="385" text-anchor="middle">DENIED</text>
+<rect class="box badbox" x="472" y="446" width="150" height="44" rx="8"/><text class="b" x="547" y="473" text-anchor="middle">DENIED</text>
+<rect class="note" x="660" y="94" width="226" height="190" rx="8"/>
+<text class="b" x="674" y="118">Every denial…</text>
+<text class="s" x="674" y="140">• is logged with the binary's path:</text>
+<text class="s m" x="684" y="156">openshell logs my-task</text>
+<text class="s" x="674" y="182">• produces a proposed rule:</text>
+<text class="s m" x="684" y="198">openshell rule get my-task</text>
+<text class="s m" x="684" y="212">  --status pending</text>
+<text class="s" x="674" y="238">• waits for your decision:</text>
+<text class="s m" x="684" y="254">openshell rule approve …</text>
+<text class="s m" x="684" y="268">openshell rule reject …</text>
+</svg>
+<figcaption>Deny rules always win over allow rules. Without <code>protocol</code> an endpoint is checked only on host, port and binary (L4), so any request to it is allowed.</figcaption>
+</figure>
+
+<h2 id="concepts--rule-anatomy">Anatomy of a network rule</h2>
+<p>A rule says <strong>who</strong> may reach <strong>where</strong>, and <strong>what</strong> they may do there.</p>
+
+<div class="cards three">
+<div class="card"><div class="tag">WHO · binaries</div><p>The program that opens the connection, by its real path. For npm that is <code>node</code>; for git over HTTPS it is <code>git-remote-http</code>. Child processes are covered too.</p><div class="sourceCode" ><pre class="sourceCode yaml"><code class="sourceCode yaml"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">binaries</span><span class="kw">:</span></span>
+<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">path</span><span class="kw">:</span><span class="at"> /usr/local/bin/node</span></span></code></pre></div>
+</div>
+<div class="card"><div class="tag">WHERE · endpoints</div><p>Host, port and, for MCP, a path. Wildcards are allowed.</p><div class="sourceCode" ><pre class="sourceCode yaml"><code class="sourceCode yaml"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">endpoints</span><span class="kw">:</span></span>
+<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">host</span><span class="kw">:</span><span class="at"> registry.npmjs.org</span></span>
+<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">port</span><span class="kw">:</span><span class="at"> </span><span class="dv">443</span></span></code></pre></div>
+</div>
+<div class="card"><div class="tag">WHAT · protocol</div><p>With <code>protocol: rest</code> each HTTP request is checked: a preset, or exact methods and paths. <code>protocol: mcp</code> checks MCP methods and tool names.</p><div class="sourceCode" ><pre class="sourceCode yaml"><code class="sourceCode yaml"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">protocol</span><span class="kw">:</span><span class="at"> rest</span></span>
+<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">access</span><span class="kw">:</span><span class="at"> read-only</span><span class="co">      # GET HEAD OPTIONS</span></span>
+<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">enforcement</span><span class="kw">:</span><span class="at"> enforce</span><span class="co">   # audit = log only</span></span></code></pre></div>
+</div>
+</div>
+
+<p>Finer control with <code>rules</code> and <code>deny_rules</code> (this is how <code>git clone</code> is allowed but <code>git push</code> is not):</p>
+<div class="sourceCode" ><pre class="sourceCode yaml"><code class="sourceCode yaml"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">network_policies</span><span class="kw">:</span></span>
+<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">github_clone</span><span class="kw">:</span></span>
+<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">name</span><span class="kw">:</span><span class="at"> github-clone</span></span>
+<span ><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">endpoints</span><span class="kw">:</span></span>
+<span ><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">host</span><span class="kw">:</span><span class="at"> github.com</span></span>
+<span ><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">port</span><span class="kw">:</span><span class="at"> </span><span class="dv">443</span></span>
+<span ><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">protocol</span><span class="kw">:</span><span class="at"> rest</span></span>
+<span ><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">enforcement</span><span class="kw">:</span><span class="at"> enforce</span></span>
+<span ><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">rules</span><span class="kw">:</span><span class="co">                                  # allowed</span></span>
+<span ><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="fu">allow</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">method</span><span class="kw">:</span><span class="at"> GET</span><span class="kw">,</span><span class="at">  </span><span class="fu">path</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;/**/info/refs&quot;</span><span class="kw">,</span><span class="at"> </span><span class="fu">query</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">service</span><span class="kw">:</span><span class="at"> git-upload-pack </span><span class="kw">}</span><span class="at"> </span><span class="kw">}</span></span>
+<span ><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="fu">allow</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">method</span><span class="kw">:</span><span class="at"> POST</span><span class="kw">,</span><span class="at"> </span><span class="fu">path</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;/**/git-upload-pack&quot;</span><span class="at"> </span><span class="kw">}</span></span>
+<span ><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">deny_rules</span><span class="kw">:</span><span class="co">                             # always wins</span></span>
+<span ><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">method</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;*&quot;</span><span class="kw">,</span><span class="at"> </span><span class="fu">path</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;/**/git-receive-pack&quot;</span><span class="at"> </span><span class="kw">}</span></span>
+<span ><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">binaries</span><span class="kw">:</span></span>
+<span ><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">path</span><span class="kw">:</span><span class="at"> /usr/lib/git-core/git-remote-http</span></span></code></pre></div>
+
+
+<p>For a remote MCP server, OpenShell reads each request and checks the method and, for <code>tools/call</code>, the tool name (the tool's arguments are not checked):</p>
+<div class="sourceCode" ><pre class="sourceCode yaml"><code class="sourceCode yaml"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">huggingface_mcp</span><span class="kw">:</span></span>
+<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">endpoints</span><span class="kw">:</span></span>
+<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">host</span><span class="kw">:</span><span class="at"> huggingface.co</span></span>
+<span ><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">port</span><span class="kw">:</span><span class="at"> </span><span class="dv">443</span></span>
+<span ><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">path</span><span class="kw">:</span><span class="at"> /mcp</span></span>
+<span ><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">protocol</span><span class="kw">:</span><span class="at"> mcp</span></span>
+<span ><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">enforcement</span><span class="kw">:</span><span class="at"> enforce</span></span>
+<span ><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">mcp</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">versions</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="st">&quot;2025-03-26&quot;</span><span class="kw">,</span><span class="at"> </span><span class="st">&quot;2025-06-18&quot;</span><span class="kw">,</span><span class="at"> </span><span class="st">&quot;2025-11-25&quot;</span><span class="kw">],</span><span class="at"> </span><span class="fu">allow_all_known_mcp_methods</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span><span class="at"> </span><span class="kw">}</span></span>
+<span ><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">rules</span><span class="kw">:</span><span class="at">       </span><span class="kw">[</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">allow</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">tool</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;hub_repo_*&quot;</span><span class="at"> </span><span class="kw">}</span><span class="at"> </span><span class="kw">}</span><span class="at"> </span><span class="kw">]</span><span class="co">   # only these tools</span></span>
+<span ><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">deny_rules</span><span class="kw">:</span><span class="at">  </span><span class="kw">[</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">method</span><span class="kw">:</span><span class="at"> tools/call</span><span class="kw">,</span><span class="at"> </span><span class="fu">tool</span><span class="kw">:</span><span class="at"> hf_fs </span><span class="kw">}</span><span class="at"> </span><span class="kw">]</span><span class="co">  # never this one</span></span>
+<span ><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">binaries</span><span class="kw">:</span></span>
+<span ><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">path</span><span class="kw">:</span><span class="at"> /usr/local/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe</span></span></code></pre></div>
+
+
+<h2 id="concepts--change-policy">Changing network access while it runs</h2>
+<p>Network access starts tight and is widened on purpose. Two ways: approve what the agent was denied, or push a changed policy. Every change is a new numbered, hashed policy version, so you can see what changed and when.</p>
+
+<figure class="diagram">
+<svg class="dg" viewBox="0 0 900 250" role="img" aria-label="Loop: the agent is denied, OpenShell proposes a rule, you review it and approve or reject, and the policy gets a new version that applies at once.">
+<defs><marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="box" x="20" y="60" width="150" height="70" rx="10"/><text class="b" x="95" y="90" text-anchor="middle">Agent is denied</text><text class="s" x="95" y="110" text-anchor="middle">DENIED in the log</text>
+<rect class="box" x="220" y="60" width="150" height="70" rx="10"/><text class="b" x="295" y="90" text-anchor="middle">Rule proposed</text><text class="s" x="295" y="110" text-anchor="middle">host + binary + why</text>
+<rect class="box acc" x="420" y="60" width="150" height="70" rx="10"/><text class="b" x="495" y="90" text-anchor="middle">You review</text><text class="s" x="495" y="110" text-anchor="middle">approve or reject</text>
+<rect class="box okbox" x="670" y="30" width="210" height="60" rx="10"/><text class="b" x="775" y="56" text-anchor="middle">New policy version</text><text class="s" x="775" y="74" text-anchor="middle">applies to the running sandbox</text>
+<rect class="box badbox" x="670" y="110" width="210" height="50" rx="10"/><text class="b" x="775" y="140" text-anchor="middle">Stays denied</text>
+<path class="arrow" marker-end="url(#a6)" d="M170 95H218"/>
+<path class="arrow" marker-end="url(#a6)" d="M370 95H418"/>
+<path class="arrow ok" marker-end="url(#a6)" d="M570 80C610 60 630 60 668 60"/>
+<path class="arrow bad" marker-end="url(#a6)" d="M570 110C610 130 630 135 668 135"/>
+<path class="arrow dash" marker-end="url(#a6)" d="M775 30C775 6 95 6 95 58"/>
+<text class="s" x="450" y="42" text-anchor="middle">the agent retries and succeeds</text>
+<text class="s m" x="295" y="156" text-anchor="middle">rule get --status pending</text>
+<text class="s m" x="500" y="156" text-anchor="middle">rule approve / reject</text>
+<text class="s m" x="775" y="104" text-anchor="middle">policy list shows the versions</text>
+<text class="s" x="20" y="232">Skip the loop for hosts you know you need: put them in the policy (policy set / update) or, if they belong to a provider, in the profile's endpoints.</text>
+</svg>
+<figcaption>Approved rules apply only to that sandbox and are gone when it is recreated.</figcaption>
+</figure>
+
+<div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Review and decide on what was denied</span></span>
+<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> logs my-task <span class="kw">|</span> <span class="fu">grep</span> DENIED</span>
+<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> rule get     my-task <span class="at">--status</span> pending</span>
+<span ><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> rule approve my-task <span class="at">--chunk-id</span> <span class="op">&lt;</span>chunk-id<span class="op">&gt;</span></span>
+<span ><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> rule reject  my-task <span class="at">--chunk-id</span> <span class="op">&lt;</span>chunk-id<span class="op">&gt;</span> --reason <span class="st">&quot;Not needed for this task.&quot;</span></span>
+<span ><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> rule approve-all my-task              <span class="co"># or: rule clear my-task</span></span>
+<span ><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span ><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># See the history and what is in force</span></span>
+<span ><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy list my-task</span>
+<span ><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy get  my-task <span class="at">--full</span>            <span class="co"># with the providers&#39; network rules</span></span>
+<span ><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> rule history my-task</span>
+<span ><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span ><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Push a changed policy to a running sandbox (hot reload)</span></span>
+<span ><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy get my-task <span class="at">--base</span> <span class="op">&gt;</span> policy.yaml     <span class="co"># edit network_policies, keep filesystem_policy</span></span>
+<span ><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy set my-task <span class="at">--policy</span> policy.yaml <span class="at">--wait</span></span>
+<span ><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span ><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Or add a single endpoint, without editing a file</span></span>
+<span ><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy update my-task <span class="at">--add-endpoint</span> docs.python.org:443:read-only:rest:enforce <span class="dt">\</span></span>
+<span ><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">--rule-name</span> python-docs <span class="at">--binary</span> /usr/local/bin/node <span class="at">--dry-run</span>     <span class="co"># preview first</span></span>
+<span ><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy update my-task <span class="at">--remove-rule</span> python-docs <span class="at">--wait</span></span>
+<span ><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span ><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co"># One policy for every sandbox</span></span>
+<span ><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy set <span class="at">--global</span> <span class="at">--policy</span> policy.yaml <span class="at">--yes</span></span>
+<span ><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy delete                         <span class="co"># remove the global lock</span></span></code></pre></div>
+
+
+<h2 id="concepts--filesystem">Filesystem policy</h2>
+<p>The filesystem part of the policy is a list of paths. Everything not listed is unreachable for the agent and its tools. The kernel enforces it (Landlock), so no program in the sandbox can opt out.</p>
+
+<figure class="diagram">
+<svg class="dg" viewBox="0 0 900 270" role="img" aria-label="Filesystem inside a sandbox: read-only paths, read-write paths and everything else blocked.">
+<rect class="box" x="20" y="20" width="860" height="230" rx="10"/>
+<text class="b" x="36" y="46">Inside the sandbox</text>
+<rect class="chip okbox" x="40" y="64" width="250" height="168" rx="8"/>
+<text class="b" x="165" y="90" text-anchor="middle">read-write</text>
+<text class="s m" x="165" y="116" text-anchor="middle">/sandbox  (workdir, $HOME)</text>
+<text class="s m" x="165" y="136" text-anchor="middle">/tmp</text>
+<text class="s m" x="165" y="156" text-anchor="middle">/dev/null</text>
+<text class="s m" x="165" y="176" text-anchor="middle">/dev/pts  /dev/ptmx</text>
+<text class="s" x="165" y="210" text-anchor="middle">the agent's work lives here</text>
+<rect class="chip acc" x="320" y="64" width="250" height="168" rx="8"/>
+<text class="b" x="445" y="90" text-anchor="middle">read-only</text>
+<text class="s m" x="445" y="116" text-anchor="middle">/usr  /bin  /lib</text>
+<text class="s m" x="445" y="136" text-anchor="middle">/etc  /proc</text>
+<text class="s m" x="445" y="156" text-anchor="middle">/var/log  /dev/urandom</text>
+<text class="s" x="445" y="210" text-anchor="middle">tools and system files</text>
+<rect class="chip badbox" x="600" y="64" width="260" height="168" rx="8"/>
+<text class="b" x="730" y="90" text-anchor="middle">not reachable</text>
+<text class="s" x="730" y="124" text-anchor="middle">everything else in the image</text>
+<text class="s" x="730" y="144" text-anchor="middle">your host's files (never mounted)</text>
+<text class="s" x="730" y="164" text-anchor="middle">other sandboxes</text>
+</svg>
+<figcaption>The paths shown are from <code>policies/vscode-terminal.yaml</code>: OpenShell's default plus <code>/dev/pts</code> and <code>/dev/ptmx</code>, so terminals work.</figcaption>
+</figure>
+
+<div class="sourceCode" ><pre class="sourceCode yaml"><code class="sourceCode yaml"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">version</span><span class="kw">:</span><span class="at"> </span><span class="dv">1</span></span>
+<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">filesystem_policy</span><span class="kw">:</span></span>
+<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">include_workdir</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span><span class="co">          # /sandbox is read-write</span></span>
+<span ><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">read_only</span><span class="kw">:</span><span class="at">  </span><span class="kw">[</span><span class="at">/bin</span><span class="kw">,</span><span class="at"> /usr</span><span class="kw">,</span><span class="at"> /lib</span><span class="kw">,</span><span class="at"> /proc</span><span class="kw">,</span><span class="at"> /dev/urandom</span><span class="kw">,</span><span class="at"> /etc</span><span class="kw">,</span><span class="at"> /var/log</span><span class="kw">]</span></span>
+<span ><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">read_write</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">/tmp</span><span class="kw">,</span><span class="at"> /dev/</span><span class="ch">null</span><span class="kw">,</span><span class="at"> /dev/pts</span><span class="kw">,</span><span class="at"> /dev/ptmx</span><span class="kw">]</span></span>
+<span ><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">landlock</span><span class="kw">:</span></span>
+<span ><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">compatibility</span><span class="kw">:</span><span class="at"> best_effort</span></span></code></pre></div>
+
+<div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy get my-task <span class="at">--base</span>      <span class="co"># the policy the sandbox got</span></span>
+<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy get my-task <span class="at">--full</span>      <span class="co"># including the network rules from its providers</span></span></code></pre></div>
+
+
+<h2 id="concepts--reaching">Reaching a sandbox</h2>
+<p>A sandbox opens no port. Everything you do with it travels through the gateway: your commands in, the agent's pages out, files both ways.</p>
+
+<figure class="diagram">
+<svg class="dg" viewBox="0 0 900 340" role="img" aria-label="Four channels between your machine and a sandbox, all through the gateway: exec and connect, editor and ssh, upload and download, port forward.">
+<defs><marker id="a7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="box" x="10" y="30" width="140" height="290" rx="10"/>
+<text class="b" x="80" y="170" text-anchor="middle">Your</text><text class="b" x="80" y="190" text-anchor="middle">machine</text>
+<rect class="box acc" x="430" y="30" width="40" height="290" rx="10"/>
+<text class="b" x="0" y="0" transform="translate(456 175) rotate(-90)" text-anchor="middle">Gateway</text>
+<rect class="box" x="750" y="30" width="140" height="290" rx="10"/>
+<text class="b" x="820" y="170" text-anchor="middle">Sandbox</text>
+<g>
+<path class="arrow" marker-start="url(#a7)" marker-end="url(#a7)" d="M150 80H750"/>
+<text class="s m" x="440" y="72" text-anchor="end" transform="translate(-14 0)">openshell sandbox exec my-task -- bash</text>
+<text class="s" x="486" y="72">a shell or the agent, in your terminal</text>
+<path class="arrow" marker-start="url(#a7)" marker-end="url(#a7)" d="M150 150H750"/>
+<text class="s m" x="426" y="142" text-anchor="end">openshell sandbox connect my-task --editor vscode</text>
+<text class="s" x="486" y="142">VS Code or plain ssh (ssh-config)</text>
+<path class="arrow" marker-start="url(#a7)" marker-end="url(#a7)" d="M150 220H750"/>
+<text class="s m" x="426" y="212" text-anchor="end">openshell sandbox upload | download my-task</text>
+<text class="s" x="486" y="212">files and git bundles</text>
+<path class="arrow" marker-start="url(#a7)" marker-end="url(#a7)" d="M150 290H750"/>
+<text class="s m" x="426" y="282" text-anchor="end">openshell forward start 3000 my-task -d</text>
+<text class="s" x="486" y="282">web pages the agent serves (127.0.0.1:3000)</text>
+</g>
+</svg>
+<figcaption>No port is opened on the sandbox, and it has no network route to your machine unless you allow one; you reach it, not the other way round. Code and files move only with <code>upload</code> and <code>download</code>, so you decide what goes in and what comes out.</figcaption>
+</figure>
+
+<div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox exec my-task <span class="at">--workdir</span> /sandbox <span class="at">--</span> bash            <span class="co"># a shell</span></span>
+<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox exec my-task <span class="at">--</span> ls <span class="at">-la</span> /sandbox                    <span class="co"># one command</span></span>
+<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox connect my-task <span class="at">--editor</span> vscode                    <span class="co"># VS Code over SSH</span></span>
+<span ><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox ssh-config my-task <span class="op">&gt;&gt;</span> ~/.ssh/config                 <span class="co"># then: ssh openshell-my-task.default</span></span>
+<span ><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span ><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox upload   my-task ./spec.md /sandbox                <span class="co"># lands in /sandbox/spec.md</span></span>
+<span ><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox download my-task /sandbox/myrepo/report.html .</span>
+<span ><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span ><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> forward start 3000 my-task <span class="at">-d</span>        <span class="co"># http://127.0.0.1:3000 shows the sandbox&#39;s port 3000</span></span>
+<span ><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> forward list</span>
+<span ><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> forward stop 3000 my-task</span>
+<span ><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span ><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> service <span class="at">--help</span>                        <span class="co"># publish a service through the gateway under its own URL</span></span></code></pre></div>
+
+
+<h2 id="concepts--observability">Seeing what happens</h2>
+<p>The supervisor records every allowed and denied connection, every checked HTTP request, SSH sessions and policy changes. You choose how to read them.</p>
+
+<figure class="diagram">
+<svg class="dg" viewBox="0 0 900 290" role="img" aria-label="The supervisor writes events that can be read as shorthand logs, as OCSF JSON; the gateway exposes metrics.">
+<defs><marker id="a8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="box" x="20" y="30" width="200" height="130" rx="10"/>
+<text class="b" x="120" y="58" text-anchor="middle">Supervisor</text>
+<text class="s" x="120" y="82" text-anchor="middle">NET:OPEN  allowed / denied</text>
+<text class="s" x="120" y="100" text-anchor="middle">HTTP:GET  checked requests</text>
+<text class="s" x="120" y="118" text-anchor="middle">SSH sessions</text>
+<text class="s" x="120" y="136" text-anchor="middle">policy + setting changes</text>
+<rect class="box acc" x="20" y="200" width="200" height="60" rx="10"/>
+<text class="b" x="120" y="226" text-anchor="middle">Gateway</text><text class="s" x="120" y="244" text-anchor="middle">sessions, relays, API calls</text>
+<rect class="chip" x="300" y="20" width="580" height="64" rx="8"/>
+<text class="b" x="316" y="44">Shorthand log (always on)</text>
+<text class="s m" x="316" y="68">openshell logs my-task --tail    --since 30m    --level warn    --source sandbox</text>
+<rect class="chip" x="300" y="100" width="580" height="64" rx="8"/>
+<text class="b" x="316" y="124">OCSF JSON (structured, off by default)</text>
+<text class="s m" x="316" y="148">openshell settings set --global --key ocsf_json_enabled --value true --yes</text>
+<rect class="chip" x="300" y="196" width="580" height="64" rx="8"/>
+<text class="b" x="316" y="220">Gateway metrics (Prometheus, off by default)</text>
+<text class="s" x="316" y="244">a scrape endpoint on the gateway, e.g. http://127.0.0.1:9464/metrics</text>
+<path class="arrow" marker-end="url(#a8)" d="M220 70L298 52"/>
+<path class="arrow" marker-end="url(#a8)" d="M220 120L298 130"/>
+<path class="arrow" marker-end="url(#a8)" d="M220 230H298"/>
+</svg>
+<figcaption>A blocked connection is two log lines: <code>NET:REFUSE</code> (the name lookup) and <code>NET:OPEN … DENIED</code> with the binary that tried. That binary path is what a rule needs.</figcaption>
+</figure>
+
+<div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> logs my-task                       <span class="co"># last 200 lines</span></span>
+<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> logs my-task <span class="at">--tail</span>                <span class="co"># follow live</span></span>
+<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> logs my-task <span class="kw">|</span> <span class="fu">grep</span> DENIED         <span class="co"># what was blocked, and by which binary</span></span>
+<span ><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> settings get <span class="at">--global</span>              <span class="co"># effective settings</span></span>
+<span ><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> settings set <span class="at">--global</span> <span class="at">--key</span> ocsf_json_enabled <span class="at">--value</span> true <span class="at">--yes</span></span>
+<span ><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> term                               <span class="co"># interactive terminal UI</span></span></code></pre></div>
+
+
+<h2 id="concepts--isolation">Layers of isolation</h2>
+<p>The agent is boxed in several times. The outermost layers are the container runtime's; the innermost are OpenShell's own.</p>
+
+<figure class="diagram">
+<svg class="dg" viewBox="0 0 900 380" role="img" aria-label="Nested layers from outside in: macOS, Linux VM, container, OpenShell sandbox, agent.">
+<rect class="ring r1" x="6" y="6" width="888" height="368" rx="16"/>
+<text class="b" x="26" y="32">macOS or Linux host</text><text class="s" x="190" y="32">your files, Keychain, network, other apps</text>
+<rect class="ring r2" x="36" y="50" width="828" height="304" rx="14"/>
+<text class="b" x="56" y="76">Linux VM (the Podman machine)</text><text class="s" x="290" y="76">its own kernel; shares /Users with the host by default</text>
+<rect class="ring r3" x="66" y="94" width="768" height="240" rx="12"/>
+<text class="b" x="86" y="120">Container</text><text class="s" x="156" y="120">rootless Podman: user namespaces, limited capabilities, seccomp, SELinux</text>
+<rect class="ring r4" x="96" y="138" width="708" height="176" rx="10"/>
+<text class="b" x="116" y="164">OpenShell sandbox</text><text class="s" x="258" y="164">no direct network: proxy only · Landlock paths · syscall filter · placeholders</text>
+<rect class="ring r5" x="126" y="184" width="300" height="106" rx="8"/>
+<text class="b" x="276" y="216" text-anchor="middle">Agent + its tools</text>
+<text class="s" x="276" y="238" text-anchor="middle">what a prompt-injected agent</text><text class="s" x="276" y="254" text-anchor="middle">can use is only what is above</text>
+<rect class="chip okbox" x="470" y="200" width="300" height="74" rx="8"/>
+<text class="b" x="620" y="226" text-anchor="middle">Hosts you allowed</text>
+<text class="s" x="620" y="246" text-anchor="middle">the one way out, and where data</text>
+<text class="s" x="620" y="262" text-anchor="middle">can leave: keep the list short</text>
+<path class="arrow ok" marker-end="url(#a9)" d="M428 237H468"/>
+<defs><marker id="a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs>
+</svg>
+<figcaption>The likeliest leak is not an escape from the layers but data sent through a host you allowed. The network rules and credential placeholders are there for that. See <a href="#isolation--the-layers">Isolation on macOS</a> for the weak spots of the VM layer.</figcaption>
+</figure>
+
+<h2 id="concepts--cheat-sheet">Feature cheat sheet</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Feature</th><th>What it gives you</th><th>Command</th></tr></thead>
+<tbody>
+<tr><td>Sandboxes</td><td>One isolated container per task, with its own files, policy and approved rules</td><td><code>openshell sandbox create | list | get | stop | start | delete</code></td></tr>
+<tr><td>Templates</td><td>Image and resources stored once, reused for many sandboxes</td><td><code>openshell sandbox template create claude --image claude-sandbox:latest --cpu 2 --memory 4Gi</code></td></tr>
+<tr><td>Labels</td><td>Group sandboxes and list them by label</td><td><code>openshell sandbox create --label project=foo …</code><br><code>openshell sandbox list --selector project=foo</code></td></tr>
+<tr><td>Resources</td><td>CPU, memory, GPU limits per sandbox</td><td><code>--cpu 2 --memory 4Gi --gpu</code> on <code>sandbox create</code></td></tr>
+<tr><td>Providers + profiles</td><td>Credentials injected by the proxy, per host and per binary</td><td><code>openshell provider create | list | update | delete</code><br><code>openshell provider profile lint | import | update | describe | export</code></td></tr>
+<tr><td>Network policy (L4 / L7)</td><td>Allow by host, port and program; optionally by HTTP method and path</td><td><code>network_policies</code> in a policy file</td></tr>
+<tr><td>MCP-aware rules</td><td>Allow only chosen MCP methods and tools on a remote MCP server</td><td><code>protocol: mcp</code> in a policy file</td></tr>
+<tr><td>Filesystem policy</td><td>Landlock-enforced read-only and read-write paths</td><td><code>--policy file.yaml</code> on <code>sandbox create</code></td></tr>
+<tr><td>Live policy changes</td><td>Hot-reload network rules; numbered, hashed versions</td><td><code>openshell policy set | update | get | list</code></td></tr>
+<tr><td>Rule proposals</td><td>Denied connections become reviewable rules</td><td><code>openshell rule get | approve | reject | approve-all | history</code></td></tr>
+<tr><td>Global policy</td><td>One policy for all sandboxes, locking per-sandbox changes</td><td><code>openshell policy set --global …</code> / <code>policy delete</code></td></tr>
+<tr><td>Shell, SSH, editors</td><td>Work inside a sandbox with no open port</td><td><code>openshell sandbox exec | connect | ssh-config</code></td></tr>
+<tr><td>Files</td><td>Copy in and out on your terms</td><td><code>openshell sandbox upload | download</code></td></tr>
+<tr><td>Port forwarding</td><td>See a page the agent serves, or expose a service</td><td><code>openshell forward start | stop | list</code><br><code>openshell service …</code></td></tr>
+<tr><td>Logs and settings</td><td>Every decision logged; structured OCSF export</td><td><code>openshell logs</code><br><code>openshell settings get | set | delete</code></td></tr>
+<tr><td>Gateways</td><td>Several gateways, local or remote, with login</td><td><code>openshell gateway add | list | select | login | info</code><br><code>openshell status | doctor</code></td></tr>
+<tr><td>Terminal UI</td><td>Browse sandboxes, logs and rules interactively</td><td><code>openshell term</code></td></tr>
+</tbody>
+</table></div>
 </section>
 <section class="doc" id="doc-setup"><p class="path"><a href="https://github.com/fredrikp999/openshell-configs/blob/main/docs/setup.md" target="_blank" rel="noopener">docs/setup.md</a></p>
 <h1 id="setup--setup">Setup</h1>
@@ -819,6 +1482,9 @@ claude      claude-code-oauth  1                 0</code></pre>
 <li><strong>An agent can bring its own key</strong> - OpenShell only swaps its placeholder for your key; an <code>Authorization</code> header the agent sets itself goes through unchanged (tested: a made-up key reached OpenRouter and was rejected there). A manipulated agent could therefore send your code in a chat request on someone else's OpenRouter account, which can log prompts. The path rule above narrows this but can't close it. Keep secrets out of sandboxes, and treat what's in a sandbox as visible to the model provider anyway.</li>
 <li><strong>Binary path</strong> - only <code>/usr/local/bin/opencode</code> may use the key. If you install OpenCode elsewhere (e.g. via npm), add that path to the profile and <a href="#customizing--update-a-profile">update it</a>.</li>
 <li><strong>Hosts left blocked</strong> - OpenCode tries <code>models.opencode.ai</code> (model list) and <code>registry.npmjs.org</code> (update check). Both are denied. OpenCode works without them, so leave them blocked unless you need them.</li>
+<li><strong>A more capable sandbox: <code>agy-hyperframes</code></strong> - <code>make agy-hyperframes</code>, then <code>bin/sandbox.sh agy my-video --hyperframes --forward 3102</code>. The image is built on <a href="#extras--hyperframes">claude-hyperframes</a> and adds <code>agy</code> and the ACP adapter. <code>npx hyperframes</code> renders with headless Chromium and FFmpeg as there, and Playwright MCP is registered with <code>agy</code> (<code>agy mcp add playwright playwright-mcp-start</code>, done on first start by <code>agy-init</code>) so it can open and screenshot pages. Unlike the Claude image, nothing here blocks Playwright's <code>browser_run_code_unsafe</code> and <code>browser_file_upload</code> tools (that's Claude Code managed settings); the network rules are the limit. Pages other than the CDNs need a <code>browser_sites</code>-style rule in the policy. <a href="https://github.com/fredrikp999/openshell-configs/blob/main/policies/agy-hyperframes.yaml" target="_blank" rel="noopener">policies/agy-hyperframes.yaml</a> is the <code>agy</code> policy plus the CDN, font and registry rules of the HyperFrames policy. That makes it the less safe choice: <code>node</code> and Chromium, which can read the tokens, may now reach those hosts (read-only, but a GET can carry data in its URL). Use it only for that work, log in, and run <code>/logout</code> and delete the sandbox afterwards. The HyperFrames skills are copied to <code>~/.claude/skills</code> as in the Claude image, where <code>agy</code> doesn't look for them; <code>npx hyperframes docs</code> has the CLI's own docs. Log in once, as above; <code>--acp</code> works too.</li>
+<li><strong>npm packages: <code>agy-node</code></strong> - <code>make agy-node</code>, then <code>bin/sandbox.sh agy my-task --node</code>. The image is <code>node:22-slim</code> with <code>agy</code> and the ACP adapter, and <a href="https://github.com/fredrikp999/openshell-configs/blob/main/policies/agy-node.yaml" target="_blank" rel="noopener">policies/agy-node.yaml</a> is the <code>agy</code> policy plus read-only access to <code>registry.npmjs.org</code> for <code>/usr/local/bin/node</code> (npm runs as node), so <code>npm install</code> works; the packages go in the workdir. It is less safe than a plain <code>agy</code> sandbox: <code>node</code> can read the tokens and reach the registry (a GET can carry data in its URL), and a package's install script runs with access to the tokens. Consider <code>npm install --ignore-scripts</code>, use it only for work that needs npm, and run <code>/logout</code> and delete the sandbox afterwards. Git and other registries (PyPI, GitHub) stay blocked. <code>--acp</code> works too.</li>
+<li><strong>Python packages: <code>agy-python</code></strong> - <code>make agy-python</code>, then <code>bin/sandbox.sh agy my-task --python</code>. The image is <code>agy-sandbox</code> plus Python 3 from Debian with pip and venv (Debian's pip refuses system-wide installs, so use <code>python -m venv .venv &amp;&amp; .venv/bin/pip install ...</code> in the workdir). <a href="https://github.com/fredrikp999/openshell-configs/blob/main/policies/agy-python.yaml" target="_blank" rel="noopener">policies/agy-python.yaml</a> is the <code>agy</code> policy plus read-only access to <code>pypi.org</code> and <code>files.pythonhosted.org</code> for <code>/usr/bin/python3*</code> (pip runs as Python). It is less safe than a plain <code>agy</code> sandbox for the same reasons as <code>agy-node</code>: Python can read the tokens and reach PyPI (a GET can carry data in its URL), and a package's setup script runs with access to the tokens. Use it only for work that needs pip, and run <code>/logout</code> and delete the sandbox afterwards. Other hosts (npm, GitHub) stay blocked. <code>--acp</code> works too.</li>
 <li><strong>The sandbox user</strong> is uid 1000 with <code>HOME=/sandbox</code>.</li>
 </ul>
 <h2 id="agents--antigravity-cli-with-a-google-account">Antigravity CLI with a Google account</h2>
@@ -859,7 +1525,7 @@ claude      claude-code-oauth  1                 0</code></pre>
 <li><strong>The tokens are in the sandbox</strong> - including the long-lived refresh token, readable by the agent and by anything else running there. The policy limits where they could be sent to the four Google hosts above. Every rule you add to such a sandbox (another site, a package registry, a <a href="#extras--headless-browser-use">browser</a>) is another place they could go, so keep <code>agy</code> sandboxes to that policy. When you're done, run <code>/logout</code> in <code>agy</code> and delete the sandbox. To revoke the login entirely, remove Antigravity under <a href="https://myaccount.google.com/connections" target="_blank" rel="noopener">Third-party access</a> in your Google account.</li>
 <li><strong>Hosts left blocked</strong> - <code>agy</code> also tries <code>play.googleapis.com</code> (usage logs), <code>antigravity-unleash.goog</code> (feature flags) and <code>www.gstatic.com</code>. They are denied, and <code>agy</code> works without them. If a new version needs more, check <code>openshell logs &lt;sandbox&gt; | grep DENIED</code> (or <a href="https://github.com/fredrikp999/openshell-configs/blob/main/bin/watch-denied.sh" target="_blank" rel="noopener">bin/watch-denied.sh</a>) and add it to the policy.</li>
 <li><strong>No self-update</strong> - <code>agy</code> normally updates itself; in the sandbox <code>/usr</code> is read-only and the update host isn't allowed, so it skips that. Get a newer version with <code>make update</code>, then create a new sandbox (and log in again).</li>
-<li><strong>No ACP</strong> - <code>agy</code> has no Agent Client Protocol mode, so <code>bin/sandbox.sh agy ... --acp</code> and <code>bin/acp_client.py</code> don't work with it.</li>
+<li><strong>ACP through a community adapter</strong> - <code>agy</code> has no Agent Client Protocol mode of its own. The image has <a href="https://github.com/sibbl/google-antigravity-acp" target="_blank" rel="noopener"><code>google-antigravity-acp</code></a> (pinned, MIT, small and not from Google), which drives <code>agy</code>'s <code>stream-json</code> print mode and speaks ACP, so <code>bin/sandbox.sh agy my-task --acp</code> and <code>bin/acp_client.py</code> work once you have logged in. The adapter makes <code>agy</code> auto-approve tool permissions; set <code>AGY_ACP_ASK=1</code> in the command to pass <code>--no-skip-permissions</code>. See <a href="#extras--acp-agent-client-protocol">ACP</a>. Google may not like third-party tools driving <code>agy</code> with a subscription login, so use it knowingly.</li>
 <li><strong>The sandbox user</strong> is uid 1000 with <code>HOME=/sandbox</code>; <code>agy</code> keeps its settings and conversations in <code>/sandbox/.gemini/antigravity-cli</code>.</li>
 </ul>
 </section>
@@ -899,10 +1565,11 @@ claude      claude-code-oauth  1                 0</code></pre>
 <td><code>agy-sandbox:latest</code></td>
 <td>none (policy <a href="#file-policies-antigravity-yaml">antigravity.yaml</a>)</td>
 <td><code>agy</code></td>
-<td>none</td>
+<td><code>agy-acp-start</code> (community adapter)</td>
 </tr>
 </tbody>
 </table></div>
+<p>The variants (<code>claude-browser</code>, <code>claude-hyperframes</code>, <code>agy-hyperframes</code>, <code>agy-node</code>, <code>agy-python</code>) have the ACP command of the agent they are built on.</p>
 <p>The examples below use Claude and the sandbox name <code>my-task</code>.</p>
 <h3 id="working-in-sandboxes--by-hand">By hand</h3>
 <ol type="1">
@@ -1012,6 +1679,10 @@ claude      claude-code-oauth  1                 0</code></pre>
 <tr>
 <td><code>bin/sandbox.sh claude my-task --acp</code></td>
 <td>The same for Claude Code, through the ACP adapter</td>
+</tr>
+<tr>
+<td><code>bin/sandbox.sh agy my-task --acp</code></td>
+<td>The same for Antigravity CLI, through a community ACP adapter (log in first)</td>
 </tr>
 <tr>
 <td><code>bin/sandbox.sh claude my-task --browser</code></td>
@@ -1260,7 +1931,8 @@ claude      claude-code-oauth  1                 0</code></pre>
 <h2 id="extras--acp-agent-client-protocol">ACP (Agent Client Protocol)</h2>
 <p>To build a UI that runs on the host and talks to the agent in the sandbox, use <a href="https://agentclientprotocol.com" target="_blank" rel="noopener">ACP</a>. ACP is JSON-RPC over the agent's stdin and stdout, so no port is opened in the sandbox: the client starts the agent through the gateway and speaks ACP over the pipes, like the SSH tunnel for VS Code.</p>
 <div class="sourceCode" id="extras--cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="extras--cb4-1"><a href="#extras--cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">bin/sandbox.sh</span> opencode my-task <span class="at">--acp</span></span>
-<span id="extras--cb4-2"><a href="#extras--cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">bin/sandbox.sh</span> claude my-task <span class="at">--acp</span></span></code></pre></div>
+<span id="extras--cb4-2"><a href="#extras--cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">bin/sandbox.sh</span> claude my-task <span class="at">--acp</span></span>
+<span id="extras--cb4-3"><a href="#extras--cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">bin/sandbox.sh</span> agy my-task <span class="at">--acp</span></span></code></pre></div>
 <p>These run the following, respectively (for OpenCode, plus the model in <code>OPENCODE_CONFIG_CONTENT</code>, see below):</p>
 <div class="sourceCode" id="extras--cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="extras--cb5-1"><a href="#extras--cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox exec my-task <span class="at">--no-tty</span> <span class="at">--no-login-shell</span> <span class="at">--workdir</span> /sandbox <span class="at">--</span> opencode acp</span>
 <span id="extras--cb5-2"><a href="#extras--cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox exec my-task <span class="at">--no-tty</span> <span class="at">--no-login-shell</span> <span class="at">--workdir</span> /sandbox <span class="at">--</span> claude-acp-start</span></code></pre></div>
@@ -1270,13 +1942,15 @@ claude      claude-code-oauth  1                 0</code></pre>
 <li><strong>Keep the sandbox's isolation:</strong> in <code>initialize</code>, don't advertise the <code>fs</code> and <code>terminal</code> client capabilities. Otherwise the agent may ask your UI to read, write and run commands on the <em>host</em>. Without them it uses its own tools inside the sandbox. Handle <code>session/request_permission</code> in the UI to approve tool use.</li>
 <li><strong>OpenCode:</strong> <code>opencode acp</code> is built in, so the image needs no changes. It has no <code>-m</code> flag, so the script sets the model (<code>OPENCODE_MODEL</code>, same default as above) through the <code>OPENCODE_CONFIG_CONTENT</code> env var. Without a model, OpenCode picks an <code>opencode/...</code> one and fails with "Cannot connect to API", because <code>opencode.ai</code> is blocked.</li>
 <li><strong>Claude Code:</strong> has no native ACP mode, so the image includes the adapter <a href="https://www.npmjs.com/package/@agentclientprotocol/claude-agent-acp" target="_blank" rel="noopener"><code>@agentclientprotocol/claude-agent-acp</code></a>. <code>--acp</code> runs <code>claude-acp-start</code>, which skips onboarding (like <code>claude-start</code>) and starts <code>claude-agent-acp</code>. The adapter runs Claude Code through the Claude Agent SDK, which by default uses its own bundled <code>claude</code> binary deep in the adapter's <code>node_modules</code>. That path is not in the profile's <code>binaries</code>, so its requests would go out without the token. The image sets <code>CLAUDE_CODE_EXECUTABLE</code> to the globally installed <code>claude.exe</code> instead, which the profile already allows. Rebuild the image and create a new sandbox after updating; existing sandboxes keep the old image.</li>
+<li><strong>Antigravity CLI:</strong> <code>agy</code> has no ACP mode, so the image includes the community adapter <a href="https://github.com/sibbl/google-antigravity-acp" target="_blank" rel="noopener"><code>google-antigravity-acp</code></a> (Node.js, pinned in the Dockerfile). <code>--acp</code> runs <code>agy-acp-start</code>, which starts it with <code>/usr/local/bin/agy</code>, the binary the policy lets reach Google. Log in once first (<code>bin/sandbox.sh agy my-task</code>); without a login the session fails with "agy process exited before emitting init event". The adapter has no <code>loadSession</code>, and auto-approves tool permissions unless <code>AGY_ACP_ASK=1</code>.</li>
+<li><strong>All images:</strong> every image has its agent's ACP command, because the variants are built on the base images: <code>claude-browser</code> and <code>claude-hyperframes</code> have <code>claude-acp-start</code>, and <code>agy-hyperframes</code>, <code>agy-node</code> and <code>agy-python</code> have <code>agy-acp-start</code> (<code>agy-hyperframes</code> and <code>claude-hyperframes</code> run <code>hyperframes-init</code> first; <code>agy-hyperframes</code> also registers Playwright MCP). <code>--acp</code> works with <code>--browser</code>, <code>--hyperframes</code>, <code>--node</code> and <code>--python</code>. <code>agy-hyperframes</code> also contains Claude's command, so <code>acp_client.py</code> takes it for <code>agy</code>.</li>
 <li><strong>Network:</strong> egress rules are unchanged; ACP doesn't open anything.</li>
 <li><strong>Fallback:</strong> if the gRPC exec stream misbehaves, use the SSH route (see <a href="#working-in-sandboxes--by-hand">By hand</a>): <code>ssh openshell-my-task.default opencode acp</code> or <code>... claude-acp-start</code> (add <code>-T</code> to disable the pty).</li>
 <li><strong>Example client:</strong> <a href="https://github.com/fredrikp999/openshell-configs/blob/main/bin/acp_client.py" target="_blank" rel="noopener">bin/acp_client.py</a> is a minimal client (Python 3, no dependencies) that lists sandboxes and chats with the agent in one:</li>
 </ul>
 <div class="sourceCode" id="extras--cb6"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="extras--cb6-1"><a href="#extras--cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">bin/acp_client.py</span> list</span>
-<span id="extras--cb6-2"><a href="#extras--cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">bin/acp_client.py</span> connect <span class="op">&lt;</span>sandbox<span class="op">&gt;</span> [--agent opencode<span class="kw">|</span><span class="ex">claude]</span> [--model M] [--cwd /sandbox]</span></code></pre></div>
-<p>Type a prompt and press Enter; <code>/help</code> lists the commands, <code>/models [FILTER]</code> lists the models the agent offers, <code>/model ID</code> switches model for the session, <code>/commands</code> lists the agent's own slash commands (e.g. <code>/init</code>, <code>/review</code>), <code>/quit</code> or Ctrl-D exits, and Ctrl-C cancels a running prompt. It checks that the sandbox exists and is <code>Ready</code>, prints the agent's text and tool calls, asks permission requests on the terminal, and refuses any <code>fs/*</code> or <code>terminal/*</code> request from the agent. If the agent fails or exits, it shows the agent's last output with a hint (missing adapter, blocked API host, wrong model). Options: <code>--timeout SEC</code> for startup, <code>-v</code> for the JSON-RPC traffic and the agent's stderr. Exit codes: 0 ok, 1 agent error, 2 bad usage or sandbox. Without <code>--agent</code>, it picks the agent by which ACP command the sandbox has (<code>claude-acp-start</code> or <code>opencode</code>). Use it as a starting point for your UI.</p>
+<span id="extras--cb6-2"><a href="#extras--cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">bin/acp_client.py</span> connect <span class="op">&lt;</span>sandbox<span class="op">&gt;</span> [--agent opencode<span class="kw">|</span><span class="ex">claude</span><span class="kw">|</span><span class="ex">agy]</span> [--model M] [--cwd /sandbox]</span></code></pre></div>
+<p>Type a prompt and press Enter; <code>/help</code> lists the commands, <code>/models [FILTER]</code> lists the models the agent offers, <code>/model ID</code> switches model for the session, <code>/commands</code> lists the agent's own slash commands (e.g. <code>/init</code>, <code>/review</code>), <code>/quit</code> or Ctrl-D exits, and Ctrl-C cancels a running prompt. It checks that the sandbox exists and is <code>Ready</code>, prints the agent's text and tool calls, asks permission requests on the terminal, and refuses any <code>fs/*</code> or <code>terminal/*</code> request from the agent. If the agent fails or exits, it shows the agent's last output with a hint (missing adapter, blocked API host, wrong model). Options: <code>--timeout SEC</code> for startup, <code>-v</code> for the JSON-RPC traffic and the agent's stderr. Exit codes: 0 ok, 1 agent error, 2 bad usage or sandbox. Without <code>--agent</code>, it picks the agent by which ACP command the sandbox has (<code>claude-acp-start</code>, <code>agy-acp-start</code> or <code>opencode</code>). Use it as a starting point for your UI.</p>
 <ul>
 <li><strong>Test it</strong> before building the UI: <code>printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{}}}' | bin/sandbox.sh opencode my-task --acp</code> (or <code>claude</code> instead of <code>opencode</code>) should print one JSON response.</li>
 </ul>
@@ -1381,6 +2055,8 @@ claude      claude-code-oauth  1                 0</code></pre>
 <li><strong>For the CLI (node):</strong> the same font and jsDelivr hosts, <code>hyperframes.heygen.com</code> (docs and schemas), and <code>raw.githubusercontent.com</code>, but only paths under <code>/heygen-com/hyperframes/</code> (the block registry for <code>hyperframes add</code> and <code>catalog</code>).</li>
 </ul>
 <p>The preview on <code>127.0.0.1</code> in the sandbox needs no rule. A composition that loads something else (an image from a website, another CDN) shows it as DENIED in <code>openshell logs my-video</code>. Add the host and apply it to the running sandbox with <code>openshell policy set my-video --policy policies/hyperframes.yaml --wait</code>.</p>
+<h3 id="extras--with-antigravity-cli">With Antigravity CLI</h3>
+<p><code>bin/sandbox.sh agy my-video --hyperframes --forward 3102</code> does the same with <code>agy</code> instead of Claude Code, using the <code>agy-hyperframes</code> image (built on <code>claude-hyperframes</code>, plus <code>agy</code> and the ACP adapter) and <a href="https://github.com/fredrikp999/openshell-configs/blob/main/policies/agy-hyperframes.yaml" target="_blank" rel="noopener">policies/agy-hyperframes.yaml</a>. Playwright MCP is registered with <code>agy</code> on first start, so it can use the headless browser. The skills are still copied to <code>~/.claude/skills</code>, where <code>agy</code> doesn't look for them. Because <code>agy</code>'s login tokens sit in the sandbox, read the warning in <a href="#agents--antigravity-cli-with-a-google-account">agents.md</a> first.</p>
 <h3 id="extras--things-to-watch-for-1">Things to watch for</h3>
 <ul>
 <li><strong>Port in use on your machine:</strong> <code>openshell forward</code> uses the same port number on both sides, and <code>--forward</code> fails if the port is taken (<code>lsof -i :3102</code>). HyperFrames' default preview port 3002 is often in use if you also run HyperFrames on the host, so pick another, as above.</li>
