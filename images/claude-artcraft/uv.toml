@@ -1,0 +1,11 @@
+# uv's system-wide settings for the claude-artcraft image (/etc/uv/uv.toml;
+# /etc is read-only in the sandbox, so the agent can't edit it).
+#
+# Wheels only: a source distribution runs the package's build code at install
+# time. `uv pip install` ignores the UV_NO_BUILD variable, so this is set here,
+# for `uv pip` and for project commands (`uv add`, `uv sync`, `uv run`).
+# `uv --no-config ...` turns it off for one command.
+no-build = true
+
+[pip]
+no-build = true

@@ -27,6 +27,13 @@ ARG UV_VERSION=0.13.1
 ARG VECTORCRAFT_VERSION=0.12.0
 ARG PHOTOCRAFT_VERSION=0.9.0
 
+# Install wheels only: a source distribution runs the package's build code at
+# install time. pip reads PIP_ONLY_BINARY; uv reads /etc/uv/uv.toml (its
+# UV_NO_BUILD variable doesn't apply to `uv pip`). `PIP_ONLY_BINARY= pip ...` and
+# `uv --no-config ...` turn it off for one command.
+ENV PIP_ONLY_BINARY=:all:
+COPY uv.toml /etc/uv/uv.toml
+
 # uv (https://docs.astral.sh/uv/), the release binary for this architecture,
 # checked against its .sha256 file. It uses the Debian python3 above and never
 # downloads a Python of its own (UV_PYTHON_DOWNLOADS=never), since the policy

@@ -10,7 +10,10 @@
 #
 # A GET to PyPI can carry data in its URL, and the setup scripts of an
 # installed package run with the agent's rights, so this is less locked down
-# than a sandbox without it. Remove the pypi rule if the task needs no packages.
+# than a sandbox without it. The image installs wheels only (no package build
+# code runs at install time) and the docs list more ways to lower the risk
+# (docs/extras.md, "Installing Python packages"). Remove the pypi rule if the
+# task needs no packages.
 # Change the rules on a running sandbox with
 #   openshell policy set <sandbox> --policy policies/artcraft.yaml --wait
 #
