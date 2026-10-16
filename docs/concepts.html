@@ -57,6 +57,31 @@
 <li><strong>Everything else is refused</strong> and logged, and OpenShell drafts a rule you can approve if it was legitimate.</li>
 </ol>
 
+<p>Zoomed out, the agent is boxed in several times. The outermost layers belong to the container runtime; the innermost are OpenShell's own.</p>
+
+<figure class="diagram">
+<svg class="dg" viewBox="0 0 900 380" role="img" aria-label="Nested layers from outside in: macOS, Linux VM, container, OpenShell sandbox, agent.">
+<rect class="ring r1" x="6" y="6" width="888" height="368" rx="16"/>
+<text class="b" x="26" y="32">macOS or Linux host</text><text class="s" x="190" y="32">your files, Keychain, network, other apps</text>
+<rect class="ring r2" x="36" y="50" width="828" height="304" rx="14"/>
+<text class="b" x="56" y="76">Linux VM (the Podman machine)</text><text class="s" x="290" y="76">its own kernel; shares /Users with the host by default</text>
+<rect class="ring r3" x="66" y="94" width="768" height="240" rx="12"/>
+<text class="b" x="86" y="120">Container</text><text class="s" x="156" y="120">rootless Podman: user namespaces, limited capabilities, seccomp, SELinux</text>
+<rect class="ring r4" x="96" y="138" width="708" height="176" rx="10"/>
+<text class="b" x="116" y="164">OpenShell sandbox</text><text class="s" x="258" y="164">no network but the supervisor · Landlock · seccomp · non-root · placeholders</text>
+<rect class="ring r5" x="126" y="184" width="300" height="106" rx="8"/>
+<text class="b" x="276" y="216" text-anchor="middle">Agent + its tools</text>
+<text class="s" x="276" y="238" text-anchor="middle">what a prompt-injected agent</text><text class="s" x="276" y="254" text-anchor="middle">can use is only what is above</text>
+<rect class="chip okbox" x="470" y="200" width="300" height="74" rx="8"/>
+<text class="b" x="620" y="226" text-anchor="middle">Hosts you allowed</text>
+<text class="s" x="620" y="246" text-anchor="middle">the one way out, and where data</text>
+<text class="s" x="620" y="262" text-anchor="middle">can leave: keep the list short</text>
+<path class="arrow ok" marker-end="url(#a9)" d="M428 237H468"/>
+<defs><marker id="a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs>
+</svg>
+<figcaption>The likeliest leak is not an escape from the layers but data sent through a host you allowed. The network rules and credential placeholders are there for that. See <a href="#isolation--the-layers">Isolation on macOS</a> for the weak spots of the VM layer.</figcaption>
+</figure>
+
 <table>
 <thead><tr><th>Part</th><th>What it does</th><th>Look at it</th></tr></thead>
 <tbody>
@@ -540,32 +565,6 @@ openshell logs my-task | grep DENIED         # what was blocked, and by which bi
 openshell settings get --global              # effective settings
 openshell settings set --global --key ocsf_json_enabled --value true --yes
 openshell term                               # interactive terminal UI</pre>
-
-<h2 id="concepts--isolation">Layers of isolation</h2>
-<p>The agent is boxed in several times. The outermost layers are the container runtime's; the innermost are OpenShell's own.</p>
-
-<figure class="diagram">
-<svg class="dg" viewBox="0 0 900 380" role="img" aria-label="Nested layers from outside in: macOS, Linux VM, container, OpenShell sandbox, agent.">
-<rect class="ring r1" x="6" y="6" width="888" height="368" rx="16"/>
-<text class="b" x="26" y="32">macOS or Linux host</text><text class="s" x="190" y="32">your files, Keychain, network, other apps</text>
-<rect class="ring r2" x="36" y="50" width="828" height="304" rx="14"/>
-<text class="b" x="56" y="76">Linux VM (the Podman machine)</text><text class="s" x="290" y="76">its own kernel; shares /Users with the host by default</text>
-<rect class="ring r3" x="66" y="94" width="768" height="240" rx="12"/>
-<text class="b" x="86" y="120">Container</text><text class="s" x="156" y="120">rootless Podman: user namespaces, limited capabilities, seccomp, SELinux</text>
-<rect class="ring r4" x="96" y="138" width="708" height="176" rx="10"/>
-<text class="b" x="116" y="164">OpenShell sandbox</text><text class="s" x="258" y="164">no network but the supervisor · Landlock · seccomp · non-root · placeholders</text>
-<rect class="ring r5" x="126" y="184" width="300" height="106" rx="8"/>
-<text class="b" x="276" y="216" text-anchor="middle">Agent + its tools</text>
-<text class="s" x="276" y="238" text-anchor="middle">what a prompt-injected agent</text><text class="s" x="276" y="254" text-anchor="middle">can use is only what is above</text>
-<rect class="chip okbox" x="470" y="200" width="300" height="74" rx="8"/>
-<text class="b" x="620" y="226" text-anchor="middle">Hosts you allowed</text>
-<text class="s" x="620" y="246" text-anchor="middle">the one way out, and where data</text>
-<text class="s" x="620" y="262" text-anchor="middle">can leave: keep the list short</text>
-<path class="arrow ok" marker-end="url(#a9)" d="M428 237H468"/>
-<defs><marker id="a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs>
-</svg>
-<figcaption>The likeliest leak is not an escape from the layers but data sent through a host you allowed. The network rules and credential placeholders are there for that. See <a href="#isolation--the-layers">Isolation on macOS</a> for the weak spots of the VM layer.</figcaption>
-</figure>
 
 <h2 id="concepts--cheat-sheet">Feature cheat sheet</h2>
 <table>
