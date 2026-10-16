@@ -69,7 +69,7 @@ What a sandbox may access comes from three places:
 * **Network rules** you approve add more hosts, per sandbox.
 
 ### Filesystem policy
-This repo has these policies: this one, [policies/example.yaml](../policies/example.yaml) (below), [policies/browser.yaml](../policies/browser.yaml) for the [browser](extras.md#headless-browser-use), [policies/hyperframes.yaml](../policies/hyperframes.yaml) for HyperFrames and [policies/antigravity.yaml](../policies/antigravity.yaml) for [Antigravity CLI](agents.md#antigravity-cli-with-a-google-account). The one used everywhere is [policies/vscode-terminal.yaml](../policies/vscode-terminal.yaml). It is the default policy plus `/dev/pts` and `/dev/ptmx`, so programs inside the sandbox can open terminals. VS Code's integrated terminal needs this; without it, it fails with `forkpty(3) failed`.
+This repo has these policies: this one, [policies/example.yaml](../policies/example.yaml) (below), [policies/browser.yaml](../policies/browser.yaml) for the [browser](extras.md#headless-browser-use), [policies/hyperframes.yaml](../policies/hyperframes.yaml) for HyperFrames, [policies/artcraft.yaml](../policies/artcraft.yaml) for [VectorCraft and PhotoCraft](extras.md#artcraft-vectorcraft-and-photocraft) and [policies/antigravity.yaml](../policies/antigravity.yaml) for [Antigravity CLI](agents.md#antigravity-cli-with-a-google-account). The one used everywhere is [policies/vscode-terminal.yaml](../policies/vscode-terminal.yaml). It is the default policy plus `/dev/pts` and `/dev/ptmx`, so programs inside the sandbox can open terminals. VS Code's integrated terminal needs this; without it, it fails with `forkpty(3) failed`.
 ```yaml
 version: 1
 filesystem_policy:

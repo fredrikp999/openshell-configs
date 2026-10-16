@@ -1,0 +1,15 @@
+{
+  "hasCompletedOnboarding": true,
+  "mcpServers": {
+    "vectorcraft": {
+      "type": "stdio",
+      "command": "vectorcraft-cli",
+      "args": ["mcp", "--automation-read-root", "/sandbox", "--automation-write-root", "/sandbox"]
+    },
+    "photocraft": {
+      "type": "stdio",
+      "command": "photocraft-cli",
+      "args": ["mcp", "--automation-read-root", "/sandbox", "--automation-write-root", "/sandbox"]
+    }
+  }
+}

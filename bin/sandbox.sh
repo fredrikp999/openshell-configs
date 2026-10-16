@@ -1,7 +1,7 @@
 #!/bin/sh
 # Start an agent sandbox, either in the terminal or in VS Code.
 #
-#   bin/sandbox.sh <claude|opencode|agy> [name] [--vscode|--acp] [--browser|--hyperframes|--node|--python]
+#   bin/sandbox.sh <claude|opencode|agy> [name] [--vscode|--acp] [--browser|--hyperframes|--artcraft|--node|--python]
 #                  [--forward PORT] [--workdir DIR] [-- agent args...]
 #
 #   bin/sandbox.sh claude                      # Claude in this terminal, sandbox claude-agent1
@@ -12,6 +12,7 @@
 #   bin/sandbox.sh opencode oc-task --acp      # ACP over stdio, for a UI/client
 #   bin/sandbox.sh claude web-task --browser   # Claude with a headless browser
 #   bin/sandbox.sh claude my-video --hyperframes --forward 3102   # HyperFrames
+#   bin/sandbox.sh claude my-art --artcraft # Claude with VectorCraft and PhotoCraft
 #
 # --acp runs the agent's Agent Client Protocol server (JSON-RPC over stdin and
 # stdout) instead of the terminal UI. A client spawns this script as its agent
@@ -29,6 +30,12 @@
 # browser. For agy it is the agy-hyperframes image (HyperFrames and Python) with
 # policies/agy-hyperframes.yaml, which lets node and Chromium reach the CDNs
 # while agy's login tokens are in the sandbox; see docs/agents.md.
+#
+# --artcraft (Claude only) creates the sandbox from the claude-artcraft image
+# with policies/artcraft.yaml: the CLIs and MCP servers of VectorCraft and
+# PhotoCraft (registered as `vectorcraft` and `photocraft`), so Claude can draw
+# SVG and PDF and edit photos in /sandbox. They need no network access beyond
+# the terminal policy's.
 #
 # --node (agy only) creates the sandbox from the agy-node image with
 # policies/agy-node.yaml, which lets node reach registry.npmjs.org so the agent
@@ -55,7 +62,7 @@
 # (bin/sandbox.sh agy <name>) before using --acp.
 set -eu
 
-usage() { sed -n "2,55p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n "2,62p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 [ $# -ge 1 ] || usage
 agent=$1; shift
@@ -91,6 +98,7 @@ vscode=false
 acp=false
 browser=false
 hyperframes=false
+artcraft=false
 node=false
 python=false
 forward=
@@ -101,6 +109,7 @@ while [ $# -gt 0 ]; do
     --acp) acp=true; shift ;;
     --browser) browser=true; shift ;;
     --hyperframes) hyperframes=true; shift ;;
+    --artcraft) artcraft=true; shift ;;
     --node) node=true; shift ;;
     --python) python=true; shift ;;
     --forward) forward=$2; shift 2 ;;
@@ -139,6 +148,12 @@ if $hyperframes; then
     image=claude-hyperframes:latest
     policy=$(dirname "$0")/../policies/hyperframes.yaml
   fi
+fi
+if $artcraft; then
+  [ "$agent" = claude ] || { echo "--artcraft is only for claude." >&2; exit 1; }
+  $browser || $hyperframes && { echo "Use only one of --artcraft, --browser and --hyperframes." >&2; exit 1; }
+  image=claude-artcraft:latest
+  policy=$(dirname "$0")/../policies/artcraft.yaml
 fi
 if $node; then
   [ "$agent" = agy ] || { echo "--node is only for agy." >&2; exit 1; }

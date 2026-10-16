@@ -43,7 +43,7 @@ DOCS = ["README.md", "docs/setup.md", "docs/agents.md", "docs/working-in-sandbox
         "docs/troubleshooting.md"]
 FILE_GROUPS = [
     ("Policies", "policies", ["vscode-terminal.yaml", "example.yaml", "browser.yaml",
-                              "hyperframes.yaml", "antigravity.yaml"]),
+                              "hyperframes.yaml", "artcraft.yaml", "antigravity.yaml"]),
     ("Provider profiles", "providers", ["claude-code-oauth.yaml", "openrouter.yaml"]),
     ("Image: claude-sandbox", "images/claude-sandbox", ["Dockerfile", "claude-start",
                                                         "claude-acp-start", "claude-start.json"]),

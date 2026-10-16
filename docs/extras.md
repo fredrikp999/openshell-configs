@@ -1,4 +1,4 @@
-# Extras: MCP servers, ACP, a headless browser and HyperFrames
+# Extras: MCP servers, ACP, a headless browser, HyperFrames, VectorCraft and PhotoCraft
 Optional additions to the basic setup. Each one gives the agent more reach, so add it when a task needs it.
 
 ## MCP servers in containers on the host
@@ -186,3 +186,56 @@ The preview on `127.0.0.1` in the sandbox needs no rule. A composition that load
 * **`npx` contacts registry.npmjs.org** once, which shows as DENIED. HyperFrames is installed globally, so it works anyway.
 * **Size:** the image adds about 0.5 GB to `claude-browser` (2.3 GB in all).
 * **Test:** [tests/hyperframes/run.sh](../tests/hyperframes/run.sh) creates a sandbox, renders a project, checks that `hyperframes check` loads GSAP without errors, and that the preview is reachable from your machine through a forwarded port. `--claude` also has Claude Code make and render a short video.
+
+## ArtCraft: VectorCraft and PhotoCraft
+[VectorCraft](https://getartcraft.com/apps/vectorcraft) is an open-source vector editor for SVG and PDF, and [PhotoCraft](https://getartcraft.com/apps/photocraft) an open-source photo editor (layers, adjustments, filters, PSD, PNG, JPEG and more). Both are written in Rust (MIT or Apache-2.0, by the ArtCraft team), and both have a headless command-line tool with an MCP server, so Claude can draw, edit and export in the sandbox. The `claude-artcraft` image has both CLIs and registers both servers.
+
+### Set it up
+1. **Build the image.** It builds on `claude-sandbox`; `make` builds both in order:
+```bash
+make claude-artcraft
+```
+   Or by hand:
+```bash
+podman build -t claude-sandbox:latest   images/claude-sandbox
+podman build -t claude-artcraft:latest  images/claude-artcraft
+```
+2. **Create the sandbox.** `--artcraft` uses the image and [policies/artcraft.yaml](../policies/artcraft.yaml):
+```bash
+bin/sandbox.sh claude my-art --artcraft
+```
+3. **Upload what Claude should work on** (photos, a PSD), if any:
+```bash
+openshell sandbox upload my-art ./raw /sandbox
+```
+4. **Ask Claude**, e.g. "Draw a 1200x630 social card for our CLI with VectorCraft and export card.svg" or "Grade the photos in /sandbox/raw with PhotoCraft (a little more contrast, sharpen) and write them to /sandbox/graded."
+5. **Get the files out:**
+```bash
+openshell sandbox download my-art /sandbox/graded .
+```
+
+By hand, without the script:
+```bash
+openshell sandbox create --name my-art --from claude-artcraft:latest --provider claude \
+  --policy policies/artcraft.yaml --detach -- sleep infinity
+openshell sandbox exec my-art --workdir /sandbox -- claude-start
+```
+`--artcraft` is only for Claude, and can't be combined with `--browser` or `--hyperframes`. `--acp` and `--vscode` work with it.
+
+### What the image adds
+[images/claude-artcraft](../images/claude-artcraft) builds on `claude-sandbox`. It adds:
+* **`vectorcraft-cli` and `photocraft-cli`**, the headless tools from each app's release for the image's architecture (arm64 or x86_64), pinned with `ARG VECTORCRAFT_VERSION` and `ARG PHOTOCRAFT_VERSION` and checked against the release's `SHA256SUMS.txt` during the build. The desktop apps from the same releases are left out, because the sandbox has no display. The build fetches them from GitHub, so it needs network access on your machine, but the sandbox doesn't.
+* **The MCP servers**, registered as `vectorcraft` and `photocraft` in [claude-start.json](../images/claude-artcraft/claude-start.json), which `claude-start` copies to `~/.claude.json` on first start. Each runs `<app>-cli mcp --automation-read-root /sandbox --automation-write-root /sandbox`, so the servers can only open and save files below `/sandbox`.
+* **The skill `clean-vector-from-raster`** ([images/claude-artcraft/skills](../images/claude-artcraft/skills/clean-vector-from-raster/SKILL.md)): a workflow for turning a raster illustration (e.g. one figure from a sprite sheet on a chroma-key background) into a clean, print-ready SVG: prepare the image in PhotoCraft (crop, upscale, smooth), trace it in VectorCraft, simplify and export. Ask for it by name or describe the task. It is copied to `~/.claude/skills` on first start by **`artcraft-init`**, which `claude-start` and `claude-acp-start` run (a skill that is already there isn't overwritten, so edits in a sandbox stay). To add a skill, put its folder in `images/claude-artcraft/skills/` and rebuild.
+* **Each app's docs and licences** in `/usr/local/share/doc/vectorcraft` and `/usr/local/share/doc/photocraft` (the READMEs describe the command API).
+
+The CLIs also work without MCP, e.g. `vectorcraft-cli run --in art.vectorcraft --export art.pdf`, or `photocraft-cli convert in.psd out.png`, `photocraft-cli run` for a list of engine commands and `photocraft-cli batch` for a folder of images. `--help` lists the rest. Both apps are in active development, so commands may change between releases.
+
+### The policy
+[policies/artcraft.yaml](../policies/artcraft.yaml) is the terminal policy ([vscode-terminal.yaml](../policies/vscode-terminal.yaml)) with no network rules, because both apps work on local files. Claude Code reaches its API through the provider, as in the other images. It is a file of its own so you can add rules for this sandbox, e.g. a host to fetch fonts or images from, and apply them to the running sandbox with `openshell policy set my-art --policy policies/artcraft.yaml --wait`. See [Sandbox policies](customizing.md#sandbox-policies).
+
+### Things to watch for
+* **Claude Code only.** There is no `agy` or OpenCode variant.
+* **The MCP root is `/sandbox`.** Files elsewhere (e.g. `/tmp`) can't be opened or saved by the servers. The agent's other tools aren't limited by it, but by the sandbox's filesystem policy.
+* **Existing sandboxes** keep their old image. Create a new one after rebuilding, e.g. to update a version.
+* **Size:** the two CLI binaries are about 90 MB each.

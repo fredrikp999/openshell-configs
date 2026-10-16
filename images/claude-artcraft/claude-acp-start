@@ -1,0 +1,6 @@
+#!/bin/sh
+# Copy the skills, skip Claude Code onboarding on first start, then run the ACP
+# adapter.
+artcraft-init
+[ -f "$HOME/.claude.json" ] || cp /etc/claude-start.json "$HOME/.claude.json"
+exec claude-agent-acp "$@"

@@ -1,0 +1,32 @@
+# Sandbox policy for the claude-artcraft image (VectorCraft and PhotoCraft): the
+# terminal policy (vscode-terminal.yaml) and nothing more.
+#
+# The CLIs and MCP servers (vectorcraft-cli, photocraft-cli) work on local files
+# and need no network, so unlike browser.yaml and hyperframes.yaml this file has no
+# network rules. Network access comes from the attached provider (Claude Code
+# reaching its API), not from this file. The MCP servers themselves are limited to
+# /sandbox by their own arguments (images/claude-artcraft/claude-start.json).
+# It is a separate file so this sandbox can get rules of its own,
+# e.g. a host from which the agent may fetch fonts or images, without changing
+# the policy the other sandboxes use.
+#
+#   openshell sandbox create --from claude-artcraft:latest --policy policies/vectorcraft.yaml ...
+#   bin/sandbox.sh claude my-art --vectorcraft       # does the same
+version: 1
+filesystem_policy:
+  include_workdir: true
+  read_only:
+    - /bin
+    - /usr                     # vectorcraft-cli and photocraft-cli, in /usr/local/bin
+    - /lib
+    - /proc
+    - /dev/urandom
+    - /etc
+    - /var/log
+  read_write:
+    - /tmp
+    - /dev/null
+    - /dev/pts
+    - /dev/ptmx
+landlock:
+  compatibility: best_effort
