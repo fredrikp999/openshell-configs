@@ -19,9 +19,10 @@ What happens in a sandbox is logged by its OpenShell supervisor: every connectio
 * The last 200 lines: `openshell logs my-task`
 * More, from the last 30 minutes: `openshell logs my-task --since 30m -n 1000`
 * Follow live: `openshell logs my-task --tail`
-* Warnings and errors only: `openshell logs my-task --level warn`
+* Warnings and errors only: `openshell logs my-task --level warn` This hides the policy events (`DENIED` and the like), which are logged at their own level, so don't use it when you look for blocked connections.
 * What was blocked: `openshell logs my-task | grep DENIED`
 * Without a name, `openshell logs` uses the last-used sandbox. `--source sandbox` or `--source gateway` shows only one side.
+* **Limits:** the gateway keeps only the last 2,000 log lines per sandbox, in memory, and loses them when it restarts. `openshell logs` doesn't show the agent's own output or what `sandbox exec` and SSH sessions print (use `podman logs` for the main process). For a durable record, export the [OCSF JSON](#ocsf-json).
 * **Line format:** `[time] [source] [level] [component] message`, with the time in Unix seconds. Security events have the component `[ocsf]`, an event type and an outcome:
 ```
 [1791703672.439] [sandbox] [OCSF ] [ocsf] NET:REFUSE [MED] DENIED github.com [reason:policy_dns_ineligible]
@@ -62,7 +63,7 @@ openshell settings set --global --key ocsf_json_enabled --value true --yes
 ```
 * Check: `openshell settings get my-task | grep ocsf`
 * Off again: `openshell settings set --global --key ocsf_json_enabled --value false --yes`
-* **Where it goes:** with the Podman driver, OpenShell 0.1.3 doesn't write the `/var/log/openshell-ocsf.*.log` file [its docs](https://docs.nvidia.com/openshell/latest/observability/ocsf-json-export) describe. The supervisor container prints each event as an `OCSF-JSON {...}` line instead, so the records are in `podman logs openshell-supervisor-<sandbox id>`. `bin/otel-export.py` reads them from there.
+* **Where it goes:** the supervisor prints each event as an `OCSF-JSON {...}` line on its stderr, so the records are in `podman logs openshell-supervisor-<sandbox id>`, and `bin/otel-export.py` reads them from there. NVIDIA's docs also describe a file, `/var/log/openshell-ocsf.YYYY-MM-DD.log`, when file logging is available; OpenShell 0.1.3 with the Podman driver didn't write it here. It would be on a tmpfs inside the supervisor container and out of reach of `openshell sandbox exec` anyway.
 * **Only from then on:** events before the setting was turned on have no JSON record. The records are gone when the sandbox is deleted, so export what you want to keep.
 * **A record** carries the sandbox (`container.name`), the outcome (`action`, `disposition`), the destination (`dst_endpoint`), the process (`actor.process`), the rule that decided (`firewall_rule`) and a severity.
 * **Schema version:** v1.8.0 by default. `ocsf_schema_version` set to `1.1` or `1.3` downgrades the records for tools that need an older one (lossy, see the OpenShell docs).
@@ -121,7 +122,7 @@ echo 'OPENSHELL_METRICS_PORT=9464' >> ~/.config/openshell/gateway.env
 brew services restart openshell
 curl -s http://127.0.0.1:9464/metrics
 ```
-   Without Homebrew, start the gateway with `--metrics-port 9464` or the same environment variable. Delete the line and restart to turn it off. The endpoint listens on `127.0.0.1` only (`--bind-address` changes that for all listeners).
+   Without Homebrew, start the gateway with `--metrics-port 9464` or the same environment variable. Delete the line and restart to turn it off. The endpoint listens on `127.0.0.1` only (`--bind-address` changes that for all listeners). The same can be set in `gateway.toml` as `metrics_bind_address` under `[openshell.gateway]`. The endpoint is plain HTTP without authentication, so keep it on loopback.
 
 | Metric | Type | What it tells you |
 |---|---|---|
@@ -174,7 +175,7 @@ podman run -d --name prometheus -p 127.0.0.1:9090:9090 \
    Then, on http://localhost:9090: `openshell_server_supervisor_sessions` for connected sandboxes, `sum by (method) (rate(openshell_server_grpc_requests_total[5m]))` for API calls per method, `rate(openshell_server_routed_request_attempts_total{outcome!="success"}[5m])` for failing relays.
 
 ### Metrics as OpenTelemetry
-OpenShell's own OTLP export covers traces only, so the metrics reach OTel through a Collector. [observability/collector.yaml](../observability/collector.yaml) scrapes the gateway's metrics endpoint and also takes the events from `bin/otel-export.py`, so one Collector sends both to your backend:
+OpenShell's documented metrics endpoint is Prometheus only, so the metrics reach OTel through a Collector. [observability/collector.yaml](../observability/collector.yaml) scrapes the gateway's metrics endpoint and also takes the events from `bin/otel-export.py`, so one Collector sends both to your backend:
 ```bash
 podman run -d --name otel-collector -p 127.0.0.1:4318:4318 \
   -v "$PWD/observability/collector.yaml:/etc/otelcol-contrib/config.yaml:ro" \

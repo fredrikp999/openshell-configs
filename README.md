@@ -35,11 +35,12 @@ OpenShell runs AI coding agents in locked-down sandboxes. Agents get only the ne
 
 ### Concepts
 * **Gateway** - the local OpenShell server (`https://localhost:17670`) that manages everything below. It runs as a background service and starts sandboxes through a container runtime (here Podman).
+* **Supervisor** - the OpenShell process that runs next to each sandbox's workload, on the trusted side. It makes every policy decision, adds the real credentials to allowed requests and reports to the gateway; the agent itself has no network except its channel to the supervisor.
 * **Profile** - a template for a type of provider: which credential it needs (e.g. `CLAUDE_CODE_OAUTH_TOKEN`), which hosts it may reach, and which binaries may use it. A YAML file in [providers/](providers/), imported into the gateway. See [Provider profiles](docs/customizing.md#provider-profiles).
 * **Provider** - an instance of a profile that holds your actual key or token, stored in the gateway. OpenShell's network proxy adds the credential to outgoing requests to the allowed hosts, so the agent never sees it. Antigravity CLI can't use one and logs in inside the sandbox instead; see [Two ways to sign in](docs/agents.md#two-ways-to-sign-in-provider-or-login-in-the-sandbox) for the trade-offs.
 * **Image** - the container image a sandbox starts from. It must contain the agent, e.g. `claude-sandbox` or `opencode-sandbox`, built from the folders in [images/](images).
 * **Sandbox** - a running, isolated container created from an image, with one or more providers attached, running a main command. The sandbox stops when that command exits.
-* **Policy and rules** - what a sandbox may access. A policy file sets filesystem access, providers add network access, and you approve or reject further network rules as the agent gets blocked. See [Sandbox policies](docs/customizing.md#sandbox-policies).
+* **Policy and rules** - what a sandbox may access. A policy file sets filesystem access (and can add network rules), providers add network access, and you approve or reject further network rules as the agent gets blocked. See [Sandbox policies](docs/customizing.md#sandbox-policies).
 
 ### Basic steps
 1. [Set up Podman](docs/setup.md#podman) and [install OpenShell](docs/setup.md#install-openshell).

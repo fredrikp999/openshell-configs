@@ -257,7 +257,7 @@ openshell rule approve my-task --chunk-id ID</pre><p class="note-line"><strong>L
 <thead><tr><th>You want to change…</th><th>Where</th><th>Takes effect</th></tr></thead>
 <tbody>
 <tr><td>Readable / writable paths</td><td><code>filesystem_policy</code> in the policy file</td><td>Next sandbox (<code>delete</code> + <code>create --policy</code>)</td></tr>
-<tr><td>Hosts a provider may reach, its credential</td><td>The provider profile (<code>openshell provider profile update</code>)</td><td>Sandboxes created after the update</td></tr>
+<tr><td>Hosts a provider may reach, its credential</td><td>The provider profile (<code>openshell provider profile update</code>)</td><td>Running sandboxes at their next sync; processes already started keep their old environment</td></tr>
 <tr><td>Extra hosts for one sandbox</td><td><code>network_policies</code> (<code>openshell policy set</code> / <code>policy update</code>) or <code>openshell rule approve</code></td><td>Immediately (hot reload)</td></tr>
 <tr><td>Process hardening (non-root user, seccomp)</td><td>The <code>process</code> section of the policy; the defaults are fine for most uses</td><td>Next sandbox</td></tr>
 <tr><td>Logging and other behaviour</td><td><code>openshell settings set</code></td><td>Within seconds</td></tr>
@@ -456,7 +456,7 @@ filesystem_policy:
   read_only:  [/bin, /usr, /lib, /proc, /dev/urandom, /etc, /var/log]
   read_write: [/tmp, /dev/null, /dev/pts, /dev/ptmx]
 landlock:
-  compatibility: best_effort     # skip paths the kernel can't enforce; hard_requirement refuses to start instead</pre>
+  compatibility: best_effort     # if Landlock can't be applied the sandbox runs WITHOUT these rules; hard_requirement refuses to start</pre>
 <pre data-lang="bash">openshell policy get my-task --base      # the policy the sandbox got
 openshell policy get my-task --full      # including the network rules from its providers</pre>
 

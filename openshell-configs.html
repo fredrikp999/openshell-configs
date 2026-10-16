@@ -208,7 +208,7 @@ td div.sourceCode { margin:.2rem 0; }
 <body>
 <nav>
 <p class="brand">OpenShell configs</p>
-<p class="meta">Built from <a href="https://github.com/fredrikp999/openshell-configs">github.com/fredrikp999/openshell-configs</a> at commit ebe2270 2026-10-16</p>
+<p class="meta">Built from <a href="https://github.com/fredrikp999/openshell-configs">github.com/fredrikp999/openshell-configs</a> at commit 7e0a015 2026-10-16</p>
 <div class="theme" role="group" aria-label="Color theme">
 <button type="button" data-theme="auto" title="Follow the system setting">Auto</button>
 <button type="button" data-theme="light">Light</button>
@@ -327,11 +327,12 @@ td div.sourceCode { margin:.2rem 0; }
 <h3 id="readme--concepts">Concepts</h3>
 <ul>
 <li><strong>Gateway</strong> - the local OpenShell server (<code>https://localhost:17670</code>) that manages everything below. It runs as a background service and starts sandboxes through a container runtime (here Podman).</li>
+<li><strong>Supervisor</strong> - the OpenShell process that runs next to each sandbox's workload, on the trusted side. It makes every policy decision, adds the real credentials to allowed requests and reports to the gateway; the agent itself has no network except its channel to the supervisor.</li>
 <li><strong>Profile</strong> - a template for a type of provider: which credential it needs (e.g. <code>CLAUDE_CODE_OAUTH_TOKEN</code>), which hosts it may reach, and which binaries may use it. A YAML file in <a href="#group-provider-profiles">providers/</a>, imported into the gateway. See <a href="#customizing--provider-profiles">Provider profiles</a>.</li>
 <li><strong>Provider</strong> - an instance of a profile that holds your actual key or token, stored in the gateway. OpenShell's network proxy adds the credential to outgoing requests to the allowed hosts, so the agent never sees it. Antigravity CLI can't use one and logs in inside the sandbox instead; see <a href="#agents--two-ways-to-sign-in-provider-or-login-in-the-sandbox">Two ways to sign in</a> for the trade-offs.</li>
 <li><strong>Image</strong> - the container image a sandbox starts from. It must contain the agent, e.g. <code>claude-sandbox</code> or <code>opencode-sandbox</code>, built from the folders in <a href="https://github.com/fredrikp999/openshell-configs/tree/main/images" target="_blank" rel="noopener">images/</a>.</li>
 <li><strong>Sandbox</strong> - a running, isolated container created from an image, with one or more providers attached, running a main command. The sandbox stops when that command exits.</li>
-<li><strong>Policy and rules</strong> - what a sandbox may access. A policy file sets filesystem access, providers add network access, and you approve or reject further network rules as the agent gets blocked. See <a href="#customizing--sandbox-policies">Sandbox policies</a>.</li>
+<li><strong>Policy and rules</strong> - what a sandbox may access. A policy file sets filesystem access (and can add network rules), providers add network access, and you approve or reject further network rules as the agent gets blocked. See <a href="#customizing--sandbox-policies">Sandbox policies</a>.</li>
 </ul>
 <h3 id="readme--basic-steps">Basic steps</h3>
 <ol type="1">
@@ -773,7 +774,7 @@ td div.sourceCode { margin:.2rem 0; }
 <thead><tr><th>You want to change…</th><th>Where</th><th>Takes effect</th></tr></thead>
 <tbody>
 <tr><td>Readable / writable paths</td><td><code>filesystem_policy</code> in the policy file</td><td>Next sandbox (<code>delete</code> + <code>create --policy</code>)</td></tr>
-<tr><td>Hosts a provider may reach, its credential</td><td>The provider profile (<code>openshell provider profile update</code>)</td><td>Sandboxes created after the update</td></tr>
+<tr><td>Hosts a provider may reach, its credential</td><td>The provider profile (<code>openshell provider profile update</code>)</td><td>Running sandboxes at their next sync; processes already started keep their old environment</td></tr>
 <tr><td>Extra hosts for one sandbox</td><td><code>network_policies</code> (<code>openshell policy set</code> / <code>policy update</code>) or <code>openshell rule approve</code></td><td>Immediately (hot reload)</td></tr>
 <tr><td>Process hardening (non-root user, seccomp)</td><td>The <code>process</code> section of the policy; the defaults are fine for most uses</td><td>Next sandbox</td></tr>
 <tr><td>Logging and other behaviour</td><td><code>openshell settings set</code></td><td>Within seconds</td></tr>
@@ -978,7 +979,7 @@ td div.sourceCode { margin:.2rem 0; }
 <span ><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">read_only</span><span class="kw">:</span><span class="at">  </span><span class="kw">[</span><span class="at">/bin</span><span class="kw">,</span><span class="at"> /usr</span><span class="kw">,</span><span class="at"> /lib</span><span class="kw">,</span><span class="at"> /proc</span><span class="kw">,</span><span class="at"> /dev/urandom</span><span class="kw">,</span><span class="at"> /etc</span><span class="kw">,</span><span class="at"> /var/log</span><span class="kw">]</span></span>
 <span ><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">read_write</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">/tmp</span><span class="kw">,</span><span class="at"> /dev/</span><span class="ch">null</span><span class="kw">,</span><span class="at"> /dev/pts</span><span class="kw">,</span><span class="at"> /dev/ptmx</span><span class="kw">]</span></span>
 <span ><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">landlock</span><span class="kw">:</span></span>
-<span ><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">compatibility</span><span class="kw">:</span><span class="at"> best_effort</span><span class="co">     # skip paths the kernel can&#39;t enforce; hard_requirement refuses to start instead</span></span></code></pre></div>
+<span ><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">compatibility</span><span class="kw">:</span><span class="at"> best_effort</span><span class="co">     # if Landlock can&#39;t be applied the sandbox runs WITHOUT these rules; hard_requirement refuses to start</span></span></code></pre></div>
 
 <div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy get my-task <span class="at">--base</span>      <span class="co"># the policy the sandbox got</span></span>
 <span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy get my-task <span class="at">--full</span>      <span class="co"># including the network rules from its providers</span></span></code></pre></div>
@@ -1122,7 +1123,7 @@ td div.sourceCode { margin:.2rem 0; }
 <h2 id="setup--podman">Podman</h2>
 <p>OpenShell runs the sandboxes in a container runtime. These steps use Podman (5.x is required). OpenShell can also use Docker (28.0 or later) or MicroVMs.</p>
 <h3 id="setup--macos-apple-silicon">macOS (Apple Silicon)</h3>
-<p>On macOS, Podman runs containers in a Linux VM called a Podman machine.</p>
+<p>On macOS, Podman runs containers in a Linux VM called a Podman machine. Note that NVIDIA's support matrix lists macOS on Apple Silicon only with Docker Desktop, and Podman as supported for rootless Linux workstations. Podman on a Mac works with the steps here (they are what this repo is tested with), but it is outside that matrix.</p>
 <ul>
 <li>Install Podman, either with the installer from <a href="https://podman.io/" target="_blank" rel="noopener">podman.io</a> (the Podman docs recommend this) or with Homebrew:</li>
 </ul>
@@ -1623,7 +1624,7 @@ claude      claude-code-oauth  1                 0</code></pre>
 <div class="sourceCode" id="working-in-sandboxes--cb8"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="working-in-sandboxes--cb8-1"><a href="#working-in-sandboxes--cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox list</span></code></pre></div>
 <ul>
 <li><code>Ready</code>: running, use it.</li>
-<li><code>Completed</code> or <code>Error</code>: stopped. Delete it and create it again (step 1). Files in it are lost, so get your work out first (see <a href="#working-in-sandboxes--getting-code-in-and-out">Getting code in and out</a>).</li>
+<li><code>Completed</code> or <code>Error</code>: stopped. Delete it and create it again (step 1). Files in it are lost, so get your work out first (see <a href="#working-in-sandboxes--getting-code-in-and-out">Getting code in and out</a>). NVIDIA's docs say <code>openshell sandbox start</code> runs the main command of such a sandbox again; on Podman with OpenShell 0.1.3 it printed an error here (<code>already running generation</code>) while the sandbox moved to <code>Starting</code>, so deleting and creating again is the safe route.</li>
 </ul>
 <ol start="6" type="1">
 <li><strong>When the task is done:</strong></li>
@@ -1751,8 +1752,8 @@ claude      claude-code-oauth  1                 0</code></pre>
 <h3 id="working-in-sandboxes--good-to-know-about-upload-and-download">Good to know about upload and download</h3>
 <ul>
 <li><code>openshell sandbox upload &lt;sandbox&gt; &lt;local-path&gt; &lt;dest&gt;</code> puts a folder <em>inside</em> <code>&lt;dest&gt;</code>. Uploading <code>./myrepo</code> to <code>/sandbox/myrepo</code> gives <code>/sandbox/myrepo/myrepo</code>, so upload to <code>/sandbox</code> instead.</li>
-<li><code>upload</code> follows <code>.gitignore</code> and leaves out the <code>.git</code> folder, so an uploaded repo has no history. Use a git bundle (below) to keep the history.</li>
-<li><code>openshell sandbox download &lt;sandbox&gt; &lt;sandbox-path&gt; &lt;local-dest&gt;</code> copies files back to the host.</li>
+<li><code>upload</code> follows <code>.gitignore</code> and leaves out the <code>.git</code> folder, so an uploaded repo has no history. Use a git bundle (below) to keep the history. <code>--no-git-ignore</code> uploads ignored files too.</li>
+<li><code>openshell sandbox download &lt;sandbox&gt; &lt;sandbox-path&gt; &lt;local-dest&gt;</code> copies files back to the host. The source has to be inside the sandbox's working directory.</li>
 <li><code>--upload</code> on <code>sandbox create</code> can't be combined with a command after <code>--</code>. Upload into a running sandbox instead.</li>
 </ul>
 <h3 id="working-in-sandboxes--single-files">Single files</h3>
@@ -1868,7 +1869,7 @@ claude      claude-code-oauth  1                 0</code></pre>
 <li><strong>One sandbox per task or branch</strong>, named after the task (<code>claude-auth-fix</code>, <code>claude-docs</code>). Each has its own filesystem, policy and approved rules, so agents don't interfere with each other.</li>
 <li><strong>Providers are shared</strong> - create a provider once and attach it to every sandbox with <code>--provider</code>.</li>
 <li><strong>Labels</strong> - add e.g. <code>--label project=foo --label task=auth</code> on create, then list with <code>openshell sandbox list --selector project=foo</code>.</li>
-<li><strong>Templates</strong> - store the image and resources once, then create sandboxes from it. <code>--template</code> can't be combined with <code>--from</code>, <code>--cpu</code>, <code>--memory</code> or <code>--env</code>:</li>
+<li><strong>Templates</strong> - store the image and resources once, then create sandboxes from it. <code>--template</code> can't be combined with <code>--from</code>, <code>--cpu</code>, <code>--memory</code>, <code>--gpu</code>, <code>--env</code> or <code>--driver-config-json</code>; those belong on the template (<code>template create</code> also takes <code>--gpu</code>, <code>--label</code> and <code>--env</code>). <code>template list</code>, <code>get</code> and <code>delete</code> manage them:</li>
 </ul>
 <div class="sourceCode" id="working-in-sandboxes--cb26"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="working-in-sandboxes--cb26-1"><a href="#working-in-sandboxes--cb26-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox template create claude <span class="at">--image</span> claude-sandbox:latest <span class="at">--cpu</span> 2 <span class="at">--memory</span> 4Gi</span>
 <span id="working-in-sandboxes--cb26-2"><a href="#working-in-sandboxes--cb26-2" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox create <span class="at">--name</span> claude-auth-fix <span class="at">--template</span> claude <span class="at">--provider</span> claude <span class="dt">\</span></span>
@@ -2158,7 +2159,7 @@ claude      claude-code-oauth  1                 0</code></pre>
 <span id="customizing--cb3-4"><a href="#customizing--cb3-4" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider profile update <span class="va">$ID</span> <span class="at">-f</span> /tmp/<span class="va">$ID</span>.yaml</span>
 <span id="customizing--cb3-5"><a href="#customizing--cb3-5" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider profile describe <span class="va">$ID</span></span></code></pre></div>
 <ul>
-<li>The existing provider picks up the change. Sandboxes created after the update get the new endpoints.</li>
+<li>Every provider of that type picks up the change; the provider records themselves aren't rewritten. Running sandboxes see the changed endpoints and binaries at their next sync, without a restart. A process that started earlier keeps the environment it started with, so start the agent again after changing a credential.</li>
 </ul>
 <h2 id="customizing--sandbox-policies">Sandbox policies</h2>
 <p>What a sandbox may access comes from three places:</p>
@@ -2189,6 +2190,7 @@ claude      claude-code-oauth  1                 0</code></pre>
 <span id="customizing--cb4-18"><a href="#customizing--cb4-18" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">compatibility</span><span class="kw">:</span><span class="at"> best_effort</span></span></code></pre></div>
 <ul>
 <li><code>read_only</code> and <code>read_write</code> list the only paths the sandbox's processes may access. Everything else is blocked (enforced with Landlock).</li>
+<li><code>landlock.compatibility</code> is <code>best_effort</code> by default: if the kernel can't enforce your filesystem rules, the sandbox still starts <strong>without them</strong> and logs a high-severity finding. <code>hard_requirement</code> makes it refuse to start instead. OpenShell also adds baseline paths itself (e.g. <code>/usr</code>, <code>/lib</code>, <code>/etc</code>, <code>/tmp</code>) when the policy has network rules, and always protects <code>/.openshell</code>.</li>
 <li><code>include_workdir: true</code> makes the working directory (<code>/sandbox</code>, also <code>$HOME</code>) read-write.</li>
 <li>There is no <code>network_policies</code> section, so network access comes only from the attached providers and approved rules.</li>
 </ul>
@@ -2206,7 +2208,7 @@ claude      claude-code-oauth  1                 0</code></pre>
 <li>Pass it with <code>--policy policies/my-policy.yaml</code> when you create the sandbox.</li>
 <li>Check what the sandbox got: <code>openshell policy get claude-agent1 --base</code>, or <code>--full</code> to include the provider's network rules.</li>
 <li><strong>Filesystem changes need a new sandbox.</strong> Filesystem rules are fixed when the sandbox starts. <code>openshell policy set</code> on a running sandbox loads the new version, but processes still can't access the new paths. Delete the sandbox and create it again with <code>--policy</code>.</li>
-<li><strong>Network changes apply right away.</strong> <code>openshell policy set &lt;sandbox&gt; --policy &lt;file&gt; --wait</code> hot-reloads <code>network_policies</code> without recreating the sandbox. <code>policy set</code> replaces the whole base policy, so start from <code>openshell policy get &lt;sandbox&gt; --base</code> and keep its filesystem part unchanged.</li>
+<li><strong>Network changes apply right away.</strong> <code>openshell policy set &lt;sandbox&gt; --policy &lt;file&gt; --wait</code> hot-reloads <code>network_policies</code> without recreating the sandbox. <code>policy set</code> replaces the whole base policy, so start from <code>openshell policy get &lt;sandbox&gt; --base</code> and keep its filesystem part unchanged. Connections that were open under the old rules (keep-alive, tunnels, WebSockets) are closed, so clients have to reconnect. Without <code>--wait</code>, success only means the gateway accepted the change; with <code>--wait</code>, exit code 0 means the sandbox loaded it, 1 that it rejected it and 124 that the wait timed out. Removing paths or changing <code>include_workdir</code>, <code>landlock</code> or <code>process</code> is rejected on a running sandbox. If a new version can't be loaded, the sandbox blocks traffic until a valid policy loads (<code>policy_validation_failure_mode</code>, default <code>fail_closed</code>).</li>
 </ul>
 <h3 id="customizing--example-policy-with-network-rules">Example policy with network rules</h3>
 <p><a href="#file-policies-example-yaml">policies/example.yaml</a> is the terminal policy plus five network rules, as a starting point for your own policies. The paths are for the <code>claude-sandbox</code> image.</p>
@@ -2255,13 +2257,15 @@ claude      claude-code-oauth  1                 0</code></pre>
 <span id="customizing--cb6-6"><a href="#customizing--cb6-6" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">port</span><span class="kw">:</span><span class="at"> </span><span class="dv">443</span></span>
 <span id="customizing--cb6-7"><a href="#customizing--cb6-7" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">protocol</span><span class="kw">:</span><span class="at"> rest</span><span class="co">             # inspect each HTTP request...</span></span>
 <span id="customizing--cb6-8"><a href="#customizing--cb6-8" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">access</span><span class="kw">:</span><span class="at"> read-only</span><span class="co">          # ...and allow only GET, HEAD and OPTIONS</span></span>
-<span id="customizing--cb6-9"><a href="#customizing--cb6-9" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">enforcement</span><span class="kw">:</span><span class="at"> enforce</span><span class="co">       # block violations (audit only logs them)</span></span>
+<span id="customizing--cb6-9"><a href="#customizing--cb6-9" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">enforcement</span><span class="kw">:</span><span class="at"> enforce</span><span class="co">       # block violations (the default, audit, only logs them)</span></span>
 <span id="customizing--cb6-10"><a href="#customizing--cb6-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">binaries</span><span class="kw">:</span><span class="co">                      # who may connect</span></span>
 <span id="customizing--cb6-11"><a href="#customizing--cb6-11" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">path</span><span class="kw">:</span><span class="at"> /usr/local/bin/node</span></span></code></pre></div>
 <ul>
-<li><strong>Binaries:</strong> list the program that actually opens the connection, by its real path (check with <code>readlink -f</code> inside the sandbox). For npm that's <code>node</code>, and for git over HTTPS it's <code>/usr/lib/git-core/git-remote-http</code>. The <code>DENIED</code> lines in <code>openshell logs &lt;sandbox&gt;</code> show the path OpenShell saw.</li>
+<li><strong>Binaries:</strong> list the program that actually opens the connection, by its real path (check with <code>readlink -f</code> inside the sandbox). For npm that's <code>node</code>, and for git over HTTPS it's <code>/usr/lib/git-core/git-remote-http</code>. The <code>DENIED</code> lines in <code>openshell logs &lt;sandbox&gt;</code> show the path OpenShell saw. Globs work (<code>/usr/lib/jvm/*/bin/java</code>), and for a script you list its interpreter. OpenShell records a hash of each program the first time it connects, and denies it from then on if the file changes, e.g. after an upgrade inside the sandbox.</li>
 <li><strong><code>access</code> or <code>rules</code>:</strong> <code>access</code> is a preset (<code>read-only</code>, <code>read-write</code>, <code>full</code>). <code>rules</code> allow specific methods, paths and query parameters, as in <code>github_clone</code>. An endpoint uses one or the other.</li>
 <li><strong><code>deny_rules</code></strong> always win over allow rules. Use them to make a ban explicit.</li>
+<li><strong><code>enforcement</code> defaults to <code>audit</code></strong>, which only logs a request that breaks the rules and lets it through. Set <code>enforce</code> to block it, as the examples here do. It only applies to the checks of <code>protocol: rest</code>/<code>mcp</code> endpoints; a connection to a host or binary no rule allows is always denied.</li>
+<li><strong>Some destinations are never allowed by a rule:</strong> loopback and link-local addresses (including the cloud metadata address 169.254.169.254), and, on exact-host and IP endpoints, the ports 2379, 2380, 6443, 10250 and 10255. Wildcard and host-less endpoints reach private addresses only through <code>allowed_ips</code>.</li>
 <li><strong>Without <code>protocol</code></strong>, OpenShell only checks host, port and binary, and allows any request.</li>
 <li><strong>Credentials:</strong> a network rule never sends provider credentials. Those only go to the hosts in the provider's profile.</li>
 </ul>
@@ -2291,7 +2295,7 @@ claude      claude-code-oauth  1                 0</code></pre>
 <span id="customizing--cb7-23"><a href="#customizing--cb7-23" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">path</span><span class="kw">:</span><span class="at"> /usr/local/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe</span></span></code></pre></div>
 <ul>
 <li><strong>Two styles:</strong> list every allowed method, as in <code>context7_mcp</code>. Or set <code>allow_all_known_mcp_methods: true</code> and only restrict the tools, as in <code>huggingface_mcp</code>, which allows <code>tool: "hub_repo_*"</code> and denies <code>hf_fs</code>.</li>
-<li><strong><code>mcp.versions</code>:</strong> the default is only <code>2025-11-25</code>. Clients send <code>initialize</code> without a version header, which counts as <code>2025-03-26</code>, so list that too.</li>
+<li><strong><code>mcp.versions</code>:</strong> the default is only <code>2025-11-25</code> (accepted: <code>2025-03-26</code>, <code>2025-06-18</code>, <code>2025-11-25</code> and <code>2026-07-28</code>). Clients send <code>initialize</code> without a version header, which counts as <code>2025-03-26</code>, so list that too.</li>
 <li><strong>Binary:</strong> Claude Code connects to remote MCP servers itself, so the binary is <code>claude.exe</code>. Add the server in Claude Code as usual, e.g. <code>claude mcp add --transport http context7 https://mcp.context7.com/mcp</code>.</li>
 <li><strong>Tool arguments aren't checked.</strong> An allowed tool can be called with any arguments.</li>
 <li><strong>Servers that need a login:</strong> put the token in a provider profile with the server's host as endpoint, and attach the provider. Never put tokens in a policy.</li>
@@ -2360,6 +2364,8 @@ claude      claude-code-oauth  1                 0</code></pre>
   Hits: 3 (first seen 2026-10-10 08:47:48, last seen 2026-10-10 08:54:27)</code></pre>
 <ul>
 <li>Approved rules apply only to that sandbox and reset when it is recreated. Hosts every sandbox needs belong in the profile's <code>endpoints</code>.</li>
+<li><strong>Every proposal is checked</strong> by OpenShell's policy prover before you see it. It flags risky reach: a provider credential going to a new host or port, a new HTTP method where a credential applies, uninspectable traffic (<code>git</code>, <code>ssh</code>, <code>nc</code>) to a credentialed host, and link-local or cloud-metadata addresses. <code>openshell rule approve-all &lt;sandbox&gt;</code> skips the flagged ones unless you add <code>--include-security-flagged</code>.</li>
+<li><strong>Auto-approval is off by default.</strong> <code>proposal_approval_mode=auto</code> (global, per sandbox or <code>--approval-mode auto</code> at creation) approves only proposals with no findings and no flagged destination (private IPs, wildcards, ports above 49152, database ports such as 5432). An agent can only propose rules itself, through <code>policy.local</code>, after <code>openshell settings set --global --key agent_policy_proposals_enabled --value true --yes</code>. While a global policy is active, no proposal can be approved.</li>
 </ul>
 </section>
 <section class="doc" id="doc-logging"><p class="path"><a href="https://github.com/fredrikp999/openshell-configs/blob/main/docs/logging.md" target="_blank" rel="noopener">docs/logging.md</a></p>
@@ -2413,9 +2419,10 @@ claude      claude-code-oauth  1                 0</code></pre>
 <li>The last 200 lines: <code>openshell logs my-task</code></li>
 <li>More, from the last 30 minutes: <code>openshell logs my-task --since 30m -n 1000</code></li>
 <li>Follow live: <code>openshell logs my-task --tail</code></li>
-<li>Warnings and errors only: <code>openshell logs my-task --level warn</code></li>
+<li>Warnings and errors only: <code>openshell logs my-task --level warn</code> This hides the policy events (<code>DENIED</code> and the like), which are logged at their own level, so don't use it when you look for blocked connections.</li>
 <li>What was blocked: <code>openshell logs my-task | grep DENIED</code></li>
 <li>Without a name, <code>openshell logs</code> uses the last-used sandbox. <code>--source sandbox</code> or <code>--source gateway</code> shows only one side.</li>
+<li><strong>Limits:</strong> the gateway keeps only the last 2,000 log lines per sandbox, in memory, and loses them when it restarts. <code>openshell logs</code> doesn't show the agent's own output or what <code>sandbox exec</code> and SSH sessions print (use <code>podman logs</code> for the main process). For a durable record, export the <a href="#logging--ocsf-json">OCSF JSON</a>.</li>
 <li><strong>Line format:</strong> <code>[time] [source] [level] [component] message</code>, with the time in Unix seconds. Security events have the component <code>[ocsf]</code>, an event type and an outcome:</li>
 </ul>
 <pre><code>[1791703672.439] [sandbox] [OCSF ] [ocsf] NET:REFUSE [MED] DENIED github.com [reason:policy_dns_ineligible]
@@ -2456,7 +2463,7 @@ claudebrowser  www.example.com:443                          1  09:29:09  chrome-
 <ul>
 <li>Check: <code>openshell settings get my-task | grep ocsf</code></li>
 <li>Off again: <code>openshell settings set --global --key ocsf_json_enabled --value false --yes</code></li>
-<li><strong>Where it goes:</strong> with the Podman driver, OpenShell 0.1.3 doesn't write the <code>/var/log/openshell-ocsf.*.log</code> file <a href="https://docs.nvidia.com/openshell/latest/observability/ocsf-json-export" target="_blank" rel="noopener">its docs</a> describe. The supervisor container prints each event as an <code>OCSF-JSON {...}</code> line instead, so the records are in <code>podman logs openshell-supervisor-&lt;sandbox id&gt;</code>. <code>bin/otel-export.py</code> reads them from there.</li>
+<li><strong>Where it goes:</strong> the supervisor prints each event as an <code>OCSF-JSON {...}</code> line on its stderr, so the records are in <code>podman logs openshell-supervisor-&lt;sandbox id&gt;</code>, and <code>bin/otel-export.py</code> reads them from there. NVIDIA's docs also describe a file, <code>/var/log/openshell-ocsf.YYYY-MM-DD.log</code>, when file logging is available; OpenShell 0.1.3 with the Podman driver didn't write it here. It would be on a tmpfs inside the supervisor container and out of reach of <code>openshell sandbox exec</code> anyway.</li>
 <li><strong>Only from then on:</strong> events before the setting was turned on have no JSON record. The records are gone when the sandbox is deleted, so export what you want to keep.</li>
 <li><strong>A record</strong> carries the sandbox (<code>container.name</code>), the outcome (<code>action</code>, <code>disposition</code>), the destination (<code>dst_endpoint</code>), the process (<code>actor.process</code>), the rule that decided (<code>firewall_rule</code>) and a severity.</li>
 <li><strong>Schema version:</strong> v1.8.0 by default. <code>ocsf_schema_version</code> set to <code>1.1</code> or <code>1.3</code> downgrades the records for tools that need an older one (lossy, see the OpenShell docs).</li>
@@ -2513,7 +2520,7 @@ claudebrowser  www.example.com:443                          1  09:29:09  chrome-
 <div class="sourceCode" id="logging--cb8"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="logging--cb8-1"><a href="#logging--cb8-1" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">&#39;OPENSHELL_METRICS_PORT=9464&#39;</span> <span class="op">&gt;&gt;</span> ~/.config/openshell/gateway.env</span>
 <span id="logging--cb8-2"><a href="#logging--cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> services restart openshell</span>
 <span id="logging--cb8-3"><a href="#logging--cb8-3" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-s</span> http://127.0.0.1:9464/metrics</span></code></pre></div>
-<p>Without Homebrew, start the gateway with <code>--metrics-port 9464</code> or the same environment variable. Delete the line and restart to turn it off. The endpoint listens on <code>127.0.0.1</code> only (<code>--bind-address</code> changes that for all listeners).</p>
+<p>Without Homebrew, start the gateway with <code>--metrics-port 9464</code> or the same environment variable. Delete the line and restart to turn it off. The endpoint listens on <code>127.0.0.1</code> only (<code>--bind-address</code> changes that for all listeners). The same can be set in <code>gateway.toml</code> as <code>metrics_bind_address</code> under <code>[openshell.gateway]</code>. The endpoint is plain HTTP without authentication, so keep it on loopback.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -2598,7 +2605,7 @@ RelayStream                            4    59.8      0.7      0.7       0</code
 <span id="logging--cb12-2"><a href="#logging--cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-v</span> <span class="st">&quot;</span><span class="va">$PWD</span><span class="st">/prometheus.yml:/etc/prometheus/prometheus.yml:ro&quot;</span> docker.io/prom/prometheus:latest</span></code></pre></div>
 <p>Then, on http://localhost:9090: <code>openshell_server_supervisor_sessions</code> for connected sandboxes, <code>sum by (method) (rate(openshell_server_grpc_requests_total[5m]))</code> for API calls per method, <code>rate(openshell_server_routed_request_attempts_total{outcome!="success"}[5m])</code> for failing relays.</p>
 <h3 id="logging--metrics-as-opentelemetry">Metrics as OpenTelemetry</h3>
-<p>OpenShell's own OTLP export covers traces only, so the metrics reach OTel through a Collector. <a href="https://github.com/fredrikp999/openshell-configs/blob/main/observability/collector.yaml" target="_blank" rel="noopener">observability/collector.yaml</a> scrapes the gateway's metrics endpoint and also takes the events from <code>bin/otel-export.py</code>, so one Collector sends both to your backend:</p>
+<p>OpenShell's documented metrics endpoint is Prometheus only, so the metrics reach OTel through a Collector. <a href="https://github.com/fredrikp999/openshell-configs/blob/main/observability/collector.yaml" target="_blank" rel="noopener">observability/collector.yaml</a> scrapes the gateway's metrics endpoint and also takes the events from <code>bin/otel-export.py</code>, so one Collector sends both to your backend:</p>
 <div class="sourceCode" id="logging--cb13"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="logging--cb13-1"><a href="#logging--cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> run <span class="at">-d</span> <span class="at">--name</span> otel-collector <span class="at">-p</span> 127.0.0.1:4318:4318 <span class="dt">\</span></span>
 <span id="logging--cb13-2"><a href="#logging--cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-v</span> <span class="st">&quot;</span><span class="va">$PWD</span><span class="st">/observability/collector.yaml:/etc/otelcol-contrib/config.yaml:ro&quot;</span> <span class="dt">\</span></span>
 <span id="logging--cb13-3"><a href="#logging--cb13-3" aria-hidden="true" tabindex="-1"></a>  docker.io/otel/opentelemetry-collector-contrib:latest</span>
@@ -2656,7 +2663,7 @@ sum by (openshell_sandbox_name) (count_over_time({service_name=&quot;openshell-s
 <tbody>
 <tr>
 <td>OpenShell sandbox</td>
-<td>Network denied by default and filtered by a proxy, credentials only as placeholders, syscall filter, filesystem rules from the <a href="#customizing--sandbox-policies">policy</a></td>
+<td>A supervisor next to the workload makes every policy decision. The workload container has no network except its channel to the supervisor, so traffic can only leave through the policy proxy, with credentials only as placeholders. Landlock paths from the <a href="#customizing--sandbox-policies">policy</a>, seccomp, and a non-root user</td>
 </tr>
 <tr>
 <td>Container</td>
@@ -2877,9 +2884,9 @@ sum by (openshell_sandbox_name) (count_over_time({service_name=&quot;openshell-s
 <td>Add it to <a href="#file-policies-browser-yaml">policies/browser.yaml</a> and run <code>openshell policy set</code> (see <a href="#extras--allowing-sites">Allowing sites</a>)</td>
 </tr>
 <tr>
-<td>Sandbox stuck in <code>Provisioning</code> after <code>openshell sandbox start</code></td>
-<td>The restart doesn't finish</td>
-<td>Delete the sandbox and create it again</td>
+<td>Sandbox stuck in <code>Provisioning</code> after <code>openshell sandbox start</code>, or after create</td>
+<td>The restart doesn't finish, or the configuration is invalid (e.g. a bad policy or conflicting providers): the condition <code>ConfigurationReady</code> shows <code>ConfigurationInvalid</code>, and after 300 seconds the sandbox goes to <code>Error</code> (<code>ProvisioningTimedOut</code>)</td>
+<td>Check <code>openshell sandbox get &lt;sandbox&gt; --output json</code>. Fix the cause, or delete the sandbox and create it again</td>
 </tr>
 <tr>
 <td>Requests from the agent denied, with a binary path in the log</td>

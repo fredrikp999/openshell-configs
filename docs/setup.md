@@ -3,7 +3,7 @@
 OpenShell runs the sandboxes in a container runtime. These steps use Podman (5.x is required). OpenShell can also use Docker (28.0 or later) or MicroVMs.
 
 ### macOS (Apple Silicon)
-On macOS, Podman runs containers in a Linux VM called a Podman machine.
+On macOS, Podman runs containers in a Linux VM called a Podman machine. Note that NVIDIA's support matrix lists macOS on Apple Silicon only with Docker Desktop, and Podman as supported for rootless Linux workstations. Podman on a Mac works with the steps here (they are what this repo is tested with), but it is outside that matrix.
 
 * Install Podman, either with the installer from [podman.io](https://podman.io/) (the Podman docs recommend this) or with Homebrew:
 ```bash

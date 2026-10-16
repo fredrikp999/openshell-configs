@@ -8,7 +8,7 @@ From the agent outwards, with Podman's defaults on macOS:
 
 | Layer | What it gives you |
 |---|---|
-| OpenShell sandbox | Network denied by default and filtered by a proxy, credentials only as placeholders, syscall filter, filesystem rules from the [policy](customizing.md#sandbox-policies) |
+| OpenShell sandbox | A supervisor next to the workload makes every policy decision. The workload container has no network except its channel to the supervisor, so traffic can only leave through the policy proxy, with credentials only as placeholders. Landlock paths from the [policy](customizing.md#sandbox-policies), seccomp, and a non-root user |
 | Container | Rootless Podman (`crun`): user namespaces, limited capabilities, seccomp, SELinux. A machine created with `--rootful` runs containers as root in the VM instead |
 | Linux VM | Fedora CoreOS on Apple's hypervisor (the `applehv` or `libkrun` provider), with its own kernel |
 | macOS | Only reachable through what the VM exposes: the shared folders and the Podman API |

@@ -60,7 +60,7 @@ sed "s/^id: $ID\$/&\nresource_version: $V/" providers/$ID.yaml > /tmp/$ID.yaml
 openshell provider profile update $ID -f /tmp/$ID.yaml
 openshell provider profile describe $ID
 ```
-* The existing provider picks up the change. Sandboxes created after the update get the new endpoints.
+* Every provider of that type picks up the change; the provider records themselves aren't rewritten. Running sandboxes see the changed endpoints and binaries at their next sync, without a restart. A process that started earlier keeps the environment it started with, so start the agent again after changing a credential.
 
 ## Sandbox policies
 What a sandbox may access comes from three places:
@@ -91,6 +91,7 @@ landlock:
   compatibility: best_effort
 ```
 * `read_only` and `read_write` list the only paths the sandbox's processes may access. Everything else is blocked (enforced with Landlock).
+* `landlock.compatibility` is `best_effort` by default: if the kernel can't enforce your filesystem rules, the sandbox still starts **without them** and logs a high-severity finding. `hard_requirement` makes it refuse to start instead. OpenShell also adds baseline paths itself (e.g. `/usr`, `/lib`, `/etc`, `/tmp`) when the policy has network rules, and always protects `/.openshell`.
 * `include_workdir: true` makes the working directory (`/sandbox`, also `$HOME`) read-write.
 * There is no `network_policies` section, so network access comes only from the attached providers and approved rules.
 
@@ -106,7 +107,7 @@ Use it:
 * Pass it with `--policy policies/my-policy.yaml` when you create the sandbox.
 * Check what the sandbox got: `openshell policy get claude-agent1 --base`, or `--full` to include the provider's network rules.
 * **Filesystem changes need a new sandbox.** Filesystem rules are fixed when the sandbox starts. `openshell policy set` on a running sandbox loads the new version, but processes still can't access the new paths. Delete the sandbox and create it again with `--policy`.
-* **Network changes apply right away.** `openshell policy set <sandbox> --policy <file> --wait` hot-reloads `network_policies` without recreating the sandbox. `policy set` replaces the whole base policy, so start from `openshell policy get <sandbox> --base` and keep its filesystem part unchanged.
+* **Network changes apply right away.** `openshell policy set <sandbox> --policy <file> --wait` hot-reloads `network_policies` without recreating the sandbox. `policy set` replaces the whole base policy, so start from `openshell policy get <sandbox> --base` and keep its filesystem part unchanged. Connections that were open under the old rules (keep-alive, tunnels, WebSockets) are closed, so clients have to reconnect. Without `--wait`, success only means the gateway accepted the change; with `--wait`, exit code 0 means the sandbox loaded it, 1 that it rejected it and 124 that the wait timed out. Removing paths or changing `include_workdir`, `landlock` or `process` is rejected on a running sandbox. If a new version can't be loaded, the sandbox blocks traffic until a valid policy loads (`policy_validation_failure_mode`, default `fail_closed`).
 
 ### Example policy with network rules
 [policies/example.yaml](../policies/example.yaml) is the terminal policy plus five network rules, as a starting point for your own policies. The paths are for the `claude-sandbox` image.
@@ -129,13 +130,15 @@ network_policies:
         port: 443
         protocol: rest             # inspect each HTTP request...
         access: read-only          # ...and allow only GET, HEAD and OPTIONS
-        enforcement: enforce       # block violations (audit only logs them)
+        enforcement: enforce       # block violations (the default, audit, only logs them)
     binaries:                      # who may connect
       - path: /usr/local/bin/node
 ```
-* **Binaries:** list the program that actually opens the connection, by its real path (check with `readlink -f` inside the sandbox). For npm that's `node`, and for git over HTTPS it's `/usr/lib/git-core/git-remote-http`. The `DENIED` lines in `openshell logs <sandbox>` show the path OpenShell saw.
+* **Binaries:** list the program that actually opens the connection, by its real path (check with `readlink -f` inside the sandbox). For npm that's `node`, and for git over HTTPS it's `/usr/lib/git-core/git-remote-http`. The `DENIED` lines in `openshell logs <sandbox>` show the path OpenShell saw. Globs work (`/usr/lib/jvm/*/bin/java`), and for a script you list its interpreter. OpenShell records a hash of each program the first time it connects, and denies it from then on if the file changes, e.g. after an upgrade inside the sandbox.
 * **`access` or `rules`:** `access` is a preset (`read-only`, `read-write`, `full`). `rules` allow specific methods, paths and query parameters, as in `github_clone`. An endpoint uses one or the other.
 * **`deny_rules`** always win over allow rules. Use them to make a ban explicit.
+* **`enforcement` defaults to `audit`**, which only logs a request that breaks the rules and lets it through. Set `enforce` to block it, as the examples here do. It only applies to the checks of `protocol: rest`/`mcp` endpoints; a connection to a host or binary no rule allows is always denied.
+* **Some destinations are never allowed by a rule:** loopback and link-local addresses (including the cloud metadata address 169.254.169.254), and, on exact-host and IP endpoints, the ports 2379, 2380, 6443, 10250 and 10255. Wildcard and host-less endpoints reach private addresses only through `allowed_ips`.
 * **Without `protocol`**, OpenShell only checks host, port and binary, and allows any request.
 * **Credentials:** a network rule never sends provider credentials. Those only go to the hosts in the provider's profile.
 
@@ -166,7 +169,7 @@ network_policies:
       - path: /usr/local/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe
 ```
 * **Two styles:** list every allowed method, as in `context7_mcp`. Or set `allow_all_known_mcp_methods: true` and only restrict the tools, as in `huggingface_mcp`, which allows `tool: "hub_repo_*"` and denies `hf_fs`.
-* **`mcp.versions`:** the default is only `2025-11-25`. Clients send `initialize` without a version header, which counts as `2025-03-26`, so list that too.
+* **`mcp.versions`:** the default is only `2025-11-25` (accepted: `2025-03-26`, `2025-06-18`, `2025-11-25` and `2026-07-28`). Clients send `initialize` without a version header, which counts as `2025-03-26`, so list that too.
 * **Binary:** Claude Code connects to remote MCP servers itself, so the binary is `claude.exe`. Add the server in Claude Code as usual, e.g. `claude mcp add --transport http context7 https://mcp.context7.com/mcp`.
 * **Tool arguments aren't checked.** An allowed tool can be called with any arguments.
 * **Servers that need a login:** put the token in a provider profile with the server's host as endpoint, and attach the provider. Never put tokens in a policy.
@@ -250,3 +253,5 @@ Network Rules:  (version 4, 2 chunks)
   Hits: 3 (first seen 2026-10-10 08:47:48, last seen 2026-10-10 08:54:27)
 ```
 * Approved rules apply only to that sandbox and reset when it is recreated. Hosts every sandbox needs belong in the profile's `endpoints`.
+* **Every proposal is checked** by OpenShell's policy prover before you see it. It flags risky reach: a provider credential going to a new host or port, a new HTTP method where a credential applies, uninspectable traffic (`git`, `ssh`, `nc`) to a credentialed host, and link-local or cloud-metadata addresses. `openshell rule approve-all <sandbox>` skips the flagged ones unless you add `--include-security-flagged`.
+* **Auto-approval is off by default.** `proposal_approval_mode=auto` (global, per sandbox or `--approval-mode auto` at creation) approves only proposals with no findings and no flagged destination (private IPs, wildcards, ports above 49152, database ports such as 5432). An agent can only propose rules itself, through `policy.local`, after `openshell settings set --global --key agent_policy_proposals_enabled --value true --yes`. While a global policy is active, no proposal can be approved.

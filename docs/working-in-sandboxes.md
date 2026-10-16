@@ -71,7 +71,7 @@ The entry tunnels SSH through the gateway with `openshell ssh-proxy`, so the san
 openshell sandbox list
 ```
 * `Ready`: running, use it.
-* `Completed` or `Error`: stopped. Delete it and create it again (step 1). Files in it are lost, so get your work out first (see [Getting code in and out](#getting-code-in-and-out)).
+* `Completed` or `Error`: stopped. Delete it and create it again (step 1). Files in it are lost, so get your work out first (see [Getting code in and out](#getting-code-in-and-out)). NVIDIA's docs say `openshell sandbox start` runs the main command of such a sandbox again; on Podman with OpenShell 0.1.3 it printed an error here (`already running generation`) while the sandbox moved to `Starting`, so deleting and creating again is the safe route.
 
 6. **When the task is done:**
 ```bash
@@ -144,8 +144,8 @@ There are three ways to do it, from safest to most convenient:
 
 ### Good to know about upload and download
 * `openshell sandbox upload <sandbox> <local-path> <dest>` puts a folder *inside* `<dest>`. Uploading `./myrepo` to `/sandbox/myrepo` gives `/sandbox/myrepo/myrepo`, so upload to `/sandbox` instead.
-* `upload` follows `.gitignore` and leaves out the `.git` folder, so an uploaded repo has no history. Use a git bundle (below) to keep the history.
-* `openshell sandbox download <sandbox> <sandbox-path> <local-dest>` copies files back to the host.
+* `upload` follows `.gitignore` and leaves out the `.git` folder, so an uploaded repo has no history. Use a git bundle (below) to keep the history. `--no-git-ignore` uploads ignored files too.
+* `openshell sandbox download <sandbox> <sandbox-path> <local-dest>` copies files back to the host. The source has to be inside the sandbox's working directory.
 * `--upload` on `sandbox create` can't be combined with a command after `--`. Upload into a running sandbox instead.
 
 ### Single files
@@ -272,7 +272,7 @@ openshell forward stop 3000 my-task
 * **One sandbox per task or branch**, named after the task (`claude-auth-fix`, `claude-docs`). Each has its own filesystem, policy and approved rules, so agents don't interfere with each other.
 * **Providers are shared** - create a provider once and attach it to every sandbox with `--provider`.
 * **Labels** - add e.g. `--label project=foo --label task=auth` on create, then list with `openshell sandbox list --selector project=foo`.
-* **Templates** - store the image and resources once, then create sandboxes from it. `--template` can't be combined with `--from`, `--cpu`, `--memory` or `--env`:
+* **Templates** - store the image and resources once, then create sandboxes from it. `--template` can't be combined with `--from`, `--cpu`, `--memory`, `--gpu`, `--env` or `--driver-config-json`; those belong on the template (`template create` also takes `--gpu`, `--label` and `--env`). `template list`, `get` and `delete` manage them:
 ```bash
 openshell sandbox template create claude --image claude-sandbox:latest --cpu 2 --memory 4Gi
 openshell sandbox create --name claude-auth-fix --template claude --provider claude \
