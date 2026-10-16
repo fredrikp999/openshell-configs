@@ -5,53 +5,54 @@
 <p>OpenShell runs an AI coding agent inside a <strong>sandbox</strong>: a container where the filesystem is restricted, the only way out is a policy-checking proxy, and API keys exist only as placeholders. A <strong>gateway</strong> on your machine manages the sandboxes, the credentials and the policies.</p>
 
 <figure class="diagram">
-<svg class="dg" viewBox="0 0 900 340" role="img" aria-label="You give commands to the gateway with the openshell CLI, an editor or a browser. The gateway creates a sandbox. In the sandbox the agent sends every request to the policy proxy, which lets requests to allowed hosts through, adding the real key, and blocks everything else.">
+<svg class="dg" viewBox="0 0 900 340" role="img" aria-label="You give commands to the gateway. The gateway creates a sandbox made of a supervisor and a workload. The agent in the workload has no network except a channel to the supervisor. The supervisor checks every request against the policy, adds real keys for allowed hosts and blocks everything else. The supervisor connects out to the gateway.">
 <defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs>
 <text class="b" x="90" y="24" text-anchor="middle">You</text>
 <text class="b" x="340" y="24" text-anchor="middle">Gateway</text>
 <text class="b" x="630" y="24" text-anchor="middle">Sandbox</text>
 <text class="b" x="840" y="24" text-anchor="middle">The internet</text>
-<!-- you -->
 <rect class="box" x="10" y="52" width="160" height="56" rx="8"/><text class="b" x="90" y="76" text-anchor="middle">openshell CLI</text><text class="s" x="90" y="94" text-anchor="middle">create, policy, logs…</text>
 <rect class="box" x="10" y="132" width="160" height="56" rx="8"/><text class="b" x="90" y="156" text-anchor="middle">VS Code / ssh</text><text class="s" x="90" y="174" text-anchor="middle">work inside the sandbox</text>
 <rect class="box" x="10" y="212" width="160" height="56" rx="8"/><text class="b" x="90" y="236" text-anchor="middle">Your browser</text><text class="s" x="90" y="254" text-anchor="middle">pages the agent serves</text>
 <path class="arrow" marker-end="url(#a1)" d="M170 80H238"/>
 <path class="arrow" marker-end="url(#a1)" d="M170 160H238"/>
 <path class="arrow" marker-end="url(#a1)" d="M170 240H238"/>
-<!-- gateway -->
 <rect class="box acc" x="240" y="36" width="200" height="262" rx="10"/>
 <text class="s m" x="340" y="58" text-anchor="middle">localhost:17670</text>
 <rect class="chip" x="254" y="72" width="172" height="52" rx="6"/><text class="t" x="340" y="94" text-anchor="middle">Providers</text><text class="s" x="340" y="111" text-anchor="middle">hold the real keys</text>
 <rect class="chip" x="254" y="136" width="172" height="52" rx="6"/><text class="t" x="340" y="158" text-anchor="middle">Policies and rules</text><text class="s" x="340" y="175" text-anchor="middle">what each sandbox may do</text>
 <rect class="chip" x="254" y="200" width="172" height="52" rx="6"/><text class="t" x="340" y="222" text-anchor="middle">Sandbox manager</text><text class="s" x="340" y="239" text-anchor="middle">starts them in Podman</text>
-<text class="s" x="340" y="280" text-anchor="middle">settings · logs · metrics</text>
-<!-- gateway -> sandbox -->
-<path class="arrow" marker-end="url(#a1)" d="M440 226H528"/>
-<text class="s" x="484" y="246" text-anchor="middle">creates</text>
-<!-- sandbox -->
+<text class="s" x="340" y="280" text-anchor="middle">settings · logs · policy prover</text>
+<path class="arrow" marker-end="url(#a1)" d="M440 250H528"/>
+<text class="s" x="484" y="268" text-anchor="middle">creates</text>
+<!-- sandbox: two containers -->
 <rect class="box" x="530" y="36" width="200" height="262" rx="10"/>
-<text class="s" x="630" y="58" text-anchor="middle">a container in the Podman VM</text>
-<rect class="chip" x="544" y="72" width="172" height="52" rx="6"/><text class="t" x="630" y="94" text-anchor="middle">Supervisor</text><text class="s" x="630" y="111" text-anchor="middle">enforces the policy</text>
-<rect class="chip" x="544" y="148" width="172" height="52" rx="6"/><text class="t" x="630" y="170" text-anchor="middle">Agent</text><text class="s" x="630" y="187" text-anchor="middle">sees only placeholders</text>
-<rect class="chip acc" x="544" y="228" width="172" height="56" rx="6"/><text class="b" x="630" y="252" text-anchor="middle">Policy proxy</text><text class="s" x="630" y="270" text-anchor="middle">checks every request</text>
-<path class="arrow" marker-end="url(#a1)" d="M630 200V226"/>
+<text class="s" x="630" y="54" text-anchor="middle">two containers in the Podman VM</text>
+<rect class="chip acc" x="544" y="64" width="172" height="96" rx="6"/>
+<text class="b" x="630" y="86" text-anchor="middle">Supervisor</text><text class="s" x="630" y="103" text-anchor="middle">trusted side of the boundary</text>
+<text class="s" x="630" y="121" text-anchor="middle">checks every request</text><text class="s" x="630" y="136" text-anchor="middle">adds the real keys</text><text class="s" x="630" y="151" text-anchor="middle">logs every decision</text>
+<rect class="chip" x="544" y="196" width="172" height="90" rx="6"/>
+<text class="b" x="630" y="218" text-anchor="middle">Workload</text><text class="s" x="630" y="235" text-anchor="middle">the agent: placeholders only</text>
+<text class="s" x="630" y="252" text-anchor="middle">Landlock · seccomp · non-root</text><text class="s" x="630" y="268" text-anchor="middle">no network but the supervisor</text>
+<path class="arrow" marker-end="url(#a1)" d="M630 196V162"/>
+<path class="arrow dash" marker-end="url(#a1)" d="M544 100H442"/>
+<text class="s" x="493" y="92" text-anchor="middle">dials out</text>
 <!-- internet -->
-<path class="arrow ok" marker-end="url(#a1)" d="M716 242L786 200"/>
-<path class="arrow bad" d="M716 270L782 292"/>
-<path class="cross" d="M782 282l14 14m0-14l-14 14"/>
-<rect class="box okbox" x="788" y="160" width="104" height="80" rx="8"/><text class="b" x="840" y="186" text-anchor="middle">Allowed</text><text class="b" x="840" y="202" text-anchor="middle">hosts</text><text class="s" x="840" y="222" text-anchor="middle">+ the real key</text>
-<rect class="box badbox" x="800" y="256" width="92" height="56" rx="8"/><text class="b" x="846" y="282" text-anchor="middle">Everything</text><text class="b" x="846" y="298" text-anchor="middle">else</text>
-<!-- numbers -->
-<circle class="num" cx="205" cy="68" r="10"/><text class="n" x="205" y="72">1</text><circle class="num" cx="484" cy="208" r="10"/><text class="n" x="484" y="212">2</text><circle class="num" cx="702" cy="174" r="10"/><text class="n" x="702" y="178">3</text><circle class="num" cx="760" cy="208" r="10"/><text class="n" x="760" y="212">4</text><circle class="num" cx="758" cy="306" r="10"/><text class="n" x="758" y="310">5</text>
+<path class="arrow ok" marker-end="url(#a1)" d="M716 96L786 96"/>
+<path class="arrow bad" d="M716 134L778 190"/>
+<path class="cross" d="M772 184l14 14m0-14l-14 14"/>
+<rect class="box okbox" x="788" y="56" width="104" height="80" rx="8"/><text class="b" x="840" y="82" text-anchor="middle">Allowed</text><text class="b" x="840" y="98" text-anchor="middle">hosts</text><text class="s" x="840" y="118" text-anchor="middle">+ the real key</text>
+<rect class="box badbox" x="800" y="200" width="92" height="56" rx="8"/><text class="b" x="846" y="226" text-anchor="middle">Everything</text><text class="b" x="846" y="242" text-anchor="middle">else</text>
+<circle class="num" cx="205" cy="68" r="10"/><text class="n" x="205" y="72">1</text><circle class="num" cx="484" cy="238" r="10"/><text class="n" x="484" y="242">2</text><circle class="num" cx="654" cy="178" r="10"/><text class="n" x="654" y="182">3</text><circle class="num" cx="752" cy="84" r="10"/><text class="n" x="752" y="88">4</text><circle class="num" cx="750" cy="160" r="10"/><text class="n" x="750" y="164">5</text>
 </svg>
-<figcaption>The gateway is the control plane. The sandbox only talks out through its policy proxy; nothing needs to listen on the sandbox.</figcaption>
+<figcaption>The gateway is the control plane. Policy is enforced in each sandbox, by the supervisor, not in the gateway. The workload has no network of its own, so a process that ignores the proxy settings still can't get out.</figcaption>
 </figure>
 <ol class="legend">
 <li><strong>You talk to the gateway</strong> with the <code>openshell</code> CLI, an editor over SSH, or a forwarded port. You never talk to a sandbox directly.</li>
-<li><strong>The gateway creates the sandbox</strong> from an image, with a policy and providers attached, through Podman (or Docker, a MicroVM, Kubernetes).</li>
-<li><strong>The agent works inside it</strong>, limited to the paths in the policy. Its API key is only a placeholder.</li>
-<li><strong>Every outgoing request goes through the policy proxy.</strong> If the host, program and request are allowed, the proxy adds the real key and sends it on.</li>
-<li><strong>Everything else is refused</strong> and logged, so you can review it and approve a rule if it was legitimate.</li>
+<li><strong>The gateway creates the sandbox</strong> through Podman (or Docker, a MicroVM, Kubernetes): a workload container from your image, and a supervisor next to it. The supervisor connects out to the gateway and gets the policy and the provider credentials.</li>
+<li><strong>The agent runs in the workload.</strong> Its files are limited to the paths in the policy, it runs as a non-root user, and its API key is only a placeholder. Its only way out is a private channel to the supervisor.</li>
+<li><strong>The supervisor decides on every connection.</strong> If the host, program and request are allowed, it opens the real connection and adds the real key.</li>
+<li><strong>Everything else is refused</strong> and logged, and OpenShell drafts a rule you can approve if it was legitimate.</li>
 </ol>
 
 <table>
@@ -59,8 +60,9 @@
 <tbody>
 <tr><td><strong>Gateway</strong></td><td>The server that stores providers, profiles, policies and settings, and starts sandboxes through a compute driver. Runs as a background service.</td><td><code>openshell status</code><br><code>openshell gateway list</code><br><code>openshell doctor</code></td></tr>
 <tr><td><strong>Compute driver</strong></td><td>Where sandboxes run: Podman, Docker, a MicroVM or Kubernetes. Chosen in the gateway's config.</td><td><code>openshell gateway info</code></td></tr>
-<tr><td><strong>Sandbox</strong></td><td>One isolated container with an agent in it, a policy and attached providers.</td><td><code>openshell sandbox list</code><br><code>openshell sandbox get my-task</code></td></tr>
-<tr><td><strong>Supervisor</strong></td><td>The OpenShell process inside each sandbox. Applies the policy, runs the proxy, logs every decision, and relays <code>exec</code>, SSH and port forwards from the gateway.</td><td><code>openshell logs my-task --source sandbox</code></td></tr>
+<tr><td><strong>Sandbox</strong></td><td>A workload container with an agent in it plus its supervisor, a policy and attached providers.</td><td><code>openshell sandbox list</code><br><code>openshell sandbox get my-task</code></td></tr>
+<tr><td><strong>Supervisor</strong></td><td>The OpenShell process next to the workload, on the trusted side of the boundary (with Podman, its own <code>openshell-supervisor-…</code> container). Makes every policy decision, runs the proxy, injects credentials, logs each decision, and keeps the link to the gateway that <code>exec</code>, SSH and port forwards use.</td><td><code>openshell logs my-task --source sandbox</code></td></tr>
+<tr><td><strong>Policy prover</strong></td><td>Runs in the gateway. Checks each proposed network rule for risky reach, such as a new host for a credential, before it can be approved.</td><td><code>openshell rule get my-task --status pending</code></td></tr>
 <tr><td><strong>Interactive view</strong></td><td>A terminal UI over sandboxes, logs and rules.</td><td><code>openshell term</code></td></tr>
 </tbody>
 </table>
@@ -108,7 +110,7 @@
 <path class="arrow" marker-end="url(#a2)" d="M190 301H704"/>
 <text class="s m" x="447" y="293" text-anchor="middle">③ --from claude-sandbox:latest</text>
 <rect class="chip" x="706" y="270" width="168" height="62" rx="8"/>
-<text class="t" x="790" y="296" text-anchor="middle">Filesystem</text><text class="s" x="790" y="314" text-anchor="middle">what the container runs</text>
+<text class="t" x="790" y="296" text-anchor="middle">Image</text><text class="s" x="790" y="314" text-anchor="middle">the agent and its tools</text>
 <!-- row 4 -->
 <rect class="box" x="10" y="344" width="180" height="62" rx="8"/>
 <text class="b" x="100" y="370" text-anchor="middle">Policy file</text><text class="s" x="100" y="388" text-anchor="middle">paths + network rules</text>
@@ -138,39 +140,36 @@ openshell sandbox list</pre>
 
 <h2 id="concepts--lifecycle">Sandbox lifecycle</h2>
 <figure class="diagram">
-<svg class="dg" viewBox="0 0 900 330" role="img" aria-label="Lifecycle: create leads to Ready; Ready can be stopped and started again, can end as Completed or Error when the main process exits, and any state can be deleted.">
+<svg class="dg" viewBox="0 0 900 340" role="img" aria-label="Lifecycle: create leads to Provisioning then Ready. Ready can be stopped and started again. When the main command exits the sandbox is Completed or Error. Delete removes it from any state.">
 <defs><marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs>
-<circle class="dot" cx="40" cy="120" r="7"/>
-<path class="arrow" marker-end="url(#a3)" d="M47 120H108"/>
-<text class="s m" x="78" y="108" text-anchor="middle">create</text>
-<rect class="box" x="110" y="92" width="130" height="56" rx="10"/>
-<text class="t" x="175" y="125" text-anchor="middle">starting</text>
-<path class="arrow" marker-end="url(#a3)" d="M240 120H318"/>
-<rect class="box okbox" x="320" y="82" width="170" height="76" rx="10"/>
-<text class="b" x="405" y="112" text-anchor="middle">Ready</text>
-<text class="s" x="405" y="132" text-anchor="middle">main command running</text>
-<text class="s" x="405" y="147" text-anchor="middle">files in /sandbox kept</text>
-<!-- stop/start -->
-<path class="arrow" marker-end="url(#a3)" d="M470 82C520 50 560 50 600 50"/>
-<text class="s m" x="540" y="36" text-anchor="middle">stop</text>
-<path class="arrow" marker-end="url(#a3)" d="M600 78C570 78 520 82 490 100"/>
-<text class="s m" x="560" y="94" text-anchor="middle">start</text>
-<rect class="box" x="602" y="28" width="170" height="64" rx="10"/>
-<text class="t" x="687" y="56" text-anchor="middle">stopped</text><text class="s" x="687" y="74" text-anchor="middle">workspace preserved</text>
-<!-- exits -->
-<path class="arrow" marker-end="url(#a3)" d="M490 140C540 160 560 168 600 168"/>
-<text class="s" x="530" y="188" text-anchor="middle">main command exits</text>
-<rect class="box badbox" x="602" y="134" width="170" height="64" rx="10"/>
-<text class="t" x="687" y="162" text-anchor="middle">Completed / Error</text><text class="s" x="687" y="180" text-anchor="middle">not reusable: delete it</text>
-<!-- delete -->
-<path class="arrow dash" marker-end="url(#a3)" d="M405 158V242"/>
-<text class="s m" x="415" y="200">delete</text>
-<path class="arrow dash" marker-end="url(#a3)" d="M687 198V266H492"/>
-<rect class="box" x="320" y="244" width="170" height="44" rx="10" stroke-dasharray="5 4"/>
-<text class="t" x="405" y="271" text-anchor="middle">gone</text>
-<text class="s" x="26" y="318">While Ready you can run commands in it, connect an editor, copy files and forward ports (see “Reaching a sandbox” below).</text>
+<circle class="dot" cx="30" cy="120" r="7"/>
+<path class="arrow" marker-end="url(#a3)" d="M37 120H88"/>
+<text class="s m" x="62" y="108" text-anchor="middle">create</text>
+<rect class="box" x="90" y="92" width="130" height="56" rx="10"/>
+<text class="t" x="155" y="118" text-anchor="middle">Provisioning</text><text class="s" x="155" y="134" text-anchor="middle">waits for supervisor</text>
+<path class="arrow" marker-end="url(#a3)" d="M220 120H298"/>
+<rect class="box okbox" x="300" y="82" width="170" height="76" rx="10"/>
+<text class="b" x="385" y="112" text-anchor="middle">Ready</text>
+<text class="s" x="385" y="132" text-anchor="middle">main command running</text>
+<text class="s" x="385" y="147" text-anchor="middle">exec · connect · files · forward</text>
+<path class="arrow" marker-end="url(#a3)" d="M450 82C500 50 540 48 600 48"/>
+<text class="s m" x="520" y="36" text-anchor="middle">stop</text>
+<path class="arrow" marker-end="url(#a3)" d="M600 76C570 76 520 80 470 100"/>
+<text class="s m" x="545" y="94" text-anchor="middle">start</text>
+<rect class="box" x="602" y="26" width="200" height="64" rx="10"/>
+<text class="t" x="702" y="54" text-anchor="middle">Stopped</text><text class="s" x="702" y="72" text-anchor="middle">policy, providers, workspace kept</text>
+<path class="arrow" marker-end="url(#a3)" d="M470 140C520 160 560 168 600 168"/>
+<text class="s" x="525" y="190" text-anchor="middle">main command exits</text>
+<rect class="box badbox" x="602" y="130" width="200" height="76" rx="10"/>
+<text class="t" x="702" y="156" text-anchor="middle">Completed (exit 0)</text><text class="t" x="702" y="174" text-anchor="middle">or Error</text><text class="s" x="702" y="194" text-anchor="middle">the main command has ended</text>
+<path class="arrow dash" marker-end="url(#a3)" d="M385 158V250"/>
+<text class="s m" x="395" y="206">delete</text>
+<path class="arrow dash" marker-end="url(#a3)" d="M702 206V272H492"/>
+<rect class="box" x="300" y="252" width="190" height="44" rx="10" stroke-dasharray="5 4"/>
+<text class="t" x="395" y="279" text-anchor="middle">Deleting → gone</text>
+<text class="s" x="26" y="322">Stopping and Starting are short in-between phases. Credentials are purged when a sandbox is deleted.</text>
 </svg>
-<figcaption>A sandbox lives as long as its main command. Running <code>sleep infinity</code> keeps it alive between agent sessions; <code>--restart-policy</code> controls what happens when the command exits.</figcaption>
+<figcaption>A sandbox lives as long as its main command. Running <code>sleep infinity</code> keeps it alive between agent sessions; <code>--restart-policy</code> controls what happens when the command exits. NVIDIA's docs say <code>start</code> also re-runs a Completed or Error sandbox. On Podman with OpenShell 0.1.3 it printed an error here (<code>already running generation</code>) while the sandbox moved to Starting, so delete and create again to be safe.</figcaption>
 </figure>
 
 <pre data-lang="bash">openshell sandbox create --name my-task --from claude-sandbox:latest \
@@ -182,30 +181,30 @@ openshell sandbox start my-task
 openshell sandbox delete my-task</pre>
 
 <h2 id="concepts--credentials">Credentials never enter the sandbox</h2>
-<p>The agent gets an environment variable that looks like a key but is a placeholder (<code>openshell:…</code>). The real value stays in the gateway. When the agent sends a request, the proxy checks it, and only then swaps the placeholder for the real credential.</p>
+<p>The agent gets an environment variable that looks like a key but is a placeholder (<code>openshell:…</code>). The real value stays in the gateway. When the agent sends a request, the supervisor checks it, and only then swaps the placeholder for the real credential, in headers, Basic auth, query parameters or URL paths (and, if the profile opts in, request bodies).</p>
 
 <figure class="diagram">
 <svg class="dg" viewBox="0 0 900 420" role="img" aria-label="Sequence: the gateway gives the agent a placeholder and the proxy the real token; the agent sends a request with the placeholder; the proxy checks host, binary and method, replaces the placeholder with the real token and forwards it to the API.">
 <defs><marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs>
 <rect class="box" x="30" y="16" width="150" height="44" rx="8"/><text class="b" x="105" y="43" text-anchor="middle">Gateway</text>
 <rect class="box" x="250" y="16" width="150" height="44" rx="8"/><text class="b" x="325" y="43" text-anchor="middle">Agent</text>
-<rect class="box acc" x="470" y="16" width="150" height="44" rx="8"/><text class="b" x="545" y="43" text-anchor="middle">Policy proxy</text>
+<rect class="box acc" x="470" y="16" width="150" height="44" rx="8"/><text class="b" x="545" y="43" text-anchor="middle">Supervisor</text>
 <rect class="box" x="710" y="16" width="160" height="44" rx="8"/><text class="b" x="790" y="43" text-anchor="middle">api.anthropic.com</text>
 <path class="life" d="M105 60V410M325 60V410M545 60V410M790 60V410"/>
 <!-- 1 -->
 <path class="arrow dash" marker-end="url(#a4)" d="M105 98H323"/>
 <text class="s" x="214" y="90" text-anchor="middle">① env var = placeholder</text>
 <path class="arrow dash" marker-end="url(#a4)" d="M105 142H543"/>
-<text class="s" x="324" y="134" text-anchor="middle">① the real token is made available to the proxy only</text>
+<text class="s" x="324" y="134" text-anchor="middle">① real token: to the supervisor, never to the agent</text>
 <!-- 2 -->
 <path class="arrow" marker-end="url(#a4)" d="M325 192H543"/>
 <text class="s" x="434" y="170" text-anchor="middle">② HTTPS request</text>
 <text class="s m" x="434" y="184" text-anchor="middle">Bearer openshell:…</text>
 <!-- 3 -->
 <rect class="note" x="556" y="206" width="226" height="64" rx="6"/>
-<text class="s" x="572" y="226">③ checks, in order:</text>
-<text class="s" x="572" y="241">host:port in the profile's endpoints?</text>
-<text class="s" x="572" y="255">binary on the list? method + path ok?</text>
+<text class="s" x="568" y="224">③ both must pass:</text>
+<text class="s" x="568" y="239">network policy allows this binary + host</text>
+<text class="s" x="568" y="254">key is bound to this host, port and path</text>
 <!-- 4 -->
 <path class="arrow ok" marker-end="url(#a4)" d="M545 306H788"/>
 <text class="s" x="666" y="284" text-anchor="middle">④ forwarded with the real token</text>
@@ -214,7 +213,7 @@ openshell sandbox delete my-task</pre>
 <path class="arrow" marker-end="url(#a4)" d="M788 346H547"/>
 <path class="arrow" marker-end="url(#a4)" d="M545 366H327"/>
 <text class="s" x="666" y="340" text-anchor="middle">⑤ response</text>
-<text class="s bad-t" x="30" y="408">Not allowed: the connection is refused and logged as DENIED. The real token is never sent.</text>
+<text class="s bad-t" x="30" y="408">Not allowed: the request is refused and logged (policy_denied, or 403 credential_endpoint_mismatch). The real token is never sent.</text>
 </svg>
 <figcaption>The real token is never in the sandbox's environment variables or files, so an agent that is tricked into printing its environment leaks only the placeholder.</figcaption>
 </figure>
@@ -258,6 +257,7 @@ openshell rule approve my-task --chunk-id ID</pre><p class="note-line"><strong>L
 <tr><td>Readable / writable paths</td><td><code>filesystem_policy</code> in the policy file</td><td>Next sandbox (<code>delete</code> + <code>create --policy</code>)</td></tr>
 <tr><td>Hosts a provider may reach, its credential</td><td>The provider profile (<code>openshell provider profile update</code>)</td><td>Sandboxes created after the update</td></tr>
 <tr><td>Extra hosts for one sandbox</td><td><code>network_policies</code> (<code>openshell policy set</code> / <code>policy update</code>) or <code>openshell rule approve</code></td><td>Immediately (hot reload)</td></tr>
+<tr><td>Process hardening (non-root user, seccomp)</td><td>The <code>process</code> section of the policy; the defaults are fine for most uses</td><td>Next sandbox</td></tr>
 <tr><td>Logging and other behaviour</td><td><code>openshell settings set</code></td><td>Within seconds</td></tr>
 </tbody>
 </table>
@@ -321,7 +321,7 @@ openshell rule approve my-task --chunk-id ID</pre><p class="note-line"><strong>L
 <text class="s m" x="684" y="254">openshell rule approve …</text>
 <text class="s m" x="684" y="268">openshell rule reject …</text>
 </svg>
-<figcaption>Deny rules always win over allow rules. Without <code>protocol</code> an endpoint is checked only on host, port and binary (L4), so any request to it is allowed.</figcaption>
+<figcaption>Deny rules always win over allow rules. Without <code>protocol</code> an endpoint is checked on host, port and binary, and any request to it is allowed. <strong>Enforcement is <code>audit</code> by default</strong>: a request that breaks a rule is then only logged, so the policies in this repo set <code>enforce</code>. A program whose file changes after OpenShell first saw it is denied, and private, loopback and link-local addresses are blocked unless a rule allows them.</figcaption>
 </figure>
 
 <h2 id="concepts--rule-anatomy">Anatomy of a network rule</h2>
@@ -370,14 +370,14 @@ openshell rule approve my-task --chunk-id ID</pre><p class="note-line"><strong>L
       - path: /usr/local/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe</pre>
 
 <h2 id="concepts--change-policy">Changing network access while it runs</h2>
-<p>Network access starts tight and is widened on purpose. Two ways: approve what the agent was denied, or push a changed policy. Every change is a new numbered, hashed policy version, so you can see what changed and when.</p>
+<p>Network access starts tight and is widened on purpose. Two ways: approve what the agent was denied, or push a changed policy. OpenShell drafts a rule from every blocked connection; the policy prover flags risky ones (a credential reaching a new host, cloud-metadata addresses, a new HTTP method on a credentialed host). Auto-approval is off by default, and an agent can only propose rules itself if you turn on <code>agent_policy_proposals_enabled</code>. Every change is a new numbered, hashed policy version, so you can see what changed and when.</p>
 
 <figure class="diagram">
 <svg class="dg" viewBox="0 0 900 250" role="img" aria-label="Loop: the agent is denied, OpenShell proposes a rule, you review it and approve or reject, and the policy gets a new version that applies at once.">
 <defs><marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs>
 <rect class="box" x="20" y="60" width="150" height="70" rx="10"/><text class="b" x="95" y="90" text-anchor="middle">Agent is denied</text><text class="s" x="95" y="110" text-anchor="middle">DENIED in the log</text>
-<rect class="box" x="220" y="60" width="150" height="70" rx="10"/><text class="b" x="295" y="90" text-anchor="middle">Rule proposed</text><text class="s" x="295" y="110" text-anchor="middle">host + binary + why</text>
-<rect class="box acc" x="420" y="60" width="150" height="70" rx="10"/><text class="b" x="495" y="90" text-anchor="middle">You review</text><text class="s" x="495" y="110" text-anchor="middle">approve or reject</text>
+<rect class="box" x="220" y="60" width="150" height="70" rx="10"/><text class="b" x="295" y="90" text-anchor="middle">Rule drafted</text><text class="s" x="295" y="107" text-anchor="middle">one binary, one host</text><text class="s" x="295" y="121" text-anchor="middle">prover checks it</text>
+<rect class="box acc" x="420" y="60" width="150" height="70" rx="10"/><text class="b" x="495" y="90" text-anchor="middle">You review</text><text class="s" x="495" y="107" text-anchor="middle">approve or reject</text><text class="s" x="495" y="121" text-anchor="middle">(or auto, if you enabled it)</text>
 <rect class="box okbox" x="670" y="30" width="210" height="60" rx="10"/><text class="b" x="775" y="56" text-anchor="middle">New policy version</text><text class="s" x="775" y="74" text-anchor="middle">applies to the running sandbox</text>
 <rect class="box badbox" x="670" y="110" width="210" height="50" rx="10"/><text class="b" x="775" y="140" text-anchor="middle">Stays denied</text>
 <path class="arrow" marker-end="url(#a6)" d="M170 95H218"/>
@@ -454,7 +454,7 @@ filesystem_policy:
   read_only:  [/bin, /usr, /lib, /proc, /dev/urandom, /etc, /var/log]
   read_write: [/tmp, /dev/null, /dev/pts, /dev/ptmx]
 landlock:
-  compatibility: best_effort</pre>
+  compatibility: best_effort     # skip paths the kernel can't enforce; hard_requirement refuses to start instead</pre>
 <pre data-lang="bash">openshell policy get my-task --base      # the policy the sandbox got
 openshell policy get my-task --full      # including the network rules from its providers</pre>
 
@@ -518,7 +518,7 @@ openshell service --help                        # publish a service through the 
 <text class="b" x="120" y="226" text-anchor="middle">Gateway</text><text class="s" x="120" y="244" text-anchor="middle">sessions, relays, API calls</text>
 <rect class="chip" x="300" y="20" width="580" height="64" rx="8"/>
 <text class="b" x="316" y="44">Shorthand log (always on)</text>
-<text class="s m" x="316" y="68">openshell logs my-task --tail    --since 30m    --level warn    --source sandbox</text>
+<text class="s m" x="316" y="68">openshell logs my-task --tail    --since 30m    --source sandbox</text>
 <rect class="chip" x="300" y="100" width="580" height="64" rx="8"/>
 <text class="b" x="316" y="124">OCSF JSON (structured, off by default)</text>
 <text class="s m" x="316" y="148">openshell settings set --global --key ocsf_json_enabled --value true --yes</text>
@@ -551,7 +551,7 @@ openshell term                               # interactive terminal UI</pre>
 <rect class="ring r3" x="66" y="94" width="768" height="240" rx="12"/>
 <text class="b" x="86" y="120">Container</text><text class="s" x="156" y="120">rootless Podman: user namespaces, limited capabilities, seccomp, SELinux</text>
 <rect class="ring r4" x="96" y="138" width="708" height="176" rx="10"/>
-<text class="b" x="116" y="164">OpenShell sandbox</text><text class="s" x="258" y="164">no direct network: proxy only · Landlock paths · syscall filter · placeholders</text>
+<text class="b" x="116" y="164">OpenShell sandbox</text><text class="s" x="258" y="164">no network but the supervisor · Landlock · seccomp · non-root · placeholders</text>
 <rect class="ring r5" x="126" y="184" width="300" height="106" rx="8"/>
 <text class="b" x="276" y="216" text-anchor="middle">Agent + its tools</text>
 <text class="s" x="276" y="238" text-anchor="middle">what a prompt-injected agent</text><text class="s" x="276" y="254" text-anchor="middle">can use is only what is above</text>
