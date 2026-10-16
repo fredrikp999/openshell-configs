@@ -94,6 +94,8 @@ svg.dg .dash { stroke-dasharray:6 4; }
 svg.dg .life { stroke:var(--border); stroke-width:1.5; stroke-dasharray:3 4; }
 svg.dg .cross { stroke:var(--bad); stroke-width:3; stroke-linecap:round; }
 svg.dg .dot { fill:var(--fg); }
+svg.dg .agentbox { fill:var(--ok-bg); stroke:var(--ok); stroke-width:2.5; }
+svg.dg text.ag { font-size:15px; letter-spacing:.06em; }
 svg.dg .mk { fill:var(--muted); }
 svg.dg .num { fill:var(--accent); }
 svg.dg text.n { fill:#fff; font-size:11px; font-weight:700; text-anchor:middle; }
@@ -206,7 +208,7 @@ td div.sourceCode { margin:.2rem 0; }
 <body>
 <nav>
 <p class="brand">OpenShell configs</p>
-<p class="meta">Built from <a href="https://github.com/fredrikp999/openshell-configs">github.com/fredrikp999/openshell-configs</a> at commit 1708a31 2026-10-15</p>
+<p class="meta">Built from <a href="https://github.com/fredrikp999/openshell-configs">github.com/fredrikp999/openshell-configs</a> at commit ebe2270 2026-10-16</p>
 <div class="theme" role="group" aria-label="Color theme">
 <button type="button" data-theme="auto" title="Follow the system setting">Auto</button>
 <button type="button" data-theme="light">Light</button>
@@ -538,10 +540,12 @@ td div.sourceCode { margin:.2rem 0; }
 <rect class="chip acc" x="544" y="64" width="172" height="96" rx="6"/>
 <text class="b" x="630" y="86" text-anchor="middle">Supervisor</text><text class="s" x="630" y="103" text-anchor="middle">trusted side of the boundary</text>
 <text class="s" x="630" y="121" text-anchor="middle">checks every request</text><text class="s" x="630" y="136" text-anchor="middle">adds the real keys</text><text class="s" x="630" y="151" text-anchor="middle">logs every decision</text>
-<rect class="chip" x="544" y="196" width="172" height="90" rx="6"/>
-<text class="b" x="630" y="218" text-anchor="middle">Workload</text><text class="s" x="630" y="235" text-anchor="middle">the agent: placeholders only</text>
-<text class="s" x="630" y="252" text-anchor="middle">Landlock · seccomp · non-root</text><text class="s" x="630" y="268" text-anchor="middle">no network but the supervisor</text>
-<path class="arrow" marker-end="url(#a1)" d="M630 196V162"/>
+<rect class="chip" x="544" y="190" width="172" height="100" rx="6"/>
+<text class="s" x="630" y="206" text-anchor="middle">Workload (untrusted)</text>
+<rect class="agentbox" x="558" y="214" width="144" height="38" rx="6"/>
+<text class="b ag" x="630" y="232" text-anchor="middle">AGENT</text><text class="s" x="630" y="246" text-anchor="middle">sees placeholders only</text>
+<text class="s" x="630" y="268" text-anchor="middle">Landlock · seccomp · non-root</text><text class="s" x="630" y="282" text-anchor="middle">no network but the supervisor</text>
+<path class="arrow" marker-end="url(#a1)" d="M630 190V162"/>
 <path class="arrow dash" marker-end="url(#a1)" d="M544 100H442"/>
 <text class="s" x="493" y="92" text-anchor="middle">dials out</text>
 <!-- internet -->

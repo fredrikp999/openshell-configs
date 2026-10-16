@@ -282,6 +282,8 @@ svg.dg .dash { stroke-dasharray:6 4; }
 svg.dg .life { stroke:var(--border); stroke-width:1.5; stroke-dasharray:3 4; }
 svg.dg .cross { stroke:var(--bad); stroke-width:3; stroke-linecap:round; }
 svg.dg .dot { fill:var(--fg); }
+svg.dg .agentbox { fill:var(--ok-bg); stroke:var(--ok); stroke-width:2.5; }
+svg.dg text.ag { font-size:15px; letter-spacing:.06em; }
 svg.dg .mk { fill:var(--muted); }
 svg.dg .num { fill:var(--accent); }
 svg.dg text.n { fill:#fff; font-size:11px; font-weight:700; text-anchor:middle; }
