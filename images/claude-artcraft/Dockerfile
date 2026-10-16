@@ -46,5 +46,5 @@ COPY claude-start.json /etc/claude-start.json
 # Skills for Claude Code, copied to ~/.claude/skills on first start
 # (artcraft-init). claude-start and claude-acp-start run it, then do what the
 # base image's versions do.
-COPY skills /opt/artcraft-skills
+COPY skills /usr/local/share/artcraft-skills
 COPY --chmod=755 artcraft-init claude-start claude-acp-start /usr/local/bin/

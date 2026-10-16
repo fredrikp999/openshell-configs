@@ -1,12 +1,14 @@
 #!/bin/sh
-# Copy the image's skills (/opt/artcraft-skills) to ~/.claude/skills, each one
-# only if it isn't there yet, so a sandbox keeps skills the agent or you edited.
-# $HOME (/sandbox) starts empty. Output goes to stderr, so stdout stays clean
-# for ACP.
+# Copy the image's skills (/usr/local/share/artcraft-skills) to
+# ~/.claude/skills, each one only if it isn't there yet, so a sandbox keeps
+# skills the agent or you edited. $HOME (/sandbox) starts empty. The skills are
+# under /usr/local/share, not /opt, because the policy's read-only paths
+# (/usr) must cover them. Output goes to stderr, so stdout stays clean for ACP.
 set -e
 {
   mkdir -p "$HOME/.claude/skills"
-  for d in /opt/artcraft-skills/*/; do
+  for d in /usr/local/share/artcraft-skills/*/; do
+    [ -d "$d" ] || continue
     [ -d "$HOME/.claude/skills/$(basename "$d")" ] || cp -r "$d" "$HOME/.claude/skills/"
   done
 } >&2
