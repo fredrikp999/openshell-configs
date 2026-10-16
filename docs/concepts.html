@@ -244,13 +244,13 @@ openshell provider update claude --from-existing   # rotate the token</pre>
 
 <div class="cards three">
 <div class="card"><div class="tag">1 · Policy file: filesystem</div><p>Which paths processes may read or write. Enforced by Landlock in the kernel.</p><pre data-lang="bash">openshell sandbox create \
-  --policy policies/vscode-terminal.yaml ...</pre><p class="note-line"><strong>Fixed at creation.</strong> Changing it means a new sandbox.</p></div>
+  --policy my.yaml ...</pre><p class="note-line"><strong>Fixed at creation.</strong> Changing it means a new sandbox.</p></div>
 <div class="card"><div class="tag">2 · Providers: hosts + credentials</div><p>Each attached provider allows the hosts in its profile and adds its credential to requests to them.</p><pre data-lang="bash">openshell sandbox create \
-  --provider claude --provider github-ro ...
-openshell sandbox provider --help</pre><p class="note-line"><strong>Set by the attached providers.</strong> Editing a profile affects new sandboxes.</p></div>
+  --provider claude ...</pre><p class="note-line"><strong>Set by the attached providers.</strong> Editing a profile reaches running sandboxes at their next sync.</p></div>
 <div class="card"><div class="tag">3 · Network rules: extra hosts</div><p>Per-binary rules in the policy's <code>network_policies</code>, and rules you approve after a denial.</p><pre data-lang="bash">openshell policy set my-task \
-  --policy policies/x.yaml --wait
-openshell rule approve my-task --chunk-id ID</pre><p class="note-line"><strong>Live.</strong> Applies to a running sandbox, without a restart.</p></div>
+  --policy x.yaml --wait
+openshell rule approve \
+  my-task --chunk-id ID</pre><p class="note-line"><strong>Live.</strong> Applies to a running sandbox, without a restart.</p></div>
 </div>
 
 <table>
@@ -409,7 +409,7 @@ openshell policy get  my-task --full            # with the providers' network ru
 openshell rule history my-task
 
 # Push a changed policy to a running sandbox (hot reload)
-openshell policy get my-task --base &gt; policy.yaml     # edit network_policies, keep filesystem_policy
+openshell policy get my-task --base | sed -n '/^version:/,$p' &gt; policy.yaml   # edit network_policies, keep filesystem_policy
 openshell policy set my-task --policy policy.yaml --wait
 
 # Or add a single endpoint, without editing a file

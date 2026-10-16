@@ -126,7 +126,8 @@ def convert_fragment(path, key):
     def code(m):
         text = html.unescape(m.group(2)).rstrip("\n")
         md = "````%s\n%s\n````\n" % (m.group(1), text)
-        return re.sub(r'\bid="[^"]+"', "", run(["pandoc", "-f", "gfm", "-t", "html5", "--wrap=none"], md))
+        out = run(["pandoc", "-f", "gfm", "-t", "html5", "--wrap=none"], md)
+        return re.sub(r'\s(?:id|href)="#?cb[\w-]*"', "", out)
     out = re.sub(r'<pre data-lang="(\w+)">(.*?)</pre>', code, out, flags=re.S)
     out = re.sub(r'<(h[12]) id="concepts--([^"]+)"', r'<\1 id="%s--\2"' % key, out)
     out = re.sub(r'href="([^"]+)"', lambda m: 'href="%s"' % html.escape(
@@ -247,7 +248,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fo
        background:var(--code-bg); padding:.15em .35em; border-radius:5px; }
 pre { background:var(--code-bg); border:1px solid var(--border); border-radius:6px; padding:.9rem 1rem;
       overflow-x:auto; line-height:1.45; }
-pre code { background:none; padding:0; font-size:13px; white-space:pre; }
+pre code, pre > code.sourceCode { background:none; padding:0; font-size:13px; white-space:pre !important; }
 div.sourceCode { margin:1rem 0; }
 .table-wrap { overflow-x:auto; margin:1rem 0; }
 table { border-collapse:collapse; font-size:14px; }

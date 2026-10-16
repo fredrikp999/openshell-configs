@@ -59,7 +59,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fo
        background:var(--code-bg); padding:.15em .35em; border-radius:5px; }
 pre { background:var(--code-bg); border:1px solid var(--border); border-radius:6px; padding:.9rem 1rem;
       overflow-x:auto; line-height:1.45; }
-pre code { background:none; padding:0; font-size:13px; white-space:pre; }
+pre code, pre > code.sourceCode { background:none; padding:0; font-size:13px; white-space:pre !important; }
 div.sourceCode { margin:1rem 0; }
 .table-wrap { overflow-x:auto; margin:1rem 0; }
 table { border-collapse:collapse; font-size:14px; }
@@ -208,7 +208,7 @@ td div.sourceCode { margin:.2rem 0; }
 <body>
 <nav>
 <p class="brand">OpenShell configs</p>
-<p class="meta">Built from <a href="https://github.com/fredrikp999/openshell-configs">github.com/fredrikp999/openshell-configs</a> at commit 7e0a015 2026-10-16</p>
+<p class="meta">Built from <a href="https://github.com/fredrikp999/openshell-configs">github.com/fredrikp999/openshell-configs</a> at commit b97ec5d 2026-10-16</p>
 <div class="theme" role="group" aria-label="Color theme">
 <button type="button" data-theme="auto" title="Follow the system setting">Auto</button>
 <button type="button" data-theme="light">Light</button>
@@ -635,20 +635,20 @@ td div.sourceCode { margin:.2rem 0; }
 <figcaption>Read it left to right and in order: ① import the profile, ② create a provider from it with your token, ③ create a sandbox that combines a provider, an image and a policy. Profiles and providers are shared by every sandbox; the image, policy and approved rules belong to one.</figcaption>
 </figure>
 
-<div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Import the profile (once), and create a provider from it with your token</span></span>
-<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider profile lint   <span class="at">-f</span> providers/claude-code-oauth.yaml</span>
-<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider profile import <span class="at">-f</span> providers/claude-code-oauth.yaml</span>
-<span ><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider create <span class="at">--name</span> claude <span class="at">--type</span> claude-code-oauth <span class="at">--from-existing</span></span>
-<span ><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
-<span ><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Create a sandbox from an image, with the provider and a policy</span></span>
-<span ><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox create <span class="at">--name</span> my-task <span class="at">--from</span> claude-sandbox:latest <span class="dt">\</span></span>
-<span ><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">--provider</span> claude <span class="at">--policy</span> policies/vscode-terminal.yaml <span class="dt">\</span></span>
-<span ><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">--detach</span> <span class="at">--</span> sleep infinity</span>
-<span ><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
-<span ><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. See what exists</span></span>
-<span ><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider profile list</span>
-<span ><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider list</span>
-<span ><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox list</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span><a aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Import the profile (once), and create a provider from it with your token</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider profile lint   <span class="at">-f</span> providers/claude-code-oauth.yaml</span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider profile import <span class="at">-f</span> providers/claude-code-oauth.yaml</span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider create <span class="at">--name</span> claude <span class="at">--type</span> claude-code-oauth <span class="at">--from-existing</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Create a sandbox from an image, with the provider and a policy</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox create <span class="at">--name</span> my-task <span class="at">--from</span> claude-sandbox:latest <span class="dt">\</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a>  <span class="at">--provider</span> claude <span class="at">--policy</span> policies/vscode-terminal.yaml <span class="dt">\</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a>  <span class="at">--detach</span> <span class="at">--</span> sleep infinity</span>
+<span><a aria-hidden="true" tabindex="-1"></a></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="co"># 3. See what exists</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider profile list</span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider list</span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox list</span></code></pre></div>
 
 
 <h2 id="concepts--lifecycle">Sandbox lifecycle</h2>
@@ -685,13 +685,13 @@ td div.sourceCode { margin:.2rem 0; }
 <figcaption>A sandbox lives as long as its main command. Running <code>sleep infinity</code> keeps it alive between agent sessions; <code>--restart-policy</code> controls what happens when the command exits. NVIDIA's docs say <code>start</code> also re-runs a Completed or Error sandbox. On Podman with OpenShell 0.1.3 it printed an error here (<code>already running generation</code>) while the sandbox moved to Starting, so delete and create again to be safe.</figcaption>
 </figure>
 
-<div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox create <span class="at">--name</span> my-task <span class="at">--from</span> claude-sandbox:latest <span class="dt">\</span></span>
-<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">--provider</span> claude <span class="at">--detach</span> <span class="at">--</span> sleep infinity</span>
-<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox list                      <span class="co"># wait for Ready</span></span>
-<span ><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox exec my-task <span class="at">--workdir</span> /sandbox <span class="at">--</span> bash</span>
-<span ><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox stop  my-task             <span class="co"># keeps the workspace</span></span>
-<span ><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox start my-task</span>
-<span ><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox delete my-task</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox create <span class="at">--name</span> my-task <span class="at">--from</span> claude-sandbox:latest <span class="dt">\</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a>  <span class="at">--provider</span> claude <span class="at">--detach</span> <span class="at">--</span> sleep infinity</span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox list                      <span class="co"># wait for Ready</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox exec my-task <span class="at">--workdir</span> /sandbox <span class="at">--</span> bash</span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox stop  my-task             <span class="co"># keeps the workspace</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox start my-task</span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox delete my-task</span></code></pre></div>
 
 
 <h2 id="concepts--credentials">Credentials never enter the sandbox</h2>
@@ -733,40 +733,40 @@ td div.sourceCode { margin:.2rem 0; }
 </figure>
 
 <p>The profile defines this contract. This excerpt of <code>claude-code-oauth</code> says which secret, where it goes, and who may use it:</p>
-<div class="sourceCode" ><pre class="sourceCode yaml"><code class="sourceCode yaml"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">id</span><span class="kw">:</span><span class="at"> claude-code-oauth</span></span>
-<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">credentials</span><span class="kw">:</span></span>
-<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> oauth_token</span></span>
-<span ><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">env_vars</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">CLAUDE_CODE_OAUTH_TOKEN</span><span class="kw">]</span><span class="co">   # read once from the host by --from-existing</span></span>
-<span ><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">auth_style</span><span class="kw">:</span><span class="at"> bearer</span><span class="co">                    # sent as &quot;Authorization: Bearer ...&quot;</span></span>
-<span ><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">header_name</span><span class="kw">:</span><span class="at"> authorization</span></span>
-<span ><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">endpoints</span><span class="kw">:</span><span class="co">                                # the credential is added ONLY on these</span></span>
-<span ><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">host</span><span class="kw">:</span><span class="at"> api.anthropic.com</span></span>
-<span ><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">port</span><span class="kw">:</span><span class="at"> </span><span class="dv">443</span></span>
-<span ><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">protocol</span><span class="kw">:</span><span class="at"> rest</span></span>
-<span ><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">access</span><span class="kw">:</span><span class="at"> read-write</span></span>
-<span ><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">enforcement</span><span class="kw">:</span><span class="at"> enforce</span></span>
-<span ><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fu">binaries</span><span class="kw">:</span><span class="co">                                 # only these programs may use it</span></span>
-<span ><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> /usr/local/lib/node_modules/@anthropic-ai/**</span></span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span><a aria-hidden="true" tabindex="-1"></a><span class="fu">id</span><span class="kw">:</span><span class="at"> claude-code-oauth</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="fu">credentials</span><span class="kw">:</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> oauth_token</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">env_vars</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">CLAUDE_CODE_OAUTH_TOKEN</span><span class="kw">]</span><span class="co">   # read once from the host by --from-existing</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">auth_style</span><span class="kw">:</span><span class="at"> bearer</span><span class="co">                    # sent as &quot;Authorization: Bearer ...&quot;</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">header_name</span><span class="kw">:</span><span class="at"> authorization</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="fu">endpoints</span><span class="kw">:</span><span class="co">                                # the credential is added ONLY on these</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">host</span><span class="kw">:</span><span class="at"> api.anthropic.com</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">port</span><span class="kw">:</span><span class="at"> </span><span class="dv">443</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">protocol</span><span class="kw">:</span><span class="at"> rest</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">access</span><span class="kw">:</span><span class="at"> read-write</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">enforcement</span><span class="kw">:</span><span class="at"> enforce</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="fu">binaries</span><span class="kw">:</span><span class="co">                                 # only these programs may use it</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> /usr/local/lib/node_modules/@anthropic-ai/**</span></span></code></pre></div>
 
-<div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider profile describe claude-code-oauth</span>
-<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider list</span>
-<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider update claude <span class="at">--from-existing</span>   <span class="co"># rotate the token</span></span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider profile describe claude-code-oauth</span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider list</span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> provider update claude <span class="at">--from-existing</span>   <span class="co"># rotate the token</span></span></code></pre></div>
 
 
 <h2 id="concepts--access">What a sandbox may access</h2>
 <p>Access comes from three sources, added together. Filesystem rules are fixed when the sandbox starts; network access can change while it runs.</p>
 
 <div class="cards three">
-<div class="card"><div class="tag">1 · Policy file: filesystem</div><p>Which paths processes may read or write. Enforced by Landlock in the kernel.</p><div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox create <span class="dt">\</span></span>
-<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">--policy</span> policies/vscode-terminal.yaml ...</span></code></pre></div>
+<div class="card"><div class="tag">1 · Policy file: filesystem</div><p>Which paths processes may read or write. Enforced by Landlock in the kernel.</p><div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox create <span class="dt">\</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a>  <span class="at">--policy</span> my.yaml ...</span></code></pre></div>
 <p class="note-line"><strong>Fixed at creation.</strong> Changing it means a new sandbox.</p></div>
-<div class="card"><div class="tag">2 · Providers: hosts + credentials</div><p>Each attached provider allows the hosts in its profile and adds its credential to requests to them.</p><div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox create <span class="dt">\</span></span>
-<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">--provider</span> claude <span class="at">--provider</span> github-ro ...</span>
-<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox provider <span class="at">--help</span></span></code></pre></div>
-<p class="note-line"><strong>Set by the attached providers.</strong> Editing a profile affects new sandboxes.</p></div>
-<div class="card"><div class="tag">3 · Network rules: extra hosts</div><p>Per-binary rules in the policy's <code>network_policies</code>, and rules you approve after a denial.</p><div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy set my-task <span class="dt">\</span></span>
-<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">--policy</span> policies/x.yaml <span class="at">--wait</span></span>
-<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> rule approve my-task <span class="at">--chunk-id</span> ID</span></code></pre></div>
+<div class="card"><div class="tag">2 · Providers: hosts + credentials</div><p>Each attached provider allows the hosts in its profile and adds its credential to requests to them.</p><div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox create <span class="dt">\</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a>  <span class="at">--provider</span> claude ...</span></code></pre></div>
+<p class="note-line"><strong>Set by the attached providers.</strong> Editing a profile reaches running sandboxes at their next sync.</p></div>
+<div class="card"><div class="tag">3 · Network rules: extra hosts</div><p>Per-binary rules in the policy's <code>network_policies</code>, and rules you approve after a denial.</p><div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy set my-task <span class="dt">\</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a>  <span class="at">--policy</span> x.yaml <span class="at">--wait</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> rule approve <span class="dt">\</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a>  my-task <span class="at">--chunk-id</span> ID</span></code></pre></div>
 <p class="note-line"><strong>Live.</strong> Applies to a running sandbox, without a restart.</p></div>
 </div>
 
@@ -847,50 +847,50 @@ td div.sourceCode { margin:.2rem 0; }
 <p>A rule says <strong>who</strong> may reach <strong>where</strong>, and <strong>what</strong> they may do there.</p>
 
 <div class="cards three">
-<div class="card"><div class="tag">WHO · binaries</div><p>The program that opens the connection, by its real path. For npm that is <code>node</code>; for git over HTTPS it is <code>git-remote-http</code>. Child processes are covered too.</p><div class="sourceCode" ><pre class="sourceCode yaml"><code class="sourceCode yaml"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">binaries</span><span class="kw">:</span></span>
-<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">path</span><span class="kw">:</span><span class="at"> /usr/local/bin/node</span></span></code></pre></div>
+<div class="card"><div class="tag">WHO · binaries</div><p>The program that opens the connection, by its real path. For npm that is <code>node</code>; for git over HTTPS it is <code>git-remote-http</code>. Child processes are covered too.</p><div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span><a aria-hidden="true" tabindex="-1"></a><span class="fu">binaries</span><span class="kw">:</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">path</span><span class="kw">:</span><span class="at"> /usr/local/bin/node</span></span></code></pre></div>
 </div>
-<div class="card"><div class="tag">WHERE · endpoints</div><p>Host, port and, for MCP, a path. Wildcards are allowed.</p><div class="sourceCode" ><pre class="sourceCode yaml"><code class="sourceCode yaml"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">endpoints</span><span class="kw">:</span></span>
-<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">host</span><span class="kw">:</span><span class="at"> registry.npmjs.org</span></span>
-<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">port</span><span class="kw">:</span><span class="at"> </span><span class="dv">443</span></span></code></pre></div>
+<div class="card"><div class="tag">WHERE · endpoints</div><p>Host, port and, for MCP, a path. Wildcards are allowed.</p><div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span><a aria-hidden="true" tabindex="-1"></a><span class="fu">endpoints</span><span class="kw">:</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">host</span><span class="kw">:</span><span class="at"> registry.npmjs.org</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">port</span><span class="kw">:</span><span class="at"> </span><span class="dv">443</span></span></code></pre></div>
 </div>
-<div class="card"><div class="tag">WHAT · protocol</div><p>With <code>protocol: rest</code> each HTTP request is checked: a preset, or exact methods and paths. <code>protocol: mcp</code> checks MCP methods and tool names.</p><div class="sourceCode" ><pre class="sourceCode yaml"><code class="sourceCode yaml"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">protocol</span><span class="kw">:</span><span class="at"> rest</span></span>
-<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">access</span><span class="kw">:</span><span class="at"> read-only</span><span class="co">      # GET HEAD OPTIONS</span></span>
-<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">enforcement</span><span class="kw">:</span><span class="at"> enforce</span><span class="co">   # audit = log only</span></span></code></pre></div>
+<div class="card"><div class="tag">WHAT · protocol</div><p>With <code>protocol: rest</code> each HTTP request is checked: a preset, or exact methods and paths. <code>protocol: mcp</code> checks MCP methods and tool names.</p><div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span><a aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">protocol</span><span class="kw">:</span><span class="at"> rest</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">access</span><span class="kw">:</span><span class="at"> read-only</span><span class="co">      # GET HEAD OPTIONS</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">enforcement</span><span class="kw">:</span><span class="at"> enforce</span><span class="co">   # audit = log only</span></span></code></pre></div>
 </div>
 </div>
 
 <p>Finer control with <code>rules</code> and <code>deny_rules</code> (this is how <code>git clone</code> is allowed but <code>git push</code> is not):</p>
-<div class="sourceCode" ><pre class="sourceCode yaml"><code class="sourceCode yaml"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">network_policies</span><span class="kw">:</span></span>
-<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">github_clone</span><span class="kw">:</span></span>
-<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">name</span><span class="kw">:</span><span class="at"> github-clone</span></span>
-<span ><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">endpoints</span><span class="kw">:</span></span>
-<span ><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">host</span><span class="kw">:</span><span class="at"> github.com</span></span>
-<span ><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">port</span><span class="kw">:</span><span class="at"> </span><span class="dv">443</span></span>
-<span ><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">protocol</span><span class="kw">:</span><span class="at"> rest</span></span>
-<span ><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">enforcement</span><span class="kw">:</span><span class="at"> enforce</span></span>
-<span ><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">rules</span><span class="kw">:</span><span class="co">                                  # allowed</span></span>
-<span ><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="fu">allow</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">method</span><span class="kw">:</span><span class="at"> GET</span><span class="kw">,</span><span class="at">  </span><span class="fu">path</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;/**/info/refs&quot;</span><span class="kw">,</span><span class="at"> </span><span class="fu">query</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">service</span><span class="kw">:</span><span class="at"> git-upload-pack </span><span class="kw">}</span><span class="at"> </span><span class="kw">}</span></span>
-<span ><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="fu">allow</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">method</span><span class="kw">:</span><span class="at"> POST</span><span class="kw">,</span><span class="at"> </span><span class="fu">path</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;/**/git-upload-pack&quot;</span><span class="at"> </span><span class="kw">}</span></span>
-<span ><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">deny_rules</span><span class="kw">:</span><span class="co">                             # always wins</span></span>
-<span ><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">method</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;*&quot;</span><span class="kw">,</span><span class="at"> </span><span class="fu">path</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;/**/git-receive-pack&quot;</span><span class="at"> </span><span class="kw">}</span></span>
-<span ><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">binaries</span><span class="kw">:</span></span>
-<span ><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">path</span><span class="kw">:</span><span class="at"> /usr/lib/git-core/git-remote-http</span></span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span><a aria-hidden="true" tabindex="-1"></a><span class="fu">network_policies</span><span class="kw">:</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">github_clone</span><span class="kw">:</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">name</span><span class="kw">:</span><span class="at"> github-clone</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">endpoints</span><span class="kw">:</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">host</span><span class="kw">:</span><span class="at"> github.com</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">port</span><span class="kw">:</span><span class="at"> </span><span class="dv">443</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">protocol</span><span class="kw">:</span><span class="at"> rest</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">enforcement</span><span class="kw">:</span><span class="at"> enforce</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">rules</span><span class="kw">:</span><span class="co">                                  # allowed</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="fu">allow</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">method</span><span class="kw">:</span><span class="at"> GET</span><span class="kw">,</span><span class="at">  </span><span class="fu">path</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;/**/info/refs&quot;</span><span class="kw">,</span><span class="at"> </span><span class="fu">query</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">service</span><span class="kw">:</span><span class="at"> git-upload-pack </span><span class="kw">}</span><span class="at"> </span><span class="kw">}</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="fu">allow</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">method</span><span class="kw">:</span><span class="at"> POST</span><span class="kw">,</span><span class="at"> </span><span class="fu">path</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;/**/git-upload-pack&quot;</span><span class="at"> </span><span class="kw">}</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">deny_rules</span><span class="kw">:</span><span class="co">                             # always wins</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">method</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;*&quot;</span><span class="kw">,</span><span class="at"> </span><span class="fu">path</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;/**/git-receive-pack&quot;</span><span class="at"> </span><span class="kw">}</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">binaries</span><span class="kw">:</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">path</span><span class="kw">:</span><span class="at"> /usr/lib/git-core/git-remote-http</span></span></code></pre></div>
 
 
 <p>For a remote MCP server, OpenShell reads each request and checks the method and, for <code>tools/call</code>, the tool name (the tool's arguments are not checked):</p>
-<div class="sourceCode" ><pre class="sourceCode yaml"><code class="sourceCode yaml"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">huggingface_mcp</span><span class="kw">:</span></span>
-<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">endpoints</span><span class="kw">:</span></span>
-<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">host</span><span class="kw">:</span><span class="at"> huggingface.co</span></span>
-<span ><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">port</span><span class="kw">:</span><span class="at"> </span><span class="dv">443</span></span>
-<span ><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">path</span><span class="kw">:</span><span class="at"> /mcp</span></span>
-<span ><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">protocol</span><span class="kw">:</span><span class="at"> mcp</span></span>
-<span ><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">enforcement</span><span class="kw">:</span><span class="at"> enforce</span></span>
-<span ><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">mcp</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">versions</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="st">&quot;2025-03-26&quot;</span><span class="kw">,</span><span class="at"> </span><span class="st">&quot;2025-06-18&quot;</span><span class="kw">,</span><span class="at"> </span><span class="st">&quot;2025-11-25&quot;</span><span class="kw">],</span><span class="at"> </span><span class="fu">allow_all_known_mcp_methods</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span><span class="at"> </span><span class="kw">}</span></span>
-<span ><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">rules</span><span class="kw">:</span><span class="at">       </span><span class="kw">[</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">allow</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">tool</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;hub_repo_*&quot;</span><span class="at"> </span><span class="kw">}</span><span class="at"> </span><span class="kw">}</span><span class="at"> </span><span class="kw">]</span><span class="co">   # only these tools</span></span>
-<span ><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">deny_rules</span><span class="kw">:</span><span class="at">  </span><span class="kw">[</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">method</span><span class="kw">:</span><span class="at"> tools/call</span><span class="kw">,</span><span class="at"> </span><span class="fu">tool</span><span class="kw">:</span><span class="at"> hf_fs </span><span class="kw">}</span><span class="at"> </span><span class="kw">]</span><span class="co">  # never this one</span></span>
-<span ><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">binaries</span><span class="kw">:</span></span>
-<span ><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">path</span><span class="kw">:</span><span class="at"> /usr/local/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe</span></span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span><a aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">huggingface_mcp</span><span class="kw">:</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">endpoints</span><span class="kw">:</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">host</span><span class="kw">:</span><span class="at"> huggingface.co</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">port</span><span class="kw">:</span><span class="at"> </span><span class="dv">443</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">path</span><span class="kw">:</span><span class="at"> /mcp</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">protocol</span><span class="kw">:</span><span class="at"> mcp</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">enforcement</span><span class="kw">:</span><span class="at"> enforce</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">mcp</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">versions</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="st">&quot;2025-03-26&quot;</span><span class="kw">,</span><span class="at"> </span><span class="st">&quot;2025-06-18&quot;</span><span class="kw">,</span><span class="at"> </span><span class="st">&quot;2025-11-25&quot;</span><span class="kw">],</span><span class="at"> </span><span class="fu">allow_all_known_mcp_methods</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span><span class="at"> </span><span class="kw">}</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">rules</span><span class="kw">:</span><span class="at">       </span><span class="kw">[</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">allow</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">tool</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;hub_repo_*&quot;</span><span class="at"> </span><span class="kw">}</span><span class="at"> </span><span class="kw">}</span><span class="at"> </span><span class="kw">]</span><span class="co">   # only these tools</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">deny_rules</span><span class="kw">:</span><span class="at">  </span><span class="kw">[</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">method</span><span class="kw">:</span><span class="at"> tools/call</span><span class="kw">,</span><span class="at"> </span><span class="fu">tool</span><span class="kw">:</span><span class="at"> hf_fs </span><span class="kw">}</span><span class="at"> </span><span class="kw">]</span><span class="co">  # never this one</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">binaries</span><span class="kw">:</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">path</span><span class="kw">:</span><span class="at"> /usr/local/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe</span></span></code></pre></div>
 
 
 <h2 id="concepts--change-policy">Changing network access while it runs</h2>
@@ -918,30 +918,30 @@ td div.sourceCode { margin:.2rem 0; }
 <figcaption>Approved rules apply only to that sandbox and are gone when it is recreated.</figcaption>
 </figure>
 
-<div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Review and decide on what was denied</span></span>
-<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> logs my-task <span class="kw">|</span> <span class="fu">grep</span> DENIED</span>
-<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> rule get     my-task <span class="at">--status</span> pending</span>
-<span ><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> rule approve my-task <span class="at">--chunk-id</span> <span class="op">&lt;</span>chunk-id<span class="op">&gt;</span></span>
-<span ><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> rule reject  my-task <span class="at">--chunk-id</span> <span class="op">&lt;</span>chunk-id<span class="op">&gt;</span> --reason <span class="st">&quot;Not needed for this task.&quot;</span></span>
-<span ><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> rule approve-all my-task              <span class="co"># or: rule clear my-task</span></span>
-<span ><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
-<span ><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># See the history and what is in force</span></span>
-<span ><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy list my-task</span>
-<span ><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy get  my-task <span class="at">--full</span>            <span class="co"># with the providers&#39; network rules</span></span>
-<span ><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> rule history my-task</span>
-<span ><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
-<span ><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Push a changed policy to a running sandbox (hot reload)</span></span>
-<span ><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy get my-task <span class="at">--base</span> <span class="op">&gt;</span> policy.yaml     <span class="co"># edit network_policies, keep filesystem_policy</span></span>
-<span ><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy set my-task <span class="at">--policy</span> policy.yaml <span class="at">--wait</span></span>
-<span ><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
-<span ><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Or add a single endpoint, without editing a file</span></span>
-<span ><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy update my-task <span class="at">--add-endpoint</span> docs.python.org:443:read-only:rest:enforce <span class="dt">\</span></span>
-<span ><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">--rule-name</span> python-docs <span class="at">--binary</span> /usr/local/bin/node <span class="at">--dry-run</span>     <span class="co"># preview first</span></span>
-<span ><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy update my-task <span class="at">--remove-rule</span> python-docs <span class="at">--wait</span></span>
-<span ><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
-<span ><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co"># One policy for every sandbox</span></span>
-<span ><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy set <span class="at">--global</span> <span class="at">--policy</span> policy.yaml <span class="at">--yes</span></span>
-<span ><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy delete                         <span class="co"># remove the global lock</span></span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span><a aria-hidden="true" tabindex="-1"></a><span class="co"># Review and decide on what was denied</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> logs my-task <span class="kw">|</span> <span class="fu">grep</span> DENIED</span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> rule get     my-task <span class="at">--status</span> pending</span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> rule approve my-task <span class="at">--chunk-id</span> <span class="op">&lt;</span>chunk-id<span class="op">&gt;</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> rule reject  my-task <span class="at">--chunk-id</span> <span class="op">&lt;</span>chunk-id<span class="op">&gt;</span> --reason <span class="st">&quot;Not needed for this task.&quot;</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> rule approve-all my-task              <span class="co"># or: rule clear my-task</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="co"># See the history and what is in force</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy list my-task</span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy get  my-task <span class="at">--full</span>            <span class="co"># with the providers&#39; network rules</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> rule history my-task</span>
+<span><a aria-hidden="true" tabindex="-1"></a></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="co"># Push a changed policy to a running sandbox (hot reload)</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy get my-task <span class="at">--base</span> <span class="kw">|</span> <span class="fu">sed</span> <span class="at">-n</span> <span class="st">&#39;/^version:/,$p&#39;</span> <span class="op">&gt;</span> policy.yaml   <span class="co"># edit network_policies, keep filesystem_policy</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy set my-task <span class="at">--policy</span> policy.yaml <span class="at">--wait</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="co"># Or add a single endpoint, without editing a file</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy update my-task <span class="at">--add-endpoint</span> docs.python.org:443:read-only:rest:enforce <span class="dt">\</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a>  <span class="at">--rule-name</span> python-docs <span class="at">--binary</span> /usr/local/bin/node <span class="at">--dry-run</span>     <span class="co"># preview first</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy update my-task <span class="at">--remove-rule</span> python-docs <span class="at">--wait</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="co"># One policy for every sandbox</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy set <span class="at">--global</span> <span class="at">--policy</span> policy.yaml <span class="at">--yes</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy delete                         <span class="co"># remove the global lock</span></span></code></pre></div>
 
 
 <h2 id="concepts--filesystem">Filesystem policy</h2>
@@ -973,16 +973,16 @@ td div.sourceCode { margin:.2rem 0; }
 <figcaption>The paths shown are from <code>policies/vscode-terminal.yaml</code>: OpenShell's default plus <code>/dev/pts</code> and <code>/dev/ptmx</code>, so terminals work.</figcaption>
 </figure>
 
-<div class="sourceCode" ><pre class="sourceCode yaml"><code class="sourceCode yaml"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">version</span><span class="kw">:</span><span class="at"> </span><span class="dv">1</span></span>
-<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">filesystem_policy</span><span class="kw">:</span></span>
-<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">include_workdir</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span><span class="co">          # /sandbox is read-write</span></span>
-<span ><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">read_only</span><span class="kw">:</span><span class="at">  </span><span class="kw">[</span><span class="at">/bin</span><span class="kw">,</span><span class="at"> /usr</span><span class="kw">,</span><span class="at"> /lib</span><span class="kw">,</span><span class="at"> /proc</span><span class="kw">,</span><span class="at"> /dev/urandom</span><span class="kw">,</span><span class="at"> /etc</span><span class="kw">,</span><span class="at"> /var/log</span><span class="kw">]</span></span>
-<span ><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">read_write</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">/tmp</span><span class="kw">,</span><span class="at"> /dev/</span><span class="ch">null</span><span class="kw">,</span><span class="at"> /dev/pts</span><span class="kw">,</span><span class="at"> /dev/ptmx</span><span class="kw">]</span></span>
-<span ><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">landlock</span><span class="kw">:</span></span>
-<span ><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">compatibility</span><span class="kw">:</span><span class="at"> best_effort</span><span class="co">     # if Landlock can&#39;t be applied the sandbox runs WITHOUT these rules; hard_requirement refuses to start</span></span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span><a aria-hidden="true" tabindex="-1"></a><span class="fu">version</span><span class="kw">:</span><span class="at"> </span><span class="dv">1</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="fu">filesystem_policy</span><span class="kw">:</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">include_workdir</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span><span class="co">          # /sandbox is read-write</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">read_only</span><span class="kw">:</span><span class="at">  </span><span class="kw">[</span><span class="at">/bin</span><span class="kw">,</span><span class="at"> /usr</span><span class="kw">,</span><span class="at"> /lib</span><span class="kw">,</span><span class="at"> /proc</span><span class="kw">,</span><span class="at"> /dev/urandom</span><span class="kw">,</span><span class="at"> /etc</span><span class="kw">,</span><span class="at"> /var/log</span><span class="kw">]</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">read_write</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">/tmp</span><span class="kw">,</span><span class="at"> /dev/</span><span class="ch">null</span><span class="kw">,</span><span class="at"> /dev/pts</span><span class="kw">,</span><span class="at"> /dev/ptmx</span><span class="kw">]</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="fu">landlock</span><span class="kw">:</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">compatibility</span><span class="kw">:</span><span class="at"> best_effort</span><span class="co">     # if Landlock can&#39;t be applied the sandbox runs WITHOUT these rules; hard_requirement refuses to start</span></span></code></pre></div>
 
-<div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy get my-task <span class="at">--base</span>      <span class="co"># the policy the sandbox got</span></span>
-<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy get my-task <span class="at">--full</span>      <span class="co"># including the network rules from its providers</span></span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy get my-task <span class="at">--base</span>      <span class="co"># the policy the sandbox got</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> policy get my-task <span class="at">--full</span>      <span class="co"># including the network rules from its providers</span></span></code></pre></div>
 
 
 <h2 id="concepts--reaching">Reaching a sandbox</h2>
@@ -1015,19 +1015,19 @@ td div.sourceCode { margin:.2rem 0; }
 <figcaption>No port is opened on the sandbox, and it has no network route to your machine unless you allow one; you reach it, not the other way round. Code and files move only with <code>upload</code> and <code>download</code>, so you decide what goes in and what comes out.</figcaption>
 </figure>
 
-<div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox exec my-task <span class="at">--workdir</span> /sandbox <span class="at">--</span> bash            <span class="co"># a shell</span></span>
-<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox exec my-task <span class="at">--</span> ls <span class="at">-la</span> /sandbox                    <span class="co"># one command</span></span>
-<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox connect my-task <span class="at">--editor</span> vscode                    <span class="co"># VS Code over SSH</span></span>
-<span ><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox ssh-config my-task <span class="op">&gt;&gt;</span> ~/.ssh/config                 <span class="co"># then: ssh openshell-my-task.default</span></span>
-<span ><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
-<span ><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox upload   my-task ./spec.md /sandbox                <span class="co"># lands in /sandbox/spec.md</span></span>
-<span ><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox download my-task /sandbox/myrepo/report.html .</span>
-<span ><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
-<span ><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> forward start 3000 my-task <span class="at">-d</span>        <span class="co"># http://127.0.0.1:3000 shows the sandbox&#39;s port 3000</span></span>
-<span ><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> forward list</span>
-<span ><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> forward stop 3000 my-task</span>
-<span ><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
-<span ><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> service <span class="at">--help</span>                        <span class="co"># publish a service through the gateway under its own URL</span></span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox exec my-task <span class="at">--workdir</span> /sandbox <span class="at">--</span> bash            <span class="co"># a shell</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox exec my-task <span class="at">--</span> ls <span class="at">-la</span> /sandbox                    <span class="co"># one command</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox connect my-task <span class="at">--editor</span> vscode                    <span class="co"># VS Code over SSH</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox ssh-config my-task <span class="op">&gt;&gt;</span> ~/.ssh/config                 <span class="co"># then: ssh openshell-my-task.default</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox upload   my-task ./spec.md /sandbox                <span class="co"># lands in /sandbox/spec.md</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> sandbox download my-task /sandbox/myrepo/report.html .</span>
+<span><a aria-hidden="true" tabindex="-1"></a></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> forward start 3000 my-task <span class="at">-d</span>        <span class="co"># http://127.0.0.1:3000 shows the sandbox&#39;s port 3000</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> forward list</span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> forward stop 3000 my-task</span>
+<span><a aria-hidden="true" tabindex="-1"></a></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> service <span class="at">--help</span>                        <span class="co"># publish a service through the gateway under its own URL</span></span></code></pre></div>
 
 
 <h2 id="concepts--observability">Seeing what happens</h2>
@@ -1060,12 +1060,12 @@ td div.sourceCode { margin:.2rem 0; }
 <figcaption>A blocked connection is two log lines: <code>NET:REFUSE</code> (the name lookup) and <code>NET:OPEN … DENIED</code> with the binary that tried. That binary path is what a rule needs.</figcaption>
 </figure>
 
-<div class="sourceCode" ><pre class="sourceCode bash"><code class="sourceCode bash"><span ><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> logs my-task                       <span class="co"># last 200 lines</span></span>
-<span ><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> logs my-task <span class="at">--tail</span>                <span class="co"># follow live</span></span>
-<span ><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> logs my-task <span class="kw">|</span> <span class="fu">grep</span> DENIED         <span class="co"># what was blocked, and by which binary</span></span>
-<span ><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> settings get <span class="at">--global</span>              <span class="co"># effective settings</span></span>
-<span ><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> settings set <span class="at">--global</span> <span class="at">--key</span> ocsf_json_enabled <span class="at">--value</span> true <span class="at">--yes</span></span>
-<span ><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> term                               <span class="co"># interactive terminal UI</span></span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> logs my-task                       <span class="co"># last 200 lines</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> logs my-task <span class="at">--tail</span>                <span class="co"># follow live</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> logs my-task <span class="kw">|</span> <span class="fu">grep</span> DENIED         <span class="co"># what was blocked, and by which binary</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> settings get <span class="at">--global</span>              <span class="co"># effective settings</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> settings set <span class="at">--global</span> <span class="at">--key</span> ocsf_json_enabled <span class="at">--value</span> true <span class="at">--yes</span></span>
+<span><a aria-hidden="true" tabindex="-1"></a><span class="ex">openshell</span> term                               <span class="co"># interactive terminal UI</span></span></code></pre></div>
 
 
 <h2 id="concepts--isolation">Layers of isolation</h2>
