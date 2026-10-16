@@ -1,11 +1,13 @@
 #!/bin/sh
-# Copy the image's skills (/usr/local/share/artcraft-skills) to
-# ~/.claude/skills, each one only if it isn't there yet, so a sandbox keeps
+# Start the gallery, and copy the image's skills (/usr/local/share/artcraft-skills)
+# to ~/.claude/skills, each one only if it isn't there yet, so a sandbox keeps
 # skills the agent or you edited. $HOME (/sandbox) starts empty. The skills are
-# under /usr/local/share, not /opt, because the policy's read-only paths
-# (/usr) must cover them. Output goes to stderr, so stdout stays clean for ACP.
+# under /usr/local/share, not /opt, because the policy's read-only paths (/usr)
+# must cover them. Output goes to stderr, so stdout stays clean for ACP.
 set -e
 {
+  # The gallery page on port 3102 (bin/sandbox.sh --forward 3102); a no-op if it runs.
+  artcraft-gallery --background || true
   mkdir -p "$HOME/.claude/skills"
   for d in /usr/local/share/artcraft-skills/*/; do
     [ -d "$d" ] || continue

@@ -204,12 +204,14 @@ podman build -t claude-artcraft:latest  images/claude-artcraft
 ```bash
 bin/sandbox.sh claude my-art --artcraft
 ```
+   This also forwards port 3102 for the gallery (step 5). If that port is in use on your machine (e.g. by a HyperFrames sandbox), it only warns and goes on; `--forward PORT` forwards another port, and then the gallery must run on it too (`artcraft-gallery --port PORT`).
 3. **Upload what Claude should work on** (photos, a PSD), if any:
 ```bash
 openshell sandbox upload my-art ./raw /sandbox
 ```
 4. **Ask Claude**, e.g. "Draw a 1200x630 social card for our CLI with VectorCraft and export card.svg" or "Grade the photos in /sandbox/raw with PhotoCraft (a little more contrast, sharpen) and write them to /sandbox/graded."
-5. **Get the files out:**
+5. **Browse the images in your browser:** open http://127.0.0.1:3102. The gallery starts by itself with the agent. See [The gallery](#the-gallery) below.
+6. **Get the files out:**
 ```bash
 openshell sandbox download my-art /sandbox/graded .
 ```
@@ -227,15 +229,30 @@ openshell sandbox exec my-art --workdir /sandbox -- claude-start
 * **`vectorcraft-cli` and `photocraft-cli`**, the headless tools from each app's release for the image's architecture (arm64 or x86_64), pinned with `ARG VECTORCRAFT_VERSION` and `ARG PHOTOCRAFT_VERSION` and checked against the release's `SHA256SUMS.txt` during the build. The desktop apps from the same releases are left out, because the sandbox has no display. The build fetches them from GitHub, so it needs network access on your machine, but the sandbox doesn't.
 * **The MCP servers**, registered as `vectorcraft` and `photocraft` in [claude-start.json](../images/claude-artcraft/claude-start.json), which `claude-start` copies to `~/.claude.json` on first start. Each runs `<app>-cli mcp --automation-read-root /sandbox --automation-write-root /sandbox`, so the servers can only open and save files below `/sandbox`.
 * **The skill `clean-vector-from-raster`** ([images/claude-artcraft/skills](../images/claude-artcraft/skills/clean-vector-from-raster/SKILL.md)): a workflow for turning a raster illustration (e.g. one figure from a sprite sheet on a chroma-key background) into a clean, print-ready SVG: prepare the image in PhotoCraft (crop, upscale, smooth), trace it in VectorCraft, simplify and export. Ask for it by name or describe the task. It is copied to `~/.claude/skills` on first start by **`artcraft-init`**, which `claude-start` and `claude-acp-start` run (a skill that is already there isn't overwritten, so edits in a sandbox stay). To add a skill, put its folder in `images/claude-artcraft/skills/` and rebuild.
+* **Python 3** from Debian with pip and venv, and **uv** ([docs.astral.sh/uv](https://docs.astral.sh/uv/), pinned with `ARG UV_VERSION`, checked against its `.sha256`). Debian's pip refuses system-wide installs, so the agent makes a virtual environment: `uv venv && uv pip install pillow`, or `python3 -m venv .venv && .venv/bin/pip install pillow`. `uvx` runs tools without installing them. `UV_PYTHON_DOWNLOADS=never` makes uv use the Debian Python, because the policy only allows PyPI and uv would otherwise fetch a Python from GitHub.
+* **`artcraft-gallery`**, a small web server (Python standard library) that shows the images in a folder. See below.
 * **Each app's docs and licences** in `/usr/local/share/doc/vectorcraft` and `/usr/local/share/doc/photocraft` (the READMEs describe the command API).
 
 The CLIs also work without MCP, e.g. `vectorcraft-cli run --in art.vectorcraft --export art.pdf`, or `photocraft-cli convert in.psd out.png`, `photocraft-cli run` for a list of engine commands and `photocraft-cli batch` for a folder of images. `--help` lists the rest. Both apps are in active development, so commands may change between releases.
 
+### The gallery
+`artcraft-gallery [--dir /sandbox] [--port 3102] [--host 127.0.0.1] [--background]` serves a page with a grid of thumbnails of the images below `--dir` (PNG, JPEG, GIF, WebP, SVG, AVIF, BMP, TIFF), newest first. It checks for new files every three seconds, so images appear as Claude writes them. You can filter by name and folder, sort by date, name or size, and click an image for a large view (arrow keys move between images, Esc closes) or to open the original.
+* **It starts by itself.** `claude-start` and `claude-acp-start` (through `artcraft-init`) run `artcraft-gallery --background`, which detaches, logs to `/tmp/artcraft-gallery.log` and does nothing if the port is already in use, so it keeps running after the agent quits and a second start doesn't make a second server. It starts when the agent starts, not when the sandbox is created, so with `--vscode` or a plain `sandbox exec` start it yourself (`artcraft-gallery --background`). To use another port or folder, run `artcraft-gallery --port N --dir D` yourself.
+* **Opening it:** you reach it through a port forward, which `bin/sandbox.sh claude my-art --artcraft` starts for 3102 every time you run it (or `openshell forward start 3102 my-art -d` by hand). The forward goes through the gateway, so the sandbox opens no port and needs no network rule. Then open http://127.0.0.1:3102. Ask Claude to put its results in `/sandbox`, in folders if you like; the folder menu follows them.
+* **Read-only:** GET only, and only image files below `--dir`. Hidden folders (`.claude`, `.venv` and the like), `node_modules` and any other file type, such as `.claude.json`, give 404, and so does a path that leaves `--dir`. Files are sent with `Content-Security-Policy: sandbox`, so scripts in an SVG don't run if you open one directly.
+* **Binding:** it listens on `127.0.0.1` in the sandbox, which is what the forward connects to. Don't use `--host 0.0.0.0` unless you know why.
+* **PDFs and PSDs** aren't shown, because browsers don't render them as images. Ask Claude to export PNG or SVG next to them.
+* **Source:** [images/claude-artcraft/artcraft-gallery](../images/claude-artcraft/artcraft-gallery), one Python file; change it and rebuild the image to customize the page.
+
 ### The policy
-[policies/artcraft.yaml](../policies/artcraft.yaml) is the terminal policy ([vscode-terminal.yaml](../policies/vscode-terminal.yaml)) with no network rules, because both apps work on local files. Claude Code reaches its API through the provider, as in the other images. It is a file of its own so you can add rules for this sandbox, e.g. a host to fetch fonts or images from, and apply them to the running sandbox with `openshell policy set my-art --policy policies/artcraft.yaml --wait`. See [Sandbox policies](customizing.md#sandbox-policies).
+[policies/artcraft.yaml](../policies/artcraft.yaml) is the terminal policy ([vscode-terminal.yaml](../policies/vscode-terminal.yaml)) plus one network rule: read-only (GET) access to PyPI, `pypi.org` and `files.pythonhosted.org`, for `/usr/bin/python3` (which also covers pip) and `/usr/local/bin/uv` and `uvx`. Both apps work on local files and need nothing else. Claude Code reaches its API through the provider, as in the other images. Any other host, e.g. `example.com` or a GitHub download, is denied.
+
+A GET to PyPI can carry data in its URL, and the setup scripts of a package the agent installs run with its rights, so this is less locked down than a policy without the rule. If the task needs no packages, delete the `pypi` rule from a copy of the policy. To add hosts (fonts or images to fetch), add rules and apply them to the running sandbox with `openshell policy set my-art --policy policies/artcraft.yaml --wait`. See [Sandbox policies](customizing.md#sandbox-policies).
 
 ### Things to watch for
+* **Gallery shows nothing or the page doesn't load?** The forward is on (`openshell forward list`) but nothing listens in the sandbox if it was created from an older image or the agent hasn't started: check with `openshell sandbox exec my-art -- python3 -c "import urllib.request as u; print(u.urlopen('http://127.0.0.1:3102/api/files').read())"` and read `/tmp/artcraft-gallery.log`. An empty page with "No images yet." means the server works and `/sandbox` has no images (images in hidden folders or other file types aren't shown).
 * **Claude Code only.** There is no `agy` or OpenCode variant.
 * **The MCP root is `/sandbox`.** Files elsewhere (e.g. `/tmp`) can't be opened or saved by the servers. The agent's other tools aren't limited by it, but by the sandbox's filesystem policy.
 * **Existing sandboxes** keep their old image. Create a new one after rebuilding, e.g. to update a version.
-* **Size:** the two CLI binaries are about 90 MB each.
+* **Size:** the two CLI binaries are about 90 MB each, plus Python and uv.
+* **Only PyPI.** `npm`, `git clone` from GitHub and other downloads are denied. A package that downloads something else when it installs or runs (a model, a binary) fails the same way.

@@ -108,9 +108,9 @@ Not needed for the basic steps above. Each one gives the agent more reach, so ad
 * See [HyperFrames](docs/extras.md#hyperframes).
 
 #### ArtCraft (vector art and photo editing)
-* **What:** Claude Code draws and exports SVG and PDF with [VectorCraft](https://getartcraft.com/apps/vectorcraft) and edits photos with [PhotoCraft](https://getartcraft.com/apps/photocraft), two open-source ArtCraft apps, through their headless CLIs and MCP servers in the sandbox. The image includes the `clean-vector-from-raster` skill (photo to print-ready SVG).
-* **How:** `make claude-artcraft`, then `bin/sandbox.sh claude my-art --artcraft`, and `openshell sandbox download` the results.
-* **What limits it:** [policies/artcraft.yaml](policies/artcraft.yaml) is the terminal policy with no network rules, and the MCP servers can only read and write below `/sandbox`.
+* **What:** Claude Code draws and exports SVG and PDF with [VectorCraft](https://getartcraft.com/apps/vectorcraft) and edits photos with [PhotoCraft](https://getartcraft.com/apps/photocraft), two open-source ArtCraft apps, through their headless CLIs and MCP servers in the sandbox. The image includes the `clean-vector-from-raster` skill (photo to print-ready SVG), Python 3 and uv (packages from PyPI), and `artcraft-gallery`, a web page for browsing the images.
+* **How:** `make claude-artcraft`, then `bin/sandbox.sh claude my-art --artcraft`, open http://127.0.0.1:3102 (the gallery starts with the agent, and the script forwards its port), and `openshell sandbox download` the results.
+* **What limits it:** [policies/artcraft.yaml](policies/artcraft.yaml) is the terminal policy plus read-only access to PyPI for `python3` and `uv`, and the MCP servers can only read and write below `/sandbox`.
 * See [ArtCraft](docs/extras.md#artcraft-vectorcraft-and-photocraft).
 
 #### Logs and OpenTelemetry

@@ -1,17 +1,21 @@
 # Sandbox policy for the claude-artcraft image (VectorCraft and PhotoCraft): the
-# terminal policy (vscode-terminal.yaml) and nothing more.
+# terminal policy (vscode-terminal.yaml) plus read-only access to PyPI.
 #
 # The CLIs and MCP servers (vectorcraft-cli, photocraft-cli) work on local files
-# and need no network, so unlike browser.yaml and hyperframes.yaml this file has no
-# network rules. Network access comes from the attached provider (Claude Code
-# reaching its API), not from this file. The MCP servers themselves are limited to
-# /sandbox by their own arguments (images/claude-artcraft/claude-start.json).
-# It is a separate file so this sandbox can get rules of its own,
-# e.g. a host from which the agent may fetch fonts or images, without changing
-# the policy the other sandboxes use.
+# and need no network. The one network rule is read-only access to PyPI for
+# Python and uv (below), so the agent can `uv pip install` or `pip install`
+# into a virtual environment. Claude Code reaches its API through the attached
+# provider, not through this file. The MCP servers are limited to /sandbox by
+# their own arguments (images/claude-artcraft/claude-start.json).
 #
-#   openshell sandbox create --from claude-artcraft:latest --policy policies/vectorcraft.yaml ...
-#   bin/sandbox.sh claude my-art --vectorcraft       # does the same
+# A GET to PyPI can carry data in its URL, and the setup scripts of an
+# installed package run with the agent's rights, so this is less locked down
+# than a sandbox without it. Remove the pypi rule if the task needs no packages.
+# Change the rules on a running sandbox with
+#   openshell policy set <sandbox> --policy policies/artcraft.yaml --wait
+#
+#   openshell sandbox create --from claude-artcraft:latest --policy policies/artcraft.yaml ...
+#   bin/sandbox.sh claude my-art --artcraft       # does the same
 version: 1
 filesystem_policy:
   include_workdir: true
@@ -30,3 +34,17 @@ filesystem_policy:
     - /dev/ptmx
 landlock:
   compatibility: best_effort
+network_policies:
+  # Python packages: pypi.org for the index, files.pythonhosted.org for the
+  # files. pip is a Python script, so the process that connects is python3; uv
+  # is its own binary.
+  pypi:
+    name: pypi
+    endpoints:
+      - { host: pypi.org, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+      - { host: files.pythonhosted.org, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+    binaries:
+      - path: /usr/bin/python3
+      - path: /usr/bin/python3.*
+      - path: /usr/local/bin/uv
+      - path: /usr/local/bin/uvx

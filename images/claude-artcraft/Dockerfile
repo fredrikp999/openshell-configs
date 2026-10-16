@@ -9,13 +9,41 @@
 # image and registers their MCP servers as `vectorcraft` and `photocraft` in
 # Claude Code, so Claude can draw SVG and PDF and edit photos. Both work on
 # local files and need no network at run time; policies/artcraft.yaml is the
-# terminal policy. The MCP servers may only read and write below /sandbox.
+# terminal policy plus read-only access to PyPI. The MCP servers may only read and write below /sandbox.
 # The image also has the skills in skills/ (clean-vector-from-raster), copied to
-# ~/.claude/skills on first start by artcraft-init.
+# ~/.claude/skills on first start by artcraft-init, Python 3, and
+# artcraft-gallery, a web page for browsing the images (forward its port with
+# bin/sandbox.sh --forward PORT).
 FROM localhost/claude-sandbox:latest
 
+# Python 3 from Debian with pip and venv (Debian's pip refuses system-wide
+# installs: use `uv venv` or `python3 -m venv .venv`), for scripts and for
+# artcraft-gallery. policies/artcraft.yaml lets python3 and uv reach PyPI.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 python3-pip python3-venv \
+ && rm -rf /var/lib/apt/lists/*
+
+ARG UV_VERSION=0.13.1
 ARG VECTORCRAFT_VERSION=0.12.0
 ARG PHOTOCRAFT_VERSION=0.9.0
+
+# uv (https://docs.astral.sh/uv/), the release binary for this architecture,
+# checked against its .sha256 file. It uses the Debian python3 above and never
+# downloads a Python of its own (UV_PYTHON_DOWNLOADS=never), since the policy
+# only allows PyPI.
+ENV UV_PYTHON_DOWNLOADS=never
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl \
+ && case "$(uname -m)" in aarch64) a=aarch64 ;; x86_64) a=x86_64 ;; *) echo "unsupported: $(uname -m)" >&2; exit 1 ;; esac \
+ && n=uv-$a-unknown-linux-gnu \
+ && cd /tmp \
+ && curl -fsSLO "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/$n.tar.gz" \
+ && curl -fsSL "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/$n.tar.gz.sha256" | sed 's/ .*/  '"$n"'.tar.gz/' | sha256sum -c - \
+ && tar xzf "$n.tar.gz" \
+ && install -m 755 "$n/uv" "$n/uvx" /usr/local/bin/ \
+ && rm -rf "/tmp/$n" "/tmp/$n.tar.gz" \
+ && apt-get purge -y curl && apt-get autoremove -y \
+ && rm -rf /var/lib/apt/lists/*
 
 # Each app's release tarball for this machine's architecture, checked against
 # the release's SHA256SUMS. Only the CLI is kept (the GUI needs a display).
@@ -47,4 +75,4 @@ COPY claude-start.json /etc/claude-start.json
 # (artcraft-init). claude-start and claude-acp-start run it, then do what the
 # base image's versions do.
 COPY skills /usr/local/share/artcraft-skills
-COPY --chmod=755 artcraft-init claude-start claude-acp-start /usr/local/bin/
+COPY --chmod=755 artcraft-init artcraft-gallery claude-start claude-acp-start /usr/local/bin/

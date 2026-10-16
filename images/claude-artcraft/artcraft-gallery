@@ -1,0 +1,272 @@
+#!/usr/bin/env python3
+"""Serve a web page that shows the images in a folder, newest first.
+
+    artcraft-gallery [--dir /sandbox] [--port 3102] [--host 127.0.0.1] [--background]
+
+--background detaches from the terminal, logs to /tmp/artcraft-gallery.log and does
+nothing if something already listens on the port. claude-start runs it that way.
+
+Open the port from your machine with `openshell forward` (bin/sandbox.sh
+--forward PORT does that). The page checks for new files every few seconds, so
+images show up as the agent writes them. Click one for a large view and
+the arrow keys to move between them.
+
+Read-only: GET only, and only image files below --dir are served, not
+hidden folders (.claude and the like), node_modules or other files.
+"""
+import argparse
+import json
+import mimetypes
+import os
+import socket
+import sys
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import unquote, urlsplit
+
+TYPES = {
+    ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+    ".gif": "image/gif", ".webp": "image/webp", ".svg": "image/svg+xml",
+    ".avif": "image/avif", ".bmp": "image/bmp", ".tif": "image/tiff",
+    ".tiff": "image/tiff",
+}
+SKIP_DIRS = {"node_modules", "__pycache__"}
+
+PAGE = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gallery</title>
+<style>
+:root { --bg:#fafaf9; --fg:#1c1917; --muted:#78716c; --card:#fff; --line:#e7e5e4; --accent:#2563eb;
+        --check:#e7e5e4; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#1c1917; --fg:#f5f5f4; --muted:#a8a29e; --card:#292524; --line:#44403c; --accent:#60a5fa;
+          --check:#44403c; } }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg);
+       font:15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { position:sticky; top:0; z-index:2; display:flex; flex-wrap:wrap; gap:12px 16px;
+         align-items:center; padding:12px 16px; background:var(--bg);
+         border-bottom:1px solid var(--line); }
+h1 { font-size:17px; margin:0; font-weight:600; }
+#count { color:var(--muted); font-size:13px; }
+select, input { font:inherit; color:inherit; background:var(--card); border:1px solid var(--line);
+                border-radius:6px; padding:6px 8px; }
+header .sp { flex:1; }
+main { display:grid; gap:14px; padding:16px; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); }
+figure { margin:0; background:var(--card); border:1px solid var(--line); border-radius:8px;
+         overflow:hidden; cursor:pointer; }
+figure:hover, figure:focus-visible { border-color:var(--accent); outline:none; }
+.thumb { aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+         background:repeating-conic-gradient(var(--check) 0 25%, transparent 0 50%) 0 0/16px 16px; }
+.thumb img { max-width:100%; max-height:100%; object-fit:contain; display:block; }
+figcaption { padding:8px 10px; font-size:13px; border-top:1px solid var(--line); }
+figcaption b { display:block; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+figcaption span { color:var(--muted); font-size:12px; }
+#empty { grid-column:1/-1; color:var(--muted); text-align:center; padding:64px 0; }
+#lb { position:fixed; inset:0; z-index:5; display:none; flex-direction:column;
+      background:rgba(0,0,0,.88); color:#fff; }
+#lb.on { display:flex; }
+#lb .bar { display:flex; gap:12px; align-items:center; padding:10px 16px; font-size:14px; }
+#lb .bar .sp { flex:1; }
+#lb a, #lb button { color:#fff; background:none; border:1px solid #fff5; border-radius:6px;
+                    padding:5px 10px; font:inherit; cursor:pointer; text-decoration:none; }
+#lb .stage { flex:1; min-height:0; display:flex; align-items:center; justify-content:center; padding:0 16px 16px; }
+#lb img { max-width:100%; max-height:100%; object-fit:contain;
+          background:repeating-conic-gradient(#444 0 25%, #333 0 50%) 0 0/20px 20px; }
+</style></head><body>
+<header>
+  <h1>Gallery</h1><span id="count"></span><span class="sp"></span>
+  <select id="dir" aria-label="Folder"></select>
+  <select id="sort" aria-label="Sort"><option value="new">Newest first</option>
+    <option value="name">Name</option><option value="size">Largest first</option></select>
+  <input id="q" type="search" placeholder="Filter by name" aria-label="Filter by name">
+</header>
+<main id="grid"></main>
+<div id="lb" role="dialog" aria-modal="true">
+  <div class="bar"><span id="lbname"></span><span class="sp"></span>
+    <a id="lbopen" target="_blank" rel="noopener">Open original</a><button id="lbclose">Close (Esc)</button></div>
+  <div class="stage"><img id="lbimg" alt=""></div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+let files = [], shown = [], cur = -1, sig = "";
+const fmtSize = n => n < 1024 ? n + " B" : n < 1048576 ? (n/1024).toFixed(0) + " KB" : (n/1048576).toFixed(1) + " MB";
+const fmtTime = t => new Date(t * 1000).toLocaleString();
+const url = f => "/files/" + f.path.split("/").map(encodeURIComponent).join("/") + "?v=" + f.mtime;
+function render() {
+  const dir = $("dir").value, q = $("q").value.toLowerCase(), sort = $("sort").value;
+  shown = files.filter(f => (!dir || f.dir === dir) && f.path.toLowerCase().includes(q));
+  shown.sort(sort === "name" ? (a, b) => a.path.localeCompare(b.path)
+           : sort === "size" ? (a, b) => b.size - a.size : (a, b) => b.mtime - a.mtime);
+  $("count").textContent = shown.length + " of " + files.length + " images";
+  const grid = $("grid"); grid.textContent = "";
+  if (!shown.length) { const e = document.createElement("div"); e.id = "empty";
+    e.textContent = files.length ? "No image matches." : "No images yet."; grid.append(e); }
+  shown.forEach((f, i) => {
+    const fig = document.createElement("figure"); fig.tabIndex = 0;
+    const th = document.createElement("div"); th.className = "thumb";
+    const img = document.createElement("img"); img.loading = "lazy"; img.src = url(f); img.alt = f.path;
+    th.append(img);
+    const cap = document.createElement("figcaption");
+    const b = document.createElement("b"); b.textContent = f.name; b.title = f.path;
+    const s = document.createElement("span"); s.textContent = fmtSize(f.size) + " · " + fmtTime(f.mtime);
+    cap.append(b, s); fig.append(th, cap);
+    fig.onclick = () => open(i);
+    fig.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(i); } };
+    grid.append(fig);
+  });
+}
+function fillDirs() {
+  const sel = $("dir"), keep = sel.value, dirs = [...new Set(files.map(f => f.dir))].sort();
+  sel.textContent = "";
+  const all = document.createElement("option"); all.value = ""; all.textContent = "All folders"; sel.append(all);
+  dirs.forEach(d => { const o = document.createElement("option"); o.value = d; o.textContent = d || "(top folder)"; sel.append(o); });
+  sel.value = dirs.includes(keep) ? keep : "";
+}
+function open(i) {
+  if (!shown.length) return;
+  cur = (i + shown.length) % shown.length;
+  const f = shown[cur];
+  $("lbimg").src = url(f); $("lbname").textContent = f.path + "  (" + (cur + 1) + "/" + shown.length + ")";
+  $("lbopen").href = url(f); $("lb").classList.add("on");
+}
+const close = () => { $("lb").classList.remove("on"); $("lbimg").removeAttribute("src"); };
+$("lbclose").onclick = close;
+$("lb").onclick = e => { if (e.target.id === "lb" || e.target.classList.contains("stage")) close(); };
+document.onkeydown = e => {
+  if (!$("lb").classList.contains("on")) return;
+  if (e.key === "Escape") close();
+  else if (e.key === "ArrowRight") open(cur + 1);
+  else if (e.key === "ArrowLeft") open(cur - 1);
+};
+["dir", "sort"].forEach(id => $(id).onchange = render);
+$("q").oninput = render;
+async function load() {
+  try {
+    const r = await fetch("/api/files", {cache: "no-store"});
+    const data = await r.json();
+    const s = JSON.stringify(data);
+    if (s !== sig) { sig = s; files = data; fillDirs(); if (!$("lb").classList.contains("on")) render(); }
+  } catch (e) { /* the server may be restarting; try again */ }
+}
+load(); setInterval(load, 3000);
+</script></body></html>
+"""
+
+
+def scan(root):
+    """The image files below root, as dicts, skipping hidden folders."""
+    out = []
+    for base, dirs, names in os.walk(root):
+        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in SKIP_DIRS]
+        for n in names:
+            if n.startswith(".") or os.path.splitext(n)[1].lower() not in TYPES:
+                continue
+            p = os.path.join(base, n)
+            try:
+                st = os.stat(p)
+            except OSError:
+                continue
+            rel = os.path.relpath(p, root).replace(os.sep, "/")
+            out.append({"path": rel, "name": n, "dir": os.path.dirname(rel),
+                        "size": st.st_size, "mtime": int(st.st_mtime)})
+    return out
+
+
+class Handler(BaseHTTPRequestHandler):
+    root = "/sandbox"
+
+    def log_message(self, fmt, *args):
+        sys.stderr.write("%s %s\n" % (self.address_string(), fmt % args))
+
+    def send_bytes(self, code, body, ctype, extra=()):
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("X-Content-Type-Options", "nosniff")
+        for k, v in extra:
+            self.send_header(k, v)
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(body)
+
+    def do_HEAD(self):
+        self.do_GET()
+
+    def do_GET(self):
+        path = unquote(urlsplit(self.path).path)
+        if path in ("/", "/index.html"):
+            self.send_bytes(200, PAGE.encode(), "text/html; charset=utf-8", [("Cache-Control", "no-store")])
+        elif path == "/api/files":
+            body = json.dumps(scan(self.root)).encode()
+            self.send_bytes(200, body, "application/json", [("Cache-Control", "no-store")])
+        elif path.startswith("/files/"):
+            self.send_file(path[len("/files/"):])
+        else:
+            self.send_bytes(404, b"Not found", "text/plain")
+
+    def send_file(self, rel):
+        parts = rel.split("/")
+        ext = os.path.splitext(rel)[1].lower()
+        # Only image files, no hidden folders, no "..": a path that scan() would not list.
+        if (ext not in TYPES or any(p in ("", ".", "..") or p.startswith(".") or p in SKIP_DIRS for p in parts)):
+            return self.send_bytes(404, b"Not found", "text/plain")
+        full = os.path.realpath(os.path.join(self.root, *parts))
+        if not full.startswith(os.path.realpath(self.root) + os.sep) or not os.path.isfile(full):
+            return self.send_bytes(404, b"Not found", "text/plain")
+        try:
+            with open(full, "rb") as f:
+                body = f.read()
+        except OSError:
+            return self.send_bytes(404, b"Not found", "text/plain")
+        # `sandbox` stops scripts in an SVG from running if it is opened directly.
+        self.send_bytes(200, body, TYPES.get(ext) or mimetypes.guess_type(full)[0] or "application/octet-stream",
+                        [("Content-Security-Policy", "sandbox"), ("Cache-Control", "no-cache")])
+
+
+def listening(host, port):
+    with socket.socket() as s:
+        s.settimeout(1)
+        return s.connect_ex((host, port)) == 0
+
+
+def daemonize(log):
+    """Detach: fork, new session, fork again, stdio to the log."""
+    if os.fork():
+        os._exit(0)
+    os.setsid()
+    if os.fork():
+        os._exit(0)
+    devnull = os.open(os.devnull, os.O_RDONLY)
+    out = os.open(log, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+    os.dup2(devnull, 0)
+    os.dup2(out, 1)
+    os.dup2(out, 2)
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Serve a gallery page for the images in a folder.")
+    ap.add_argument("--dir", default="/sandbox", help="folder to show (default /sandbox)")
+    ap.add_argument("--port", type=int, default=3102, help="port (default 3102)")
+    ap.add_argument("--host", default="127.0.0.1", help="address to bind (default 127.0.0.1)")
+    ap.add_argument("--background", action="store_true",
+                    help="detach and log to /tmp/artcraft-gallery.log; do nothing if the port is in use")
+    a = ap.parse_args()
+    if not os.path.isdir(a.dir):
+        sys.exit("artcraft-gallery: not a folder: " + a.dir)
+    if a.background:
+        if listening("127.0.0.1" if a.host in ("0.0.0.0", "") else a.host, a.port):
+            print("artcraft-gallery: already running on port %d" % a.port, file=sys.stderr)
+            return
+        daemonize("/tmp/artcraft-gallery.log")
+    Handler.root = os.path.abspath(a.dir)
+    srv = ThreadingHTTPServer((a.host, a.port), Handler)
+    print("artcraft-gallery: serving %s on http://%s:%d/" % (Handler.root, a.host, a.port), file=sys.stderr, flush=True)
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        pass
+
+
+if __name__ == "__main__":
+    main()

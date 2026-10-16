@@ -34,8 +34,11 @@
 # --artcraft (Claude only) creates the sandbox from the claude-artcraft image
 # with policies/artcraft.yaml: the CLIs and MCP servers of VectorCraft and
 # PhotoCraft (registered as `vectorcraft` and `photocraft`), so Claude can draw
-# SVG and PDF and edit photos in /sandbox. They need no network access beyond
-# the terminal policy's.
+# SVG and PDF and edit photos in /sandbox, with Python, uv and artcraft-gallery
+# (a web page for the images, http://127.0.0.1:3102). It forwards port 3102 for
+# the gallery unless you give another --forward PORT, and only warns if that
+# port is taken. The policy lets python3 and uv reach PyPI; there is no other
+# network access.
 #
 # --node (agy only) creates the sandbox from the agy-node image with
 # policies/agy-node.yaml, which lets node reach registry.npmjs.org so the agent
@@ -62,7 +65,7 @@
 # (bin/sandbox.sh agy <name>) before using --acp.
 set -eu
 
-usage() { sed -n "2,62p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n "2,65p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 [ $# -ge 1 ] || usage
 agent=$1; shift
@@ -167,6 +170,12 @@ if $python; then
   image=agy-python:latest
   policy=$(dirname "$0")/../policies/agy-python.yaml
 fi
+# --artcraft forwards the gallery's port by default; failing to is only a warning.
+forward_soft=false
+if $artcraft && [ -z "$forward" ]; then
+  forward=3102
+  forward_soft=true
+fi
 case $forward in
   '') ;;
   *[!0-9]*) echo "--forward needs a port number." >&2; exit 1 ;;
@@ -210,7 +219,7 @@ if [ -n "$forward" ]; then
     echo "Forwarding http://127.0.0.1:$forward/ to port $forward in $name." >&2
   else
     echo "Could not forward port $forward; is it in use on this machine? (lsof -i :$forward)" >&2
-    exit 1
+    $forward_soft || exit 1
   fi
 fi
 
