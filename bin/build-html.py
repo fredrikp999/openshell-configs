@@ -175,9 +175,10 @@ sections, toc = [], []
 for doc in [DOCS[0], CONCEPTS] + DOCS[1:]:
     title, h2s, body = (convert_fragment(doc, "concepts") if doc == CONCEPTS else convert_doc(doc))
     key = DOC_KEYS[doc]
-    sections.append('<section class="doc" id="doc-%s"><p class="path"><a href="%s/blob/main/%s" '
-                    'target="_blank" rel="noopener">%s</a></p>\n%s</section>'
-                    % (key, GITHUB, doc, doc, body))
+    # The Concepts chapter exists only on this page, so it has no source link above its title.
+    path = "" if doc == CONCEPTS else ('<p class="path"><a href="%s/blob/main/%s" target="_blank" '
+                                       'rel="noopener">%s</a></p>' % (GITHUB, doc, doc))
+    sections.append('<section class="doc" id="doc-%s">%s\n%s</section>' % (key, path, body))
     sub = "".join('<li><a href="#%s">%s</a></li>' % (i, re.sub(r"<[^>]+>", "", t)) for i, t in h2s)
     toc.append('<li><a href="#doc-%s">%s</a>%s</li>' % (key, html.escape(title),
                                                         "<ul>%s</ul>" % sub if sub else ""))
