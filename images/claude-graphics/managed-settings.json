@@ -18,7 +18,6 @@
       "Bash(graphics-key:*)",
       "Bash(python3 -m zipfile:*)",
       "WebFetch(domain:replicate.com)",
-      "mcp__replicate__get_account",
       "mcp__replicate__get_collections",
       "mcp__replicate__list_collections",
       "mcp__replicate__get_deployments",
@@ -68,7 +67,8 @@
       "mcp__replicate__delete_files",
       "mcp__replicate__delete_models",
       "mcp__replicate__delete_models_versions",
-      "mcp__replicate__get_default_webhooks_secret"
+      "mcp__replicate__get_default_webhooks_secret",
+      "mcp__replicate__get_account"
     ]
   }
 }
