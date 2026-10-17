@@ -46,11 +46,11 @@
       "Bash(.venv/bin/python:*)",
       "Bash(uv:*)",
       "Bash(uvx:*)",
-      "Bash(pip:*)"
+      "Bash(pip:*)",
+      "Bash(node:*)",
+      "Bash(rm:*)"
     ],
     "ask": [
-      "Bash(node:*)",
-      "Bash(rm:*)",
       "mcp__replicate__create_predictions",
       "mcp__replicate__create_models_predictions",
       "mcp__replicate__create_deployments_predictions",
