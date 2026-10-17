@@ -30,7 +30,8 @@ SCRIPTS := bin/sandbox.sh bin/provider.sh bin/bundle.sh bin/watch-denied.sh bin/
            images/claude-hyperframes/claude-acp-start \
            images/agy-sandbox/agy-acp-start images/agy-node/agy-acp-start images/agy-hyperframes/agy-init images/agy-hyperframes/agy-start \
            images/agy-hyperframes/agy-acp-start
-PYTHON := bin/acp_client.py bin/otel-export.py bin/otel-view.py bin/metrics-view.py bin/check-links.py bin/build-html.py images/claude-artcraft/artcraft-gallery
+PYTHON := bin/acp_client.py bin/otel-export.py bin/otel-view.py bin/metrics-view.py bin/check-links.py bin/build-html.py images/claude-artcraft/artcraft-gallery \
+         images/claude-artcraft/artcraft-key tests/artcraft-key/test_artcraft_key.py
 
 .PHONY: images $(IMAGES) update test lint doctor html
 

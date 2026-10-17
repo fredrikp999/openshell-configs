@@ -1,0 +1,510 @@
+#!/usr/bin/env python3
+"""Chroma-key cleanup for the clean-vector-from-raster workflow.
+
+    artcraft-key bg    FILE.png...             what is the background color, and will `key` catch it?
+    artcraft-key key   FILE.png...             make the background transparent
+    artcraft-key check FILE.png...             count the background pixels that are left
+    artcraft-key strip FILE.svg...             remove paths filled with the background color
+
+By default the background is magenta "spill": a pixel is background when red
+and blue are both well above green, that is min(r, b) - g >= 30 and
+min(r, b) >= 110. That catches pure magenta (#ff00ff), lighter magentas
+(#fc3efb) and the blended edges between them and dark hair or outlines, which
+stay (min(r, b) < 110). A strict key (r, b >= 200 and g <= 60) leaves the
+blended edges and lighter magentas; a looser one (spill 12) removes edge
+detail. Anything in the artwork that looks like the key (pink details, a
+reflection) is removed too.
+
+For a different background give a color and how far each of r, g and b may
+differ from it, or explicit ranges (this replaces the default rule, in `key`,
+`check` and `strip`):
+
+    artcraft-key key --color "#00ff00" --tolerance 50 FILE.png
+    artcraft-key key --range "0-90,170-255,0-90" FILE.png
+
+A color range keeps no blended edges: pixels between the background and the art
+stay, so `check` reports them as "blended edge", and a larger --tolerance
+removes more of them (and more of the art). `bg` shows a PNG's border colors
+and the command to use if the default would not remove them.
+
+Uses numpy and Pillow when they are installed (any PNG type, fast: `uv venv &&
+uv pip install numpy pillow`); otherwise a built-in reader for 8-bit RGB and
+RGBA PNGs, which is slow on large images. --pure forces the built-in one.
+An input file is never overwritten unless you give --in-place.
+
+Exit status: 0 ok, 1 `check` found background pixels, 2 bad usage or file.
+"""
+import argparse
+import os
+import re
+import struct
+import sys
+import zlib
+from collections import Counter
+
+try:
+    import numpy as np
+    from PIL import Image
+except ImportError:
+    np = Image = None
+
+SPILL = 30     # background: min(r, b) - g at least this ...
+MIN_RB = 110   # ... and min(r, b) at least this
+FRINGE = 12    # `check` also counts blended edge pixels from here (not an error)
+STRIP_SPILL = 60   # strip: SVG fills are only removed when clearly pink ...
+STRIP_MIN = 120    # ... so dark colors are never matched
+BOX_FRINGE = 30    # for --color/--range, `check` counts blended edges this far outside the box
+DEFAULT_TOLERANCE = 40
+SIGNATURE = b"\x89PNG\r\n\x1a\n"
+
+
+class ToolError(Exception):
+    pass
+
+
+# ----- What counts as background ----------------------------------------------
+
+class Matcher:
+    """The background rule: magenta spill (the default), or a box of r, g, b ranges."""
+
+    def __init__(self, spill=None, min_rb=None, lo=None, hi=None):
+        self.spill, self.min_rb, self.lo, self.hi = spill, min_rb, lo, hi
+
+    def one(self, r, g, b):
+        if self.lo is not None:
+            return all(l <= v <= h for v, l, h in zip((r, g, b), self.lo, self.hi))
+        mn = r if r < b else b
+        return mn - g >= self.spill and mn >= self.min_rb
+
+    def mask(self, r, g, b):
+        """Boolean array for int16 arrays r, g, b."""
+        if self.lo is not None:
+            return ((r >= self.lo[0]) & (r <= self.hi[0]) & (g >= self.lo[1]) & (g <= self.hi[1])
+                    & (b >= self.lo[2]) & (b <= self.hi[2]))
+        mn = np.minimum(r, b)
+        return (mn - g >= self.spill) & (mn >= self.min_rb)
+
+    def widened(self):
+        """A looser rule, to count the blended edges next to the background."""
+        if self.lo is not None:
+            return Matcher(lo=[max(0, v - BOX_FRINGE) for v in self.lo], hi=[min(255, v + BOX_FRINGE) for v in self.hi])
+        return Matcher(spill=FRINGE, min_rb=self.min_rb)
+
+    def describe(self):
+        if self.lo is not None:
+            return "r %d-%d, g %d-%d, b %d-%d" % (self.lo[0], self.hi[0], self.lo[1], self.hi[1], self.lo[2], self.hi[2])
+        return "min(r,b) - g >= %d and min(r,b) >= %d" % (self.spill, self.min_rb)
+
+
+def make_matcher(a, spill, min_rb):
+    """The Matcher for the command line: --color/--tolerance or --range, else the spill rule."""
+    if a.color and a.range:
+        raise ToolError("use either --color or --range, not both")
+    if a.color or a.range:
+        if a.spill is not None or a.min_rb is not None:
+            raise ToolError("--spill and --min-rb belong to the default rule; with --color or --range they do nothing")
+        if a.color:
+            c = parse_color(a.color)
+            if c is None:
+                raise ToolError("--color: not a color: %s (use #rrggbb)" % a.color)
+            t = DEFAULT_TOLERANCE if a.tolerance is None else a.tolerance
+            if not 0 <= t <= 255:
+                raise ToolError("--tolerance must be between 0 and 255")
+            return Matcher(lo=[max(0, v - t) for v in c], hi=[min(255, v + t) for v in c])
+        parts = a.range.replace(" ", "").split(",")
+        try:
+            pairs = [tuple(int(x) for x in p.split("-")) for p in parts]
+            ok = len(pairs) == 3 and all(len(p) == 2 and 0 <= p[0] <= p[1] <= 255 for p in pairs)
+        except ValueError:
+            ok = False
+        if not ok:
+            raise ToolError('--range: expected "R0-R1,G0-G1,B0-B1" with 0 <= low <= high <= 255, e.g. "200-255,0-80,200-255"')
+        return Matcher(lo=[p[0] for p in pairs], hi=[p[1] for p in pairs])
+    if a.tolerance is not None:
+        raise ToolError("--tolerance goes with --color")
+    return Matcher(spill=spill if a.spill is None else a.spill, min_rb=min_rb if a.min_rb is None else a.min_rb)
+
+
+# ----- PNG: built-in reader and writer (8-bit RGB and RGBA only) -------------
+
+def read_png(path):
+    """(width, height, bytes per pixel, pixel bytes) of an 8-bit RGB or RGBA PNG."""
+    with open(path, "rb") as f:
+        data = f.read()
+    if data[:8] != SIGNATURE:
+        raise ToolError("%s: not a PNG file" % path)
+    i, idat, ihdr = 8, [], None
+    while i + 8 <= len(data):
+        n, = struct.unpack(">I", data[i:i + 4])
+        kind, body = data[i + 4:i + 8], data[i + 8:i + 8 + n]
+        if kind == b"IHDR":
+            ihdr = struct.unpack(">IIBBBBB", body)
+        elif kind == b"IDAT":
+            idat.append(body)
+        elif kind == b"IEND":
+            break
+        i += 12 + n
+    if ihdr is None or not idat:
+        raise ToolError("%s: damaged PNG (no header or no image data)" % path)
+    w, h, depth, ctype, _, _, interlace = ihdr
+    if depth != 8 or ctype not in (2, 6) or interlace:
+        raise ToolError(
+            "%s: the built-in reader handles only 8-bit RGB and RGBA PNGs that are not interlaced "
+            "(this one: %d-bit, color type %d%s). Install numpy and Pillow (uv venv && uv pip install numpy pillow) "
+            "or convert the file." % (path, depth, ctype, ", interlaced" if interlace else ""))
+    bpp = 4 if ctype == 6 else 3
+    stride = w * bpp
+    try:
+        raw = zlib.decompress(b"".join(idat))
+    except zlib.error as e:
+        raise ToolError("%s: damaged PNG (%s)" % (path, e))
+    if len(raw) < h * (stride + 1):
+        raise ToolError("%s: damaged PNG (image data is too short)" % path)
+    out = bytearray(h * stride)
+    prev = bytearray(stride)
+    p = 0
+    for y in range(h):
+        f = raw[p]
+        line = bytearray(raw[p + 1:p + 1 + stride])
+        p += 1 + stride
+        if f == 1:
+            for x in range(bpp, stride):
+                line[x] = (line[x] + line[x - bpp]) & 255
+        elif f == 2:
+            line = bytearray((a + b) & 255 for a, b in zip(line, prev))
+        elif f == 3:
+            for x in range(stride):
+                a = line[x - bpp] if x >= bpp else 0
+                line[x] = (line[x] + ((a + prev[x]) >> 1)) & 255
+        elif f == 4:
+            for x in range(stride):
+                a = line[x - bpp] if x >= bpp else 0
+                b = prev[x]
+                c = prev[x - bpp] if x >= bpp else 0
+                pa, pb, pc = abs(b - c), abs(a - c), abs(a + b - 2 * c)
+                line[x] = (line[x] + (a if pa <= pb and pa <= pc else (b if pb <= pc else c))) & 255
+        elif f != 0:
+            raise ToolError("%s: damaged PNG (unknown filter %d)" % (path, f))
+        out[y * stride:(y + 1) * stride] = line
+        prev = line
+    return w, h, bpp, out
+
+
+def write_png(path, w, h, px):
+    """Write RGBA bytes as a PNG."""
+    stride = w * 4
+    raw = bytearray()
+    for y in range(h):
+        raw.append(0)
+        raw += px[y * stride:(y + 1) * stride]
+
+    def chunk(kind, body):
+        return struct.pack(">I", len(body)) + kind + body + struct.pack(">I", zlib.crc32(kind + body) & 0xffffffff)
+
+    with open(path, "wb") as f:
+        f.write(SIGNATURE + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
+                + chunk(b"IDAT", zlib.compress(bytes(raw), 6)) + chunk(b"IEND", b""))
+
+
+# ----- PNG: keying, checking, probing ----------------------------------------
+
+def fast(a):
+    return np is not None and not a.pure
+
+
+def load_rgba(path):
+    try:
+        return np.array(Image.open(path).convert("RGBA"))
+    except Exception as e:
+        raise ToolError("%s: cannot read the image (%s)" % (path, e))
+
+
+def key_png(src, dst, a):
+    """Make background pixels transparent. Returns (width, height, pixels made transparent)."""
+    if fast(a):
+        px = load_rgba(src)
+        r, g, b = (px[..., i].astype(np.int16) for i in range(3))
+        hit = (px[..., 3] != 0) & a.matcher.mask(r, g, b)
+        px[hit, 3] = 0
+        h, w = px.shape[:2]
+        Image.fromarray(px).save(dst)
+        return w, h, int(hit.sum())
+    w, h, bpp, px = read_png(src)
+    out = bytearray(w * h * 4)
+    j = n = 0
+    for k in range(0, len(px), bpp):
+        r, g, b = px[k], px[k + 1], px[k + 2]
+        al = px[k + 3] if bpp == 4 else 255
+        if al and a.matcher.one(r, g, b):
+            al = 0
+            n += 1
+        out[j] = r
+        out[j + 1] = g
+        out[j + 2] = b
+        out[j + 3] = al
+        j += 4
+    write_png(dst, w, h, out)
+    return w, h, n
+
+
+def count_png(src, a):
+    """(width, height, opaque pixels, background pixels, blended edge pixels)."""
+    if fast(a):
+        px = load_rgba(src)
+        r, g, b = (px[..., i].astype(np.int16) for i in range(3))
+        opaque = px[..., 3] != 0
+        hit = opaque & a.matcher.mask(r, g, b)
+        near = opaque & a.matcher.widened().mask(r, g, b) & ~hit
+        h, w = px.shape[:2]
+        return w, h, int(opaque.sum()), int(hit.sum()), int(near.sum())
+    w, h, bpp, px = read_png(src)
+    wide = a.matcher.widened()
+    opaque = bg = fringe = 0
+    for k in range(0, len(px), bpp):
+        if bpp == 4 and not px[k + 3]:
+            continue
+        opaque += 1
+        r, g, b = px[k], px[k + 1], px[k + 2]
+        if a.matcher.one(r, g, b):
+            bg += 1
+        elif wide.one(r, g, b):
+            fringe += 1
+    return w, h, opaque, bg, fringe
+
+
+def border_colors(src, a):
+    """(width, height, the four corner colors, the most common colors along the border)."""
+    if fast(a):
+        px = load_rgba(src)
+        h, w = px.shape[:2]
+
+        def at(x, y):
+            return tuple(int(v) for v in px[y, x][:3])
+    else:
+        w, h, bpp, raw = read_png(src)
+
+        def at(x, y):
+            k = (y * w + x) * bpp
+            return raw[k], raw[k + 1], raw[k + 2]
+    corners = [at(0, 0), at(w - 1, 0), at(0, h - 1), at(w - 1, h - 1)]
+    step_x, step_y = max(1, w // 200), max(1, h // 200)
+    ring = Counter()
+    for x in range(0, w, step_x):
+        ring[at(x, 0)] += 1
+        ring[at(x, h - 1)] += 1
+    for y in range(0, h, step_y):
+        ring[at(0, y)] += 1
+        ring[at(w - 1, y)] += 1
+    return w, h, corners, ring.most_common(3)
+
+
+def hexcolor(c):
+    return "#%02x%02x%02x" % tuple(c)
+
+
+# ----- SVG -------------------------------------------------------------------
+
+# One <path ...> element: self-closing, or with a closing </path>.
+PATH = re.compile(r"""<path\b(?:[^>"']|"[^"]*"|'[^']*')*?(?:/>|>.*?</path>)""", re.S)
+FILL_ATTR = re.compile(r"""\sfill\s*=\s*(?:"([^"]*)"|'([^']*)')""")
+STYLE_ATTR = re.compile(r"""\sstyle\s*=\s*(?:"([^"]*)"|'([^']*)')""")
+NAMED = {"magenta": (255, 0, 255), "fuchsia": (255, 0, 255)}
+
+
+def parse_color(text):
+    """(r, g, b), or None for a value that is not a plain color."""
+    t = text.strip().lower()
+    if t in NAMED:
+        return NAMED[t]
+    m = re.fullmatch(r"#([0-9a-f]{3}|[0-9a-f]{6})", t)
+    if m:
+        h = m.group(1)
+        if len(h) == 3:
+            h = "".join(c * 2 for c in h)
+        return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    m = re.fullmatch(r"rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)", t)
+    if m:
+        return tuple(min(255, int(v)) for v in m.groups())
+    return None
+
+
+def element_fill(el):
+    """The fill value of a path element: a style declaration (it wins in CSS), else the fill attribute."""
+    m = STYLE_ATTR.search(el)
+    if m:
+        for decl in (m.group(1) or m.group(2) or "").split(";"):
+            key, _, value = decl.partition(":")
+            if key.strip().lower() == "fill":
+                return value.strip()
+    m = FILL_ATTR.search(el)
+    if m:
+        return m.group(1) if m.group(1) is not None else m.group(2)
+    return None
+
+
+def strip_svg(src, dst, a):
+    """Remove <path> elements filled with the spill color. Returns (removed, colors, unknown fills)."""
+    with open(src, encoding="utf-8") as f:
+        s = f.read()
+    removed, unknown = [], Counter()
+
+    def repl(m):
+        el = m.group(0)
+        fill = element_fill(el)
+        if fill is None or fill.strip().lower() in ("none", "currentcolor") or fill.strip().lower().startswith("url("):
+            return el
+        c = parse_color(fill)
+        if c is None:
+            unknown[fill.strip()] += 1
+            return el
+        if a.matcher.one(*c):
+            removed.append(hexcolor(c))
+            return ""
+        return el
+
+    out = PATH.sub(repl, s)
+    stem = os.path.splitext(os.path.basename(dst))[0]
+    # VectorCraft titles the SVG with the name of the traced PNG; use the SVG's own name.
+    out = re.sub(r"<title>[^<]*\.png</title>", "<title>%s</title>" % stem, out, count=1)
+    with open(dst, "w", encoding="utf-8") as f:
+        f.write(out)
+    return len(removed), sorted(set(removed)), unknown
+
+
+# ----- Command line ----------------------------------------------------------
+
+def output_path(src, a, suffix, ext):
+    """Where to write the result for src; never the input itself, unless --in-place."""
+    if a.in_place:
+        return src
+    base, e = os.path.splitext(os.path.basename(src))
+    if a.output:
+        dst = a.output
+    elif a.out_dir:
+        dst = os.path.join(a.out_dir, re.sub(r"_rgb$", "", base) + suffix + ext if suffix else base + e)
+    else:
+        dst = os.path.join(os.path.dirname(src), re.sub(r"_rgb$", "", base) + (suffix or "_clean") + ext)
+    if os.path.abspath(dst) == os.path.abspath(src):
+        raise ToolError("%s: the output would overwrite the input; use another name, --out-dir or --in-place" % src)
+    return dst
+
+
+def check_outputs(a, n_inputs):
+    if a.output and n_inputs != 1:
+        raise ToolError("-o takes exactly one input file; use --out-dir for several")
+    if a.output and a.in_place:
+        raise ToolError("use either -o or --in-place, not both")
+    if a.out_dir:
+        os.makedirs(a.out_dir, exist_ok=True)
+
+
+def cmd_bg(a):
+    for src in a.files:
+        w, h, corners, common = border_colors(src, a)
+        print("%s  %dx%d" % (os.path.basename(src), w, h))
+        print("  corners: " + " ".join(hexcolor(c) for c in corners))
+        for c, n in common:
+            if a.matcher.one(*c):
+                verdict = "removed by the current rule (%s)" % a.matcher.describe()
+            else:
+                verdict = 'NOT removed by the current rule; try --color "%s" --tolerance %d' % (hexcolor(c), DEFAULT_TOLERANCE)
+            print("  border color %s  (%d samples): %s" % (hexcolor(c), n, verdict))
+    return 0
+
+
+def cmd_key(a):
+    check_outputs(a, len(a.files))
+    if a.matcher.spill is not None and a.matcher.spill < 25:
+        print("warning: --spill %d is below 25; a rule of 12 removed edge detail and was rejected" % a.matcher.spill, file=sys.stderr)
+    for src in a.files:
+        dst = output_path(src, a, "_key", ".png")
+        w, h, n = key_png(src, dst, a)
+        print("%s  %dx%d  %d background pixels made transparent  (%s)" % (
+            os.path.basename(dst), w, h, n, "numpy" if fast(a) else "built-in"))
+    return 0
+
+
+def cmd_check(a):
+    worst = 0
+    for src in a.files:
+        w, h, opaque, bg, fringe = count_png(src, a)
+        worst = max(worst, bg)
+        print("%s  %dx%d  opaque %d  background %d  blended edge %d  %s" % (
+            os.path.basename(src), w, h, opaque, bg, fringe, "OK" if bg <= a.max else "BACKGROUND LEFT"))
+    return 1 if worst > a.max else 0
+
+
+def cmd_strip(a):
+    check_outputs(a, len(a.files))
+    for src in a.files:
+        dst = output_path(src, a, "", ".svg")
+        n, colors, unknown = strip_svg(src, dst, a)
+        print("%s  removed %d paths  %s" % (os.path.basename(dst), n, " ".join(colors)))
+        if unknown:
+            print("  warning: %d fills are not plain colors and were left alone: %s" % (
+                sum(unknown.values()), ", ".join(sorted(unknown)[:5])), file=sys.stderr)
+    return 0
+
+
+def parser():
+    p = argparse.ArgumentParser(prog="artcraft-key", description=__doc__.split("\n\n")[0],
+                                epilog="Run `artcraft-key COMMAND --help` for the options of a command.")
+    sub = p.add_subparsers(dest="command", required=True)
+
+    def common(sp, png, spill, min_rb):
+        sp.add_argument("files", nargs="+", metavar="FILE")
+        sp.add_argument("--spill", type=int, help="default rule: min(r,b) - g at least this is background (default %d)" % spill)
+        sp.add_argument("--min-rb", type=int, help="default rule: and min(r,b) at least this (default %d)" % min_rb)
+        sp.add_argument("--color", metavar="#RRGGBB", help="another background color to remove instead of the default rule")
+        sp.add_argument("--tolerance", type=int, help="with --color: each of r, g, b may differ by up to this (default %d)" % DEFAULT_TOLERANCE)
+        sp.add_argument("--range", metavar="R0-R1,G0-G1,B0-B1", help='another background as ranges instead, e.g. "200-255,0-80,200-255"')
+        if png:
+            sp.add_argument("--pure", action="store_true", help="use the built-in PNG code even if numpy and Pillow are installed")
+        sp.set_defaults(default_spill=spill, default_min_rb=min_rb)
+
+    def outputs(sp, what):
+        sp.add_argument("-o", "--output", help="output file (one input only)")
+        sp.add_argument("--out-dir", help="folder for the %s (created if missing)" % what)
+        sp.add_argument("--in-place", action="store_true", help="overwrite the input file")
+
+    sp = sub.add_parser("bg", help="show the background color of PNGs, and whether `key` removes it")
+    common(sp, True, SPILL, MIN_RB)
+    sp.set_defaults(func=cmd_bg)
+
+    sp = sub.add_parser("key", help="make the background transparent (writes NAME_key.png; NAME_rgb.png gives NAME_key.png)")
+    common(sp, True, SPILL, MIN_RB)
+    outputs(sp, "keyed PNGs")
+    sp.set_defaults(func=cmd_key)
+
+    sp = sub.add_parser("check", help="count background pixels left in PNGs; status 1 if more than --max")
+    common(sp, True, SPILL, MIN_RB)
+    sp.add_argument("--max", type=int, default=0, help="background pixels allowed per file (default 0)")
+    sp.set_defaults(func=cmd_check)
+
+    sp = sub.add_parser("strip", help="remove paths filled with the background color from SVGs (writes NAME_clean.svg)")
+    common(sp, False, STRIP_SPILL, STRIP_MIN)
+    outputs(sp, "cleaned SVGs")
+    sp.set_defaults(func=cmd_strip)
+    return p
+
+
+def main(argv=None):
+    a = parser().parse_args(argv)
+    try:
+        for f in a.files:
+            if not os.path.isfile(f):
+                raise ToolError("%s: no such file" % f)
+        if not hasattr(a, "pure"):
+            a.pure = False
+        a.matcher = make_matcher(a, a.default_spill, a.default_min_rb)
+        return a.func(a)
+    except ToolError as e:
+        print("artcraft-key: %s" % e, file=sys.stderr)
+        return 2
+    except (OSError, UnicodeDecodeError) as e:
+        print("artcraft-key: %s" % e, file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

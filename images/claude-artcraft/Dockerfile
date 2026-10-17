@@ -82,4 +82,7 @@ COPY claude-start.json /etc/claude-start.json
 # (artcraft-init). claude-start and claude-acp-start run it, then do what the
 # base image's versions do.
 COPY skills /usr/local/share/artcraft-skills
-COPY --chmod=755 artcraft-init artcraft-gallery claude-start claude-acp-start /usr/local/bin/
+# artcraft-key: chroma-key cleanup of PNGs and traced SVGs for the
+# clean-vector-from-raster workflow (artcraft-key --help). It uses numpy and
+# Pillow when the agent installs them, else its own PNG code.
+COPY --chmod=755 artcraft-init artcraft-gallery artcraft-key claude-start claude-acp-start /usr/local/bin/
