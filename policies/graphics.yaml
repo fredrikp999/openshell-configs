@@ -51,14 +51,46 @@ network_policies:
       - path: /usr/bin/python3.*
       - path: /usr/local/bin/uv
       - path: /usr/local/bin/uvx
-  # Replicate model output (images, video) is downloaded from replicate.delivery.
-  # Read-only and without the API token: that is added only for the hosts in
-  # providers/replicate.yaml.
+  # Replicate, without the API token (that is added only for the hosts in
+  # providers/replicate.yaml). All read-only.
+  # Model output (images, video) is downloaded from replicate.delivery and its
+  # subdomains.
   replicate-files:
     name: replicate-files
     endpoints:
       - { host: replicate.delivery, port: 443, protocol: rest, access: read-only, enforcement: enforce }
       - { host: "*.replicate.delivery", port: 443, protocol: rest, access: read-only, enforcement: enforce }
     binaries:
+      - path: /usr/bin/python3
+      - path: /usr/bin/python3.*
+      - path: /usr/local/bin/node
+  # Streaming output: the `urls.stream` of a prediction is on stream.replicate.com
+  # (server-sent events).
+  replicate-stream:
+    name: replicate-stream
+    endpoints:
+      - { host: stream.replicate.com, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+      - { host: streaming.api.replicate.com, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+    binaries:
+      - path: /usr/bin/python3
+      - path: /usr/bin/python3.*
+      - path: /usr/local/bin/node
+  # The docs the Replicate skills point to (https://replicate.com/docs/llms.txt,
+  # a model's llms.txt with its schema), for Claude's WebFetch too. Only these
+  # paths: the rest of replicate.com (account pages, search) stays closed.
+  replicate-docs:
+    name: replicate-docs
+    endpoints:
+      - host: replicate.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "/docs/**" }
+          - allow: { method: GET, path: "/*/*/llms.txt" }
+    binaries:
+      - path: /usr/bin/claude
+      - path: /usr/local/bin/claude
+      - path: /usr/local/lib/node_modules/@anthropic-ai/**
       - path: /usr/bin/python3
       - path: /usr/bin/python3.*
