@@ -13,9 +13,10 @@ set -e
     [ -d "$d" ] || continue
     [ -d "$HOME/.claude/skills/$(basename "$d")" ] || cp -r "$d" "$HOME/.claude/skills/"
   done
-  # Register the Replicate MCP server when the replicate provider is attached
-  # (REPLICATE_API_TOKEN is then a placeholder that the proxy swaps for the
-  # token in the Authorization header). Claude Code expands ${...} in headers.
+  # Register the Replicate MCP server (local, from the replicate-mcp package)
+  # when the replicate provider is attached. REPLICATE_API_TOKEN is then a
+  # placeholder that the proxy swaps for the token on requests to
+  # api.replicate.com. The hosted server (mcp.replicate.com) rejects API tokens.
   [ -f "$HOME/.claude.json" ] || cp /etc/claude-start.json "$HOME/.claude.json"
   if [ -n "${REPLICATE_API_TOKEN:-}" ]; then
     python3 -I - "$HOME/.claude.json" <<'PY' || true
@@ -23,9 +24,9 @@ import json, sys
 p = sys.argv[1]
 c = json.load(open(p))
 c.setdefault("mcpServers", {})["replicate"] = {
-    "type": "sse",
-    "url": "https://mcp.replicate.com/sse",
-    "headers": {"Authorization": "Bearer ${REPLICATE_API_TOKEN}"},
+    "type": "stdio",
+    "command": "mcp-server",
+    "args": ["--client", "claude-code"],
 }
 with open(p, "w") as f:
     json.dump(c, f, indent=2)

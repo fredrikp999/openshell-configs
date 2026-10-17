@@ -4,10 +4,11 @@
 # Credential:  a Replicate API token (replicate.com/account/api-tokens) in
 #              REPLICATE_API_TOKEN, sent as `Authorization: Bearer <token>` to
 #              the endpoints below. The sandbox only sees a placeholder.
-# Binaries:    claude (the Replicate MCP server, mcp.replicate.com) and
-#              python3 (the API, for the Replicate skills). Not curl: the image
-#              has none.
-# Endpoints:   mcp.replicate.com and api.replicate.com only. The placeholder is
+# Binaries:    node (the replicate-mcp MCP server in the image) and python3
+#              (the API, for the Replicate skills). Not curl: the image has
+#              none. The hosted server mcp.replicate.com is not used: it
+#              rejects API tokens ("Invalid token format"; it wants OAuth).
+# Endpoints:   api.replicate.com only. The placeholder is
 #              swapped for the token on every host listed here, so nothing else
 #              belongs in this list. replicate.delivery (where model output is
 #              downloaded from) is in policies/graphics.yaml instead, without
@@ -31,19 +32,12 @@ credentials:
 discovery:
   credentials: [api_token]
 endpoints:
-  - host: mcp.replicate.com
-    port: 443
-    protocol: rest
-    access: read-write
-    enforcement: enforce
   - host: api.replicate.com
     port: 443
     protocol: rest
     access: read-write
     enforcement: enforce
 binaries:
-  - /usr/bin/claude
-  - /usr/local/bin/claude
-  - /usr/local/lib/node_modules/@anthropic-ai/**
+  - /usr/local/bin/node
   - /usr/bin/python3
   - /usr/bin/python3.*

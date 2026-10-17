@@ -26,6 +26,7 @@ RUN apt-get update \
 ARG UV_VERSION=0.13.1
 ARG VECTORCRAFT_VERSION=0.12.0
 ARG PHOTOCRAFT_VERSION=0.9.0
+ARG REPLICATE_MCP_VERSION=0.9.0
 
 # Install wheels only: a source distribution runs the package's build code at
 # install time. pip reads PIP_ONLY_BINARY; uv reads /etc/uv/uv.toml (its
@@ -73,6 +74,12 @@ RUN apt-get update \
     done \
  && apt-get purge -y curl && apt-get autoremove -y \
  && rm -rf /var/lib/apt/lists/*
+
+# Replicate's MCP server (stdio), registered by graphics-init only when the
+# replicate provider is attached. The hosted server (mcp.replicate.com) wants an
+# OAuth token and rejects an API token, so this local one is used; it calls
+# api.replicate.com with REPLICATE_API_TOKEN (command: mcp-server).
+RUN npm install -g "replicate-mcp@${REPLICATE_MCP_VERSION}" && npm cache clean --force
 
 # Registers the servers for Claude Code: claude-start copies this file to
 # $HOME/.claude.json on first start.
