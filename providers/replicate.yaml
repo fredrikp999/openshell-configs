@@ -32,11 +32,19 @@ credentials:
 discovery:
   credentials: [api_token]
 endpoints:
+  # `access: read-write` has no QUERY, which Replicate uses to search models
+  # (QUERY /v1/models), so the methods are listed.
   - host: api.replicate.com
     port: 443
     protocol: rest
-    access: read-write
     enforcement: enforce
+    rules:
+      - allow: { method: GET, path: "/**" }
+      - allow: { method: POST, path: "/**" }
+      - allow: { method: PUT, path: "/**" }
+      - allow: { method: PATCH, path: "/**" }
+      - allow: { method: DELETE, path: "/**" }
+      - allow: { method: QUERY, path: "/**" }
 binaries:
   - /usr/local/bin/node
   - /usr/bin/python3
