@@ -1,9 +1,10 @@
 # Sandbox policy for the claude-graphics image (VectorCraft and PhotoCraft): the
-# terminal policy (vscode-terminal.yaml) plus read-only access to PyPI.
+# terminal policy (vscode-terminal.yaml) plus read-only access to PyPI and, for
+# Replicate, to its output, streaming and docs hosts (see the rules below).
 #
 # The CLIs and MCP servers (vectorcraft-cli, photocraft-cli) work on local files
-# and need no network. The one network rule is read-only access to PyPI for
-# Python and uv (below), so the agent can `uv pip install` or `pip install`
+# and need no network. The PyPI rule is read-only access for Python and uv
+# (below), so the agent can `uv pip install` or `pip install`
 # into a virtual environment. Claude Code reaches its API through the attached
 # provider, not through this file. The MCP servers are limited to /sandbox by
 # their own arguments (images/claude-graphics/claude-start.json).
@@ -65,12 +66,14 @@ network_policies:
       - path: /usr/bin/python3.*
       - path: /usr/local/bin/node
   # Output served by the AI gateway: presigned (X-Amz-Signature) links to one
-  # Cloudflare R2 bucket, only below /provider-outputs/. The host is pinned to
-  # this bucket, not *.r2.cloudflarestorage.com, so other R2 buckets stay closed.
+  # Cloudflare R2 bucket, only below /provider-outputs/. The host is
+  # ai-gateway-outputs.<account id>.r2.cloudflarestorage.com; the account id may
+  # differ, so it is a wildcard. The bucket name is fixed, so other buckets stay
+  # closed, and so do other paths.
   replicate-outputs:
     name: replicate-outputs
     endpoints:
-      - host: ai-gateway-outputs.0d37909e38d3e99c29fa2cd343ac421a.r2.cloudflarestorage.com
+      - host: "ai-gateway-outputs.*.r2.cloudflarestorage.com"
         port: 443
         protocol: rest
         enforcement: enforce
