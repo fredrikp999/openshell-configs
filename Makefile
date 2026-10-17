@@ -31,7 +31,9 @@ SCRIPTS := bin/sandbox.sh bin/provider.sh bin/bundle.sh bin/watch-denied.sh bin/
            images/agy-sandbox/agy-acp-start images/agy-node/agy-acp-start images/agy-hyperframes/agy-init images/agy-hyperframes/agy-start \
            images/agy-hyperframes/agy-acp-start
 PYTHON := bin/acp_client.py bin/otel-export.py bin/otel-view.py bin/metrics-view.py bin/check-links.py bin/build-html.py images/claude-graphics/graphics-gallery \
-         images/claude-graphics/graphics-key tests/graphics-key/test_graphics_key.py
+         images/claude-graphics/graphics-key tests/graphics-key/test_graphics_key.py \
+         images/claude-graphics/skills/clean-vector-from-raster/layout.py \
+         images/claude-graphics/skills/clean-vector-from-raster/edge_check.py
 
 .PHONY: images $(IMAGES) update test lint doctor html
 

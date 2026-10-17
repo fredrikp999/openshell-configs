@@ -5,7 +5,11 @@ description: Turn a raster character/cartoon illustration (e.g. a sprite sheet o
 
 # Clean vector from a raster illustration (PhotoCraft -> VectorCraft)
 
-Proven workflow (40 cells from 7 sprite sheets on a magenta key background). Paths are relative to the PhotoCraft read/write roots (`/sandbox` in the claude-graphics image); VectorCraft opens files from the same working folder.
+Proven workflow (about 100 cells from sprite sheets on a magenta key background: 6x2 grid sheets, and single-row framed sheets with 8 panels). Paths are relative to the PhotoCraft read/write roots (`/sandbox` in the claude-graphics image); VectorCraft opens files from the same working folder.
+
+`layout.py` and `edge_check.py` need numpy and Pillow. Once per sandbox, in the working folder: `uv venv && uv pip install numpy pillow`; the commands below use that `.venv/bin/python`.
+
+Run one cell at a time in one session. Do not run several agents against the same PhotoCraft/VectorCraft instance: they close each other's documents and trace into the wrong one (seen in a 2-agent test).
 
 ## 0. Load tools
 PhotoCraft/VectorCraft tools are deferred: `ToolSearch select:` the ones you need (`mcp__photocraft__doc_open`, `command_run`, `command_batch`, `doc_save`, `render_preview`, `session_list`, `doc_close`; `mcp__vectorcraft__open_file`, `command_batch`, `export`, `save_file`, `render_preview`, `inspect_document`) before calling.
@@ -17,10 +21,18 @@ PhotoCraft/VectorCraft tools are deferred: `ToolSearch select:` the ones you nee
 - Which figure/region (or "all cells"), and target colors (keep **original colors** unless told otherwise; recolor is trivial in vector later).
 - The user wants **none** of the background color in the output. Say so in the plan and check for it (step 2).
 - Use bare filenames; if a name has odd characters (`%2D`, commas) try the cleaned name.
-- Sheets: look at each one first (`Read` the PNG; the preview is downscaled, so multiply coordinates by original width / displayed width). Sprite sheets are often a regular grid: find the cell origin and step once (e.g. 8 columns x 2 rows, cells 380x656 at x = 8 + 396*i, y = 8 and 680 on a 3168x1344 sheet), then confirm the crop preview shows one figure. Panels in other sheets may not be regular: crop at the gaps between figures.
+- Sheets: look at each one first (`Read` the PNG; the preview is downscaled, so multiply coordinates by original width / displayed width). **Do not assume the grid.** Sheets in one batch differ: 3168x1344 sheets were 6 columns x 2 rows (cells 528x672), while another was 8 panels in one row with a dark frame, 1040 px tall. Run the layout script on every sheet first:
+  ```sh
+  .venv/bin/python -I ~/.claude/skills/clean-vector-from-raster/layout.py SHEET.png
+  ```
+  It finds the dark frame or grid lines from the pixels and prints one crop box per panel (`x= y= w= h=`), already set in from the frame. Use those boxes, then confirm the first cell of each new layout by eye.
 
 ## 2. Prepare the trace source (the step that decides quality)
-1. `doc_open` the original. In one `command_batch`: `layer.new.layerFromBackground`, `image.crop` to the one figure **inside** the grid or panel border (inset about 8 px; if a thin dark line remains along one edge, use a larger inset), `image.imageSize {percent:300, resample:"preserveDetails"}`, then `filter.blur.surfaceBlur {radius:8, threshold:30}` **twice**. This removes fabric/noise texture while keeping outlines crisp. Skipping it gives speckled jeans and 18k-anchor mush; tracing the 1x image gives blotchy results.
+1. `doc_open` the original. In one `command_batch`: `layer.new.layerFromBackground`, `image.crop` to the one figure, `image.imageSize {percent:300, resample:"preserveDetails"}`, then `filter.blur.surfaceBlur {radius:8, threshold:30}` **twice**. This removes fabric/noise texture while keeping outlines crisp. Skipping it gives speckled jeans and 18k-anchor mush; tracing the 1x image gives blotchy results.
+   - **Crop boxes: get them from `layout.py`, not from a fixed inset.** A fixed 8 px inset failed both ways in practice:
+     - Figures often reach the frame (arms, feet, mohawks). An 8 px inset clipped them. Use the full interior, starting 1 px past each dark line.
+     - On 6x2 grid sheets the dark grid line is about 8 px wide, and its anti-aliased edge runs 2-4 px further. Any part of it left in the crop stays as a dark strip. If `edge_check.py` reports a side touching, move that side inward 3-4 px and rebuild the cell.
+     - If the first cell of a new layout shows a clipped figure or a strip along an edge, fix the box before running the rest of the sheet.
    - If the image would be larger than about 4000 px after upscaling (e.g. a single 2000x2000 bust), use 200%: keying and tracing a 6000 px image is very slow.
 2. `doc_save` the result as `sheetN_cellNN_rgb.png` in `/sandbox/work` (still on the solid key background).
 3. **Key the background out to transparency with a script, not in PhotoCraft.** In this environment `select.magicWand` at (2,2) followed by `edit.clear` or `layer.layerMask.hideSelection` cleared only a sliver of the background (27k of 1.5M pixels in the test cell). The exported PNG does keep alpha, so key it yourself:
@@ -34,7 +46,10 @@ PhotoCraft/VectorCraft tools are deferred: `ToolSearch select:` the ones you nee
    - **Do not lower `--spill` below 25.** A rule of `min(r,b) - g >= 12` ate edge detail, the trace got noisy, and the user rejected the result ("totally bad"); the tool warns about it.
    - **A different background** (green screen, blue, white): `bg` prints the command to use. Give a color and how far each of r, g, b may differ, or explicit ranges: `graphics-key key --color "#00ff00" --tolerance 50 FILE.png` or `--range "0-90,170-255,0-90"`. These replace the default rule in `key`, `check` and `strip`. A color range has no notion of blended edges: pixels between the background and the art stay, `check` counts them as "blended edge", and a larger `--tolerance` removes more of them (and more of the art), so render a sample.
    - **Large images:** with numpy and Pillow installed, `graphics-key` is faster, uses less memory and reads any PNG type (the built-in code handles only 8-bit RGB/RGBA and takes minutes on 8+ megapixel images; a tool call times out after about 2 minutes, so start long runs with `nohup ... > log 2>&1 &` and poll the log). Install them and run the tool with that Python: `uv venv && uv pip install numpy pillow && .venv/bin/python /usr/local/bin/graphics-key key ...`. Both give identical output (tested).
-4. **Check the keyed PNG before tracing**: `graphics-key check` (it must report `background 0`; "blended edge" pixels are the anti-aliased mix next to the art and are not an error) and render it. A check for pure `#ff00ff` only reports 0 for a lighter background that is still there, which is why `check` uses the same rule as `key`.
+4. **Check the keyed PNG before tracing**:
+   - `graphics-key check` must report `background 0` ("blended edge" pixels are the anti-aliased mix next to the art and are not an error). A check for pure `#ff00ff` only reports 0 for a lighter background that is still there, which is why `check` uses the same rule as `key`.
+   - **Edge check**: `.venv/bin/python -I ~/.claude/skills/clean-vector-from-raster/edge_check.py KEYED.png`. It lists the sides where opaque pixels reach the crop edge. A side that touches is either a figure cut by the crop (fix the box) or a grid/frame line left in (move that side inward 3-4 px). Do not trace a cell with a touching side until it is resolved or noted as a real figure edge.
+   - Render it. A cell with more than about 5,000 blended-edge pixels deserves a closer look at the hair/outline edges.
    - Do NOT flatten if the user wants layers; keep a cropped/masked PSD separately.
 
 ## 3. Trace in VectorCraft
@@ -69,3 +84,7 @@ PhotoCraft/VectorCraft tools are deferred: `ToolSearch select:` the ones you nee
 - In VectorCraft, `object.delete` does not exist; `edit.clear {ids:[...]}` deletes objects. The trace id returned by `make` is different from the image id.
 - Global color adjustments also shift the key background; select first. Color-range on near-neutral charcoal bleeds into hair/jeans/glasses - avoid recoloring before tracing.
 - JPG cannot hold transparency: deliver PNG/PSD/SVG for cutouts.
+- `photocraft doc_close` with no index closes the **active** document, and the active one may not be the document you meant. Pass the index from `session_list`. A stray document left open from an earlier run is harmless, but check it is not the one being edited.
+- Send `doc_save` only after the crop `command_batch` has returned. Running them in the same turn once let the save run before the batch had finished.
+- `imageTrace.expand` followed by `object.path.simplify` must run in the same session as `make`. In the parallel-agent test they failed with "Simplify: select paths" and "no such object". After a failure, re-run `make` on a freshly opened keyed file rather than patching the failed step.
+- The trace id from `make` changes for each cell and each run. Always use the id that `make` returned, not one from an earlier cell.
