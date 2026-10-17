@@ -64,6 +64,22 @@ network_policies:
       - path: /usr/bin/python3
       - path: /usr/bin/python3.*
       - path: /usr/local/bin/node
+  # Output served by the AI gateway: presigned (X-Amz-Signature) links to one
+  # Cloudflare R2 bucket, only below /provider-outputs/. The host is pinned to
+  # this bucket, not *.r2.cloudflarestorage.com, so other R2 buckets stay closed.
+  replicate-outputs:
+    name: replicate-outputs
+    endpoints:
+      - host: ai-gateway-outputs.0d37909e38d3e99c29fa2cd343ac421a.r2.cloudflarestorage.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "/provider-outputs/**" }
+    binaries:
+      - path: /usr/bin/python3
+      - path: /usr/bin/python3.*
+      - path: /usr/local/bin/node
   # Streaming output: the `urls.stream` of a prediction is on stream.replicate.com
   # (server-sent events).
   replicate-stream:

@@ -285,10 +285,11 @@ What you get:
 | Rule | Hosts | For |
 |---|---|---|
 | `replicate-files` | `replicate.delivery`, `*.replicate.delivery` | downloading model output (python3, node) |
+| `replicate-outputs` | `ai-gateway-outputs.0d37909e38d3e99c29fa2cd343ac421a.r2.cloudflarestorage.com`, only `/provider-outputs/**` | output served as presigned Cloudflare R2 links (`X-Amz-Signature=...`, valid for 24 hours; python3, node) |
 | `replicate-stream` | `stream.replicate.com`, `streaming.api.replicate.com` | streamed output, `urls.stream` (python3, node) |
 | `replicate-docs` | `replicate.com`, only `/docs/**` and `/OWNER/MODEL/llms.txt` | the docs and model schemas the skills point to (Claude's WebFetch, python3) |
 
-  The rest of `replicate.com` (account pages, search, explore) is denied. Save results in `/sandbox` and they show up in the gallery.
+  The R2 host is pinned to that one bucket and path, not `*.r2.cloudflarestorage.com`, so other R2 buckets stay denied; if Replicate serves output from another bucket, `openshell logs my-art | grep DENIED` shows the host to add. The rest of `replicate.com` (account pages, search, explore) is denied. Save results in `/sandbox` and they show up in the gallery.
 
 Things to know:
 * The token can spend your Replicate credit. A manipulated agent can run models on your account but cannot read the token or send it to other hosts: the proxy refuses the placeholder on every host outside the profile (`credential_endpoint_mismatch`).
@@ -297,7 +298,7 @@ Things to know:
 * **`claude mcp list` shows `replicate` as failed?** Check that the sandbox was created after `bin/provider.sh replicate` (`openshell sandbox exec -n my-art -- printenv REPLICATE_API_TOKEN` prints a placeholder, `openshell:resolve:env:...`) and that the token is valid (`api.replicate.com/v1/account` returns 200 from `python3`).
 
 ### The policy
-[policies/graphics.yaml](../policies/graphics.yaml) is the terminal policy ([vscode-terminal.yaml](../policies/vscode-terminal.yaml)) plus network rules. The first is read-only (GET) access to PyPI, `pypi.org` and `files.pythonhosted.org`, for `/usr/bin/python3` (which also covers pip) and `/usr/local/bin/uv` and `uvx`. The Replicate rules (`replicate-files`, `replicate-stream`, `replicate-docs`) are described under [Replicate](#replicate-models-for-images-and-video). Both apps work on local files and need nothing else. Claude Code reaches its API through the provider, as in the other images. Any other host, e.g. `example.com` or a GitHub download, is denied.
+[policies/graphics.yaml](../policies/graphics.yaml) is the terminal policy ([vscode-terminal.yaml](../policies/vscode-terminal.yaml)) plus network rules. The first is read-only (GET) access to PyPI, `pypi.org` and `files.pythonhosted.org`, for `/usr/bin/python3` (which also covers pip) and `/usr/local/bin/uv` and `uvx`. The Replicate rules (`replicate-files`, `replicate-outputs`, `replicate-stream`, `replicate-docs`) are described under [Replicate](#replicate-models-for-images-and-video). Both apps work on local files and need nothing else. Claude Code reaches its API through the provider, as in the other images. Any other host, e.g. `example.com` or a GitHub download, is denied.
 
 A GET to PyPI can carry data in its URL, and the setup scripts of a package the agent installs run with its rights, so this is less locked down than a policy without the rule. If the task needs no packages, delete the `pypi` rule from a copy of the policy. To add hosts (fonts or images to fetch), add rules and apply them to the running sandbox with `openshell policy set my-art --policy policies/graphics.yaml --wait`. See [Sandbox policies](customizing.md#sandbox-policies).
 
