@@ -51,6 +51,10 @@
       "Bash(rm:*)"
     ],
     "ask": [
+      "Bash(rm -R:*)",
+      "Bash(rm -r:*)",
+      "Bash(rm -fr:*)",
+      "Bash(rm -rf:*)",
       "mcp__replicate__create_predictions",
       "mcp__replicate__create_models_predictions",
       "mcp__replicate__create_deployments_predictions",
