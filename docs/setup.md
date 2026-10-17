@@ -87,14 +87,16 @@ It tells you which one it used, never prints the value, and passes it to `opensh
 |---|---|---|
 | Claude Code | `CLAUDE_CODE_OAUTH_TOKEN` | `claude setup-token` on the host, see [Create an OAuth token](agents.md#create-an-oauth-token-on-the-host) |
 | OpenCode | `OPENROUTER_API_KEY` | [openrouter.ai/keys](https://openrouter.ai/keys) |
+| Replicate (`--graphics`, optional) | `REPLICATE_API_TOKEN` | [replicate.com/account/api-tokens](https://replicate.com/account/api-tokens), see [Replicate](extras.md#replicate-models-for-images-and-video) |
 
 ### In the Keychain (recommended)
 Store the key as a generic password with service `openshell` and the variable name as account. `-w` without a value makes `security` prompt for it, so it doesn't end up in your shell history, and `-U` replaces an existing one:
 ```bash
 security add-generic-password -U -s openshell -a CLAUDE_CODE_OAUTH_TOKEN -w
 security add-generic-password -U -s openshell -a OPENROUTER_API_KEY -w
+security add-generic-password -U -s openshell -a REPLICATE_API_TOKEN -w
 ```
-Then create the provider with `bin/provider.sh claude` (or `opencode`), and after a new token with `bin/provider.sh --update claude`.
+Then create the provider with `bin/provider.sh claude` (or `opencode`, or `replicate`), and after a new token with `bin/provider.sh --update claude`.
 
 * Check that it's there, without showing it: `security find-generic-password -s openshell -a CLAUDE_CODE_OAUTH_TOKEN >/dev/null && echo found`
 * Remove it: `security delete-generic-password -s openshell -a CLAUDE_CODE_OAUTH_TOKEN`

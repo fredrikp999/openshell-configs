@@ -270,18 +270,31 @@ The policy lets `python3` and `uv` reach PyPI, so the agent can install packages
 * **Remove the `pypi` rule** from a copy of the policy for tasks that need no packages.
 
 ### Replicate: models for images and video
-The image can use [Replicate](https://replicate.com) to generate or edit images and video with hosted models, through an MCP server and its API. The sandbox has no Replicate access until you give it a token:
+The image can use [Replicate](https://replicate.com) to generate or edit images and video with hosted models, through an MCP server, skills and the API. The sandbox has no Replicate access until you give it a token:
 
-1. Create an API token at [replicate.com/account/api-tokens](https://replicate.com/account/api-tokens).
-2. Store it and create the provider: `bin/provider.sh replicate` (it takes `REPLICATE_API_TOKEN` from the environment, the Keychain or `.env`, see [Credentials](setup.md#credentials)). This imports [providers/replicate.yaml](../providers/replicate.yaml) and creates the provider `replicate`.
-3. Create the sandbox: `bin/sandbox.sh claude my-art --graphics`. If the provider `replicate` exists, `sandbox.sh` attaches it. Without it, it prints a hint and Replicate stays off.
+1. Create an API token at [replicate.com/account/api-tokens](https://replicate.com/account/api-tokens). Use one for this only, and set a spending limit in your Replicate account.
+2. Create the provider: `bin/provider.sh replicate`. It takes `REPLICATE_API_TOKEN` from the environment, the Keychain or `.env` (see [Credentials](setup.md#credentials); in the Keychain: `security add-generic-password -U -s openshell -a REPLICATE_API_TOKEN -w`), imports [providers/replicate.yaml](../providers/replicate.yaml) and creates the provider `replicate`. Once is enough; a new token goes in with `bin/provider.sh --update replicate`.
+3. Create the sandbox: `bin/sandbox.sh claude my-art --graphics`. If the provider `replicate` exists, `sandbox.sh` attaches it, and only to `--graphics` sandboxes. Without it, it prints a hint and Replicate stays off.
 
 What you get:
-* The MCP server `replicate`, registered by `graphics-init` only when the token is present. It is the local `replicate-mcp` package from the image (`mcp-server`, over stdio), not the hosted `mcp.replicate.com`: that one only accepts OAuth tokens and answers an API token with 401 `Invalid token format`. The local server sends the placeholder to `api.replicate.com` and the proxy swaps in the real token, so the token never lives in the sandbox. Check it with `claude mcp list`.
-* The Replicate skills `find-models`, `compare-models`, `run-models`, `prompt-images` and `prompt-videos`, copied from [replicate/skills](https://github.com/replicate/skills) at a fixed commit (see `images/claude-graphics/skills/REPLICATE-SOURCE.md`). They are in `~/.claude/skills`, as for the other skills, with or without the token. They call the API at `api.replicate.com`, which only `node` (the MCP server) and `python3` can reach with the token. The profile lists the HTTP methods because Replicate searches models with `QUERY /v1/models`, which `access: read-write` doesn't include (the image has no `curl`).
-* Read-only access to more Replicate hosts, all without the token ([policies/graphics.yaml](../policies/graphics.yaml)): `replicate.delivery` and `*.replicate.delivery`, where model output is downloaded from (rule `replicate-files`); `stream.replicate.com` and `streaming.api.replicate.com` for streamed output (`replicate-stream`); and on `replicate.com` only `/docs/**` and a model's `/OWNER/MODEL/llms.txt` (`replicate-docs`), which the skills point to, also for Claude's WebFetch. The rest of `replicate.com` (account pages, search, explore) is denied. Python and node can use the first two, Claude, Python and node the third. Save results in `/sandbox` and they show up in the gallery.
+* **The MCP server `replicate`**, registered by `graphics-init` only when the token is present. It is the local `replicate-mcp` package from the image (`mcp-server`, over stdio), not the hosted `mcp.replicate.com`: that one only accepts OAuth tokens and answers an API token with 401 `Invalid token format`. The local server sends the placeholder to `api.replicate.com` and the proxy swaps in the real token, so the token never lives in the sandbox. Check it with `claude mcp list`.
+* **The Replicate skills** `find-models`, `compare-models`, `run-models`, `prompt-images` and `prompt-videos`, copied from [replicate/skills](https://github.com/replicate/skills) at a fixed commit (see `images/claude-graphics/skills/REPLICATE-SOURCE.md`; Apache 2.0). They are in `~/.claude/skills`, as for the other skills, with or without the token. They call the API with `python3` (the image has no `curl`).
+* **The API**, `api.replicate.com`, the only host that gets the token. Only `node` (the MCP server) and `python3` may use it, so any Node or Python script in the sandbox can call the API with your token, and nothing else can. The profile lists the HTTP methods instead of `access: read-write`, because Replicate searches models with `QUERY /v1/models`, which `read-write` doesn't include.
+* **More hosts, read-only and without the token** ([policies/graphics.yaml](../policies/graphics.yaml)):
 
-Things to know: the token can spend your Replicate credit, so use a token for this only and set a spending limit in your Replicate account. A manipulated agent can run models on your account but cannot read the token or send it to other hosts: the proxy refuses the placeholder on every host outside the profile (`credential_endpoint_mismatch`). Model output is generated content; check it before relying on it. `node` may use the token too, so any Node script in the sandbox can call the Replicate API with it (and only that host).
+| Rule | Hosts | For |
+|---|---|---|
+| `replicate-files` | `replicate.delivery`, `*.replicate.delivery` | downloading model output (python3, node) |
+| `replicate-stream` | `stream.replicate.com`, `streaming.api.replicate.com` | streamed output, `urls.stream` (python3, node) |
+| `replicate-docs` | `replicate.com`, only `/docs/**` and `/OWNER/MODEL/llms.txt` | the docs and model schemas the skills point to (Claude's WebFetch, python3) |
+
+  The rest of `replicate.com` (account pages, search, explore) is denied. Save results in `/sandbox` and they show up in the gallery.
+
+Things to know:
+* The token can spend your Replicate credit. A manipulated agent can run models on your account but cannot read the token or send it to other hosts: the proxy refuses the placeholder on every host outside the profile (`credential_endpoint_mismatch`).
+* Model output is generated content; check it before relying on it. Models and their outputs have their own licences and terms, separate from the Apache 2.0 of the skills and the MCP package.
+* **Changes apply to new sandboxes.** After editing [providers/replicate.yaml](../providers/replicate.yaml), update the profile in the gateway ([Update a profile](customizing.md#update-a-profile), ID `replicate`) and create the sandbox again; a running one keeps the old rules. A denied call shows in `openshell logs my-art | grep DENIED` (e.g. `DENIED QUERY … /v1/models` before the method was allowed).
+* **`claude mcp list` shows `replicate` as failed?** Check that the sandbox was created after `bin/provider.sh replicate` (`openshell sandbox exec -n my-art -- printenv REPLICATE_API_TOKEN` prints a placeholder, `openshell:resolve:env:...`) and that the token is valid (`api.replicate.com/v1/account` returns 200 from `python3`).
 
 ### The policy
 [policies/graphics.yaml](../policies/graphics.yaml) is the terminal policy ([vscode-terminal.yaml](../policies/vscode-terminal.yaml)) plus network rules. The first is read-only (GET) access to PyPI, `pypi.org` and `files.pythonhosted.org`, for `/usr/bin/python3` (which also covers pip) and `/usr/local/bin/uv` and `uvx`. The Replicate rules (`replicate-files`, `replicate-stream`, `replicate-docs`) are described under [Replicate](#replicate-models-for-images-and-video). Both apps work on local files and need nothing else. Claude Code reaches its API through the provider, as in the other images. Any other host, e.g. `example.com` or a GitHub download, is denied.
@@ -295,4 +308,4 @@ A GET to PyPI can carry data in its URL, and the setup scripts of a package the 
 * **Existing sandboxes** keep their old image. Create a new one after rebuilding, e.g. to update a version.
 * **Size:** the two CLI binaries are about 90 MB each, plus Python and uv.
 * **Wheels only.** A package with no wheel for arm64 or x86_64 and Debian's Python 3.11 can't be installed; see [Installing Python packages](#installing-python-packages).
-* **Only PyPI.** `npm`, `git clone` from GitHub and other downloads are denied. A package that downloads something else when it installs or runs (a model, a binary) fails the same way.
+* **Only PyPI, and Replicate if you set it up.** `npm`, `git clone` from GitHub and other downloads are denied. A package that downloads something else when it installs or runs (a model, a binary) fails the same way.

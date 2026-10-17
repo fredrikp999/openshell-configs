@@ -108,9 +108,9 @@ Not needed for the basic steps above. Each one gives the agent more reach, so ad
 * See [HyperFrames](docs/extras.md#hyperframes).
 
 #### Graphics (vector art and photo editing)
-* **What:** Claude Code draws and exports SVG and PDF with [VectorCraft](https://getartcraft.com/apps/vectorcraft) and edits photos with [PhotoCraft](https://getartcraft.com/apps/photocraft), two open-source ArtCraft apps, through their headless CLIs and MCP servers in the sandbox. The image includes the `clean-vector-from-raster` skill (photo to print-ready SVG), Python 3 and uv (packages from PyPI), and `graphics-gallery`, a web page for browsing the images.
+* **What:** Claude Code draws and exports SVG and PDF with [VectorCraft](https://getartcraft.com/apps/vectorcraft) and edits photos with [PhotoCraft](https://getartcraft.com/apps/photocraft), two open-source ArtCraft apps, through their headless CLIs and MCP servers in the sandbox. The image includes the `clean-vector-from-raster` skill (photo to print-ready SVG), Python 3 and uv (packages from PyPI), and `graphics-gallery`, a web page for browsing the images. With a Replicate token it can also generate images and video with hosted models (MCP server and skills).
 * **How:** `make claude-graphics`, then `bin/sandbox.sh claude my-art --graphics`, open http://127.0.0.1:3102 (the gallery starts with the agent, and the script forwards its port), and `openshell sandbox download` the results.
-* **What limits it:** [policies/graphics.yaml](policies/graphics.yaml) is the terminal policy plus read-only access to PyPI for `python3` and `uv`, and the MCP servers can only read and write below `/sandbox`.
+* **What limits it:** [policies/graphics.yaml](policies/graphics.yaml) is the terminal policy plus read-only access to PyPI for `python3` and `uv`, and the MCP servers can only read and write below `/sandbox`. For Replicate (`bin/provider.sh replicate`) the token goes only to `api.replicate.com`, plus read-only rules for its output, streaming and docs hosts.
 * See [Graphics](docs/extras.md#graphics-vectorcraft-and-photocraft).
 
 #### Logs and OpenTelemetry
