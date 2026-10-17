@@ -41,14 +41,14 @@
       "mcp__replicate__create_models",
       "mcp__replicate__create_files",
       "mcp__replicate__cancel_predictions",
-      "mcp__replicate__cancel_trainings"
-    ],
-    "ask": [
+      "mcp__replicate__cancel_trainings",
       "Bash(python3:*)",
       "Bash(.venv/bin/python:*)",
       "Bash(uv:*)",
       "Bash(uvx:*)",
-      "Bash(pip:*)",
+      "Bash(pip:*)"
+    ],
+    "ask": [
       "Bash(node:*)",
       "Bash(rm:*)",
       "mcp__replicate__create_predictions",
