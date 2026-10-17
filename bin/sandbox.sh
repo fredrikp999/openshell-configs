@@ -1,7 +1,7 @@
 #!/bin/sh
 # Start an agent sandbox, either in the terminal or in VS Code.
 #
-#   bin/sandbox.sh <claude|opencode|agy> [name] [--vscode|--acp] [--browser|--hyperframes|--artcraft|--node|--python]
+#   bin/sandbox.sh <claude|opencode|agy> [name] [--vscode|--acp] [--browser|--hyperframes|--graphics|--node|--python]
 #                  [--forward PORT] [--workdir DIR] [-- agent args...]
 #
 #   bin/sandbox.sh claude                      # Claude in this terminal, sandbox claude-agent1
@@ -12,7 +12,7 @@
 #   bin/sandbox.sh opencode oc-task --acp      # ACP over stdio, for a UI/client
 #   bin/sandbox.sh claude web-task --browser   # Claude with a headless browser
 #   bin/sandbox.sh claude my-video --hyperframes --forward 3102   # HyperFrames
-#   bin/sandbox.sh claude my-art --artcraft # Claude with VectorCraft and PhotoCraft
+#   bin/sandbox.sh claude my-art --graphics # Claude with VectorCraft and PhotoCraft
 #
 # --acp runs the agent's Agent Client Protocol server (JSON-RPC over stdin and
 # stdout) instead of the terminal UI. A client spawns this script as its agent
@@ -31,10 +31,10 @@
 # policies/agy-hyperframes.yaml, which lets node and Chromium reach the CDNs
 # while agy's login tokens are in the sandbox; see docs/agents.md.
 #
-# --artcraft (Claude only) creates the sandbox from the claude-artcraft image
-# with policies/artcraft.yaml: the CLIs and MCP servers of VectorCraft and
+# --graphics (Claude only) creates the sandbox from the claude-graphics image
+# with policies/graphics.yaml: the CLIs and MCP servers of VectorCraft and
 # PhotoCraft (registered as `vectorcraft` and `photocraft`), so Claude can draw
-# SVG and PDF and edit photos in /sandbox, with Python, uv and artcraft-gallery
+# SVG and PDF and edit photos in /sandbox, with Python, uv and graphics-gallery
 # (a web page for the images, http://127.0.0.1:3102). It forwards port 3102 for
 # the gallery unless you give another --forward PORT, and only warns if that
 # port is taken. The policy lets python3 and uv reach PyPI; there is no other
@@ -101,7 +101,7 @@ vscode=false
 acp=false
 browser=false
 hyperframes=false
-artcraft=false
+graphics=false
 node=false
 python=false
 forward=
@@ -112,7 +112,7 @@ while [ $# -gt 0 ]; do
     --acp) acp=true; shift ;;
     --browser) browser=true; shift ;;
     --hyperframes) hyperframes=true; shift ;;
-    --artcraft) artcraft=true; shift ;;
+    --graphics) graphics=true; shift ;;
     --node) node=true; shift ;;
     --python) python=true; shift ;;
     --forward) forward=$2; shift 2 ;;
@@ -152,11 +152,11 @@ if $hyperframes; then
     policy=$(dirname "$0")/../policies/hyperframes.yaml
   fi
 fi
-if $artcraft; then
-  [ "$agent" = claude ] || { echo "--artcraft is only for claude." >&2; exit 1; }
-  $browser || $hyperframes && { echo "Use only one of --artcraft, --browser and --hyperframes." >&2; exit 1; }
-  image=claude-artcraft:latest
-  policy=$(dirname "$0")/../policies/artcraft.yaml
+if $graphics; then
+  [ "$agent" = claude ] || { echo "--graphics is only for claude." >&2; exit 1; }
+  $browser || $hyperframes && { echo "Use only one of --graphics, --browser and --hyperframes." >&2; exit 1; }
+  image=claude-graphics:latest
+  policy=$(dirname "$0")/../policies/graphics.yaml
 fi
 if $node; then
   [ "$agent" = agy ] || { echo "--node is only for agy." >&2; exit 1; }
@@ -170,9 +170,9 @@ if $python; then
   image=agy-python:latest
   policy=$(dirname "$0")/../policies/agy-python.yaml
 fi
-# --artcraft forwards the gallery's port by default; failing to is only a warning.
+# --graphics forwards the gallery's port by default; failing to is only a warning.
 forward_soft=false
-if $artcraft && [ -z "$forward" ]; then
+if $graphics && [ -z "$forward" ]; then
   forward=3102
   forward_soft=true
 fi

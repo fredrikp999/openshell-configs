@@ -1,6 +1,6 @@
-"""Tests for images/claude-artcraft/artcraft-key, run through its command line.
+"""Tests for images/claude-graphics/graphics-key, run through its command line.
 
-    ARTCRAFT_KEY=path/to/artcraft-key python3 test_artcraft_key.py
+    GRAPHICS_KEY=path/to/graphics-key python3 test_graphics_key.py
 
 Uses numpy and Pillow for the fast backend when they are installed, and always
 tests the built-in code too (--pure).
@@ -15,9 +15,9 @@ import tempfile
 import unittest
 import zlib
 
-TOOL = os.environ.get("ARTCRAFT_KEY", os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../images/claude-artcraft/artcraft-key"))
-loader = importlib.machinery.SourceFileLoader("artcraft_key", TOOL)
-spec = importlib.util.spec_from_loader("artcraft_key", loader)
+TOOL = os.environ.get("GRAPHICS_KEY", os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../images/claude-graphics/graphics-key"))
+loader = importlib.machinery.SourceFileLoader("graphics_key", TOOL)
+spec = importlib.util.spec_from_loader("graphics_key", loader)
 tool = importlib.util.module_from_spec(spec)
 loader.exec_module(tool)
 try:

@@ -1,4 +1,4 @@
-# Sandbox policy for the claude-artcraft image (VectorCraft and PhotoCraft): the
+# Sandbox policy for the claude-graphics image (VectorCraft and PhotoCraft): the
 # terminal policy (vscode-terminal.yaml) plus read-only access to PyPI.
 #
 # The CLIs and MCP servers (vectorcraft-cli, photocraft-cli) work on local files
@@ -6,7 +6,7 @@
 # Python and uv (below), so the agent can `uv pip install` or `pip install`
 # into a virtual environment. Claude Code reaches its API through the attached
 # provider, not through this file. The MCP servers are limited to /sandbox by
-# their own arguments (images/claude-artcraft/claude-start.json).
+# their own arguments (images/claude-graphics/claude-start.json).
 #
 # A GET to PyPI can carry data in its URL, and the setup scripts of an
 # installed package run with the agent's rights, so this is less locked down
@@ -15,10 +15,10 @@
 # (docs/extras.md, "Installing Python packages"). Remove the pypi rule if the
 # task needs no packages.
 # Change the rules on a running sandbox with
-#   openshell policy set <sandbox> --policy policies/artcraft.yaml --wait
+#   openshell policy set <sandbox> --policy policies/graphics.yaml --wait
 #
-#   openshell sandbox create --from claude-artcraft:latest --policy policies/artcraft.yaml ...
-#   bin/sandbox.sh claude my-art --artcraft       # does the same
+#   openshell sandbox create --from claude-graphics:latest --policy policies/graphics.yaml ...
+#   bin/sandbox.sh claude my-art --graphics       # does the same
 version: 1
 filesystem_policy:
   include_workdir: true

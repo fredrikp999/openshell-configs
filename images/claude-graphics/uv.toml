@@ -1,4 +1,4 @@
-# uv's system-wide settings for the claude-artcraft image (/etc/uv/uv.toml;
+# uv's system-wide settings for the claude-graphics image (/etc/uv/uv.toml;
 # /etc is read-only in the sandbox, so the agent can't edit it).
 #
 # Wheels only: a source distribution runs the package's build code at install

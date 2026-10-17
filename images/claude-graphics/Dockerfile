@@ -2,23 +2,23 @@
 # https://getartcraft.com/apps/vectorcraft) and PhotoCraft (photo editing,
 # https://getartcraft.com/apps/photocraft), for OpenShell.
 #
-#   make claude-artcraft           (builds claude-sandbox first)
-#   podman build -t claude-artcraft:latest images/claude-artcraft
+#   make claude-graphics           (builds claude-sandbox first)
+#   podman build -t claude-graphics:latest images/claude-graphics
 #
 # Adds the headless vectorcraft-cli and photocraft-cli to the claude-sandbox
 # image and registers their MCP servers as `vectorcraft` and `photocraft` in
 # Claude Code, so Claude can draw SVG and PDF and edit photos. Both work on
-# local files and need no network at run time; policies/artcraft.yaml is the
+# local files and need no network at run time; policies/graphics.yaml is the
 # terminal policy plus read-only access to PyPI. The MCP servers may only read and write below /sandbox.
 # The image also has the skills in skills/ (clean-vector-from-raster), copied to
-# ~/.claude/skills on first start by artcraft-init, Python 3, and
-# artcraft-gallery, a web page for browsing the images (forward its port with
+# ~/.claude/skills on first start by graphics-init, Python 3, and
+# graphics-gallery, a web page for browsing the images (forward its port with
 # bin/sandbox.sh --forward PORT).
 FROM localhost/claude-sandbox:latest
 
 # Python 3 from Debian with pip and venv (Debian's pip refuses system-wide
 # installs: use `uv venv` or `python3 -m venv .venv`), for scripts and for
-# artcraft-gallery. policies/artcraft.yaml lets python3 and uv reach PyPI.
+# graphics-gallery. policies/graphics.yaml lets python3 and uv reach PyPI.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends python3 python3-pip python3-venv \
  && rm -rf /var/lib/apt/lists/*
@@ -79,10 +79,10 @@ RUN apt-get update \
 COPY claude-start.json /etc/claude-start.json
 
 # Skills for Claude Code, copied to ~/.claude/skills on first start
-# (artcraft-init). claude-start and claude-acp-start run it, then do what the
+# (graphics-init). claude-start and claude-acp-start run it, then do what the
 # base image's versions do.
-COPY skills /usr/local/share/artcraft-skills
-# artcraft-key: chroma-key cleanup of PNGs and traced SVGs for the
-# clean-vector-from-raster workflow (artcraft-key --help). It uses numpy and
+COPY skills /usr/local/share/graphics-skills
+# graphics-key: chroma-key cleanup of PNGs and traced SVGs for the
+# clean-vector-from-raster workflow (graphics-key --help). It uses numpy and
 # Pillow when the agent installs them, else its own PNG code.
-COPY --chmod=755 artcraft-init artcraft-gallery artcraft-key claude-start claude-acp-start /usr/local/bin/
+COPY --chmod=755 graphics-init graphics-gallery graphics-key claude-start claude-acp-start /usr/local/bin/

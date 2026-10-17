@@ -1,6 +1,6 @@
 #!/bin/sh
-# Start the gallery and copy the skills (artcraft-init), skip Claude Code
+# Start the gallery and copy the skills (graphics-init), skip Claude Code
 # onboarding on first start, then run claude with any args.
-artcraft-init
+graphics-init
 [ -f "$HOME/.claude.json" ] || cp /etc/claude-start.json "$HOME/.claude.json"
 exec claude "$@"

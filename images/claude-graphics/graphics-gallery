@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Serve a web page that shows the images in a folder, newest first.
 
-    artcraft-gallery [--dir /sandbox] [--port 3102] [--host 127.0.0.1] [--background]
+    graphics-gallery [--dir /sandbox] [--port 3102] [--host 127.0.0.1] [--background]
 
---background detaches from the terminal, logs to /tmp/artcraft-gallery.log and does
+--background detaches from the terminal, logs to /tmp/graphics-gallery.log and does
 nothing if something already listens on the port. claude-start runs it that way.
 
 Open the port from your machine with `openshell forward` (bin/sandbox.sh
@@ -250,18 +250,18 @@ def main():
     ap.add_argument("--port", type=int, default=3102, help="port (default 3102)")
     ap.add_argument("--host", default="127.0.0.1", help="address to bind (default 127.0.0.1)")
     ap.add_argument("--background", action="store_true",
-                    help="detach and log to /tmp/artcraft-gallery.log; do nothing if the port is in use")
+                    help="detach and log to /tmp/graphics-gallery.log; do nothing if the port is in use")
     a = ap.parse_args()
     if not os.path.isdir(a.dir):
-        sys.exit("artcraft-gallery: not a folder: " + a.dir)
+        sys.exit("graphics-gallery: not a folder: " + a.dir)
     if a.background:
         if listening("127.0.0.1" if a.host in ("0.0.0.0", "") else a.host, a.port):
-            print("artcraft-gallery: already running on port %d" % a.port, file=sys.stderr)
+            print("graphics-gallery: already running on port %d" % a.port, file=sys.stderr)
             return
-        daemonize("/tmp/artcraft-gallery.log")
+        daemonize("/tmp/graphics-gallery.log")
     Handler.root = os.path.abspath(a.dir)
     srv = ThreadingHTTPServer((a.host, a.port), Handler)
-    print("artcraft-gallery: serving %s on http://%s:%d/" % (Handler.root, a.host, a.port), file=sys.stderr, flush=True)
+    print("graphics-gallery: serving %s on http://%s:%d/" % (Handler.root, a.host, a.port), file=sys.stderr, flush=True)
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

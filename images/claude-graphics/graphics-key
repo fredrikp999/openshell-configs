@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Chroma-key cleanup for the clean-vector-from-raster workflow.
 
-    artcraft-key bg    FILE.png...             what is the background color, and will `key` catch it?
-    artcraft-key key   FILE.png...             make the background transparent
-    artcraft-key check FILE.png...             count the background pixels that are left
-    artcraft-key strip FILE.svg...             remove paths filled with the background color
+    graphics-key bg    FILE.png...             what is the background color, and will `key` catch it?
+    graphics-key key   FILE.png...             make the background transparent
+    graphics-key check FILE.png...             count the background pixels that are left
+    graphics-key strip FILE.svg...             remove paths filled with the background color
 
 By default the background is magenta "spill": a pixel is background when red
 and blue are both well above green, that is min(r, b) - g >= 30 and
@@ -19,8 +19,8 @@ For a different background give a color and how far each of r, g and b may
 differ from it, or explicit ranges (this replaces the default rule, in `key`,
 `check` and `strip`):
 
-    artcraft-key key --color "#00ff00" --tolerance 50 FILE.png
-    artcraft-key key --range "0-90,170-255,0-90" FILE.png
+    graphics-key key --color "#00ff00" --tolerance 50 FILE.png
+    graphics-key key --range "0-90,170-255,0-90" FILE.png
 
 A color range keeps no blended edges: pixels between the background and the art
 stay, so `check` reports them as "blended edge", and a larger --tolerance
@@ -447,8 +447,8 @@ def cmd_strip(a):
 
 
 def parser():
-    p = argparse.ArgumentParser(prog="artcraft-key", description=__doc__.split("\n\n")[0],
-                                epilog="Run `artcraft-key COMMAND --help` for the options of a command.")
+    p = argparse.ArgumentParser(prog="graphics-key", description=__doc__.split("\n\n")[0],
+                                epilog="Run `graphics-key COMMAND --help` for the options of a command.")
     sub = p.add_subparsers(dest="command", required=True)
 
     def common(sp, png, spill, min_rb):
@@ -499,10 +499,10 @@ def main(argv=None):
         a.matcher = make_matcher(a, a.default_spill, a.default_min_rb)
         return a.func(a)
     except ToolError as e:
-        print("artcraft-key: %s" % e, file=sys.stderr)
+        print("graphics-key: %s" % e, file=sys.stderr)
         return 2
     except (OSError, UnicodeDecodeError) as e:
-        print("artcraft-key: %s" % e, file=sys.stderr)
+        print("graphics-key: %s" % e, file=sys.stderr)
         return 2
 
 

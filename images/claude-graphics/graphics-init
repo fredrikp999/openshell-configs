@@ -1,5 +1,5 @@
 #!/bin/sh
-# Start the gallery, and copy the image's skills (/usr/local/share/artcraft-skills)
+# Start the gallery, and copy the image's skills (/usr/local/share/graphics-skills)
 # to ~/.claude/skills, each one only if it isn't there yet, so a sandbox keeps
 # skills the agent or you edited. $HOME (/sandbox) starts empty. The skills are
 # under /usr/local/share, not /opt, because the policy's read-only paths (/usr)
@@ -7,9 +7,9 @@
 set -e
 {
   # The gallery page on port 3102 (bin/sandbox.sh --forward 3102); a no-op if it runs.
-  artcraft-gallery --background || true
+  graphics-gallery --background || true
   mkdir -p "$HOME/.claude/skills"
-  for d in /usr/local/share/artcraft-skills/*/; do
+  for d in /usr/local/share/graphics-skills/*/; do
     [ -d "$d" ] || continue
     [ -d "$HOME/.claude/skills/$(basename "$d")" ] || cp -r "$d" "$HOME/.claude/skills/"
   done
