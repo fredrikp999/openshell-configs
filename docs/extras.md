@@ -302,6 +302,17 @@ Things to know:
 
 A GET to PyPI can carry data in its URL, and the setup scripts of a package the agent installs run with its rights, so this is less locked down than a policy without the rule. If the task needs no packages, delete the `pypi` rule from a copy of the policy. To add hosts (fonts or images to fetch), add rules and apply them to the running sandbox with `openshell policy set my-art --policy policies/graphics.yaml --wait`. See [Sandbox policies](customizing.md#sandbox-policies).
 
+### Permissions
+What Claude Code may do without asking is set in [images/claude-graphics/managed-settings.json](../images/claude-graphics/managed-settings.json), installed as `/etc/claude-code/managed-settings.json`. These managed settings can't be changed by the agent. Rules are checked in the order deny, ask, allow:
+
+| | What |
+|---|---|
+| **Allowed** (no prompt) | `Read`, `Glob`, `Grep`, `Edit`, `Write` (the filesystem policy still limits where); all tools of the `vectorcraft` and `photocraft` MCP servers; the Bash commands `ls`, `cat`, `head`, `tail`, `wc`, `file`, `mkdir`, `graphics-key` and `python3 -m zipfile`; WebFetch of `replicate.com`; the Replicate MCP tools that only read or search (`get_*`, `list_*`, `search_models`, `download_files`) |
+| **Asks** | running code and installing packages: Bash `python3`, `.venv/bin/python`, `uv`, `uvx`, `pip`, `node`; `rm`; Replicate tools that cost money or change your account: `create_predictions` (also for models and deployments), `create_trainings`, `create_deployments`, `update_deployments`, `create_models`, `create_files`, `cancel_predictions`, `cancel_trainings`; WebFetch of other sites (Claude Code's default) |
+| **Denied** (not offered at all) | Bash `sudo`; the Replicate tools `delete_deployments`, `delete_files`, `delete_models`, `delete_models_versions` and `get_default_webhooks_secret` |
+
+Anything not listed follows Claude Code's defaults (it asks). The list is a starting point: running Python can do what `rm` or `curl` would, so the ask rules are there to keep you in the loop, not to be the boundary; the sandbox policy is. Your own rules in `~/.claude/settings.json` (or `/permissions` in Claude Code) add to these but can't lift a deny. To change the defaults, edit the file and rebuild the image (`make claude-graphics`); existing sandboxes keep the old one. Tested in a sandbox with `claude -p`: `ls` ran, `python3` was refused as needing permission, and a denied tool was not available.
+
 ### Things to watch for
 * **Gallery shows nothing or the page doesn't load?** The forward is on (`openshell forward list`) but nothing listens in the sandbox if it was created from an older image or the agent hasn't started: check with `openshell sandbox exec my-art -- python3 -c "import urllib.request as u; print(u.urlopen('http://127.0.0.1:3102/api/files').read())"` and read `/tmp/graphics-gallery.log`. An empty page with "No images yet." means the server works and `/sandbox` has no images (images in hidden folders or other file types aren't shown).
 * **Claude Code only.** There is no `agy` or OpenCode variant.

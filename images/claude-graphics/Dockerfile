@@ -81,6 +81,11 @@ RUN apt-get update \
 # api.replicate.com with REPLICATE_API_TOKEN (command: mcp-server).
 RUN npm install -g "replicate-mcp@${REPLICATE_MCP_VERSION}" && npm cache clean --force
 
+# Permissions for Claude Code: what is allowed without asking, what asks, what
+# is denied. Managed settings (/etc/claude-code), which the agent can't change;
+# your own rules in ~/.claude/settings.json add to them but can't lift a deny.
+COPY managed-settings.json /etc/claude-code/managed-settings.json
+
 # Registers the servers for Claude Code: claude-start copies this file to
 # $HOME/.claude.json on first start.
 COPY claude-start.json /etc/claude-start.json
