@@ -37,7 +37,11 @@
       "mcp__replicate__get_predictions",
       "mcp__replicate__list_predictions",
       "mcp__replicate__get_trainings",
-      "mcp__replicate__list_trainings"
+      "mcp__replicate__list_trainings",
+      "mcp__replicate__create_models",
+      "mcp__replicate__create_files",
+      "mcp__replicate__cancel_predictions",
+      "mcp__replicate__cancel_trainings"
     ],
     "ask": [
       "Bash(python3:*)",
@@ -52,11 +56,7 @@
       "mcp__replicate__create_deployments_predictions",
       "mcp__replicate__create_trainings",
       "mcp__replicate__create_deployments",
-      "mcp__replicate__update_deployments",
-      "mcp__replicate__create_models",
-      "mcp__replicate__create_files",
-      "mcp__replicate__cancel_predictions",
-      "mcp__replicate__cancel_trainings"
+      "mcp__replicate__update_deployments"
     ],
     "deny": [
       "Bash(sudo:*)",
