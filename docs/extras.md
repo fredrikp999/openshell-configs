@@ -269,8 +269,22 @@ The policy lets `python3` and `uv` reach PyPI, so the agent can install packages
   The files themselves come from `files.pythonhosted.org`, whose paths hold only hashes and no package names, so that host can't be limited by package. The installer can't find other packages, but someone who knows a file's exact URL could still fetch it. This lowers the risk without removing it. Test the list in a sandbox before relying on it: a dependency you forgot fails the install, which is how you find it.
 * **Remove the `pypi` rule** from a copy of the policy for tasks that need no packages.
 
+### Replicate: models for images and video
+The image can use [Replicate](https://replicate.com) to generate or edit images and video with hosted models, through its [MCP server](https://mcp.replicate.com/) and its API. The sandbox has no Replicate access until you give it a token:
+
+1. Create an API token at [replicate.com/account/api-tokens](https://replicate.com/account/api-tokens).
+2. Store it and create the provider: `bin/provider.sh replicate` (it asks for `REPLICATE_API_TOKEN` in the Keychain like the other providers, see [Credentials](setup.md)). This imports [providers/replicate.yaml](../providers/replicate.yaml) and creates the provider `replicate`.
+3. Create the sandbox: `bin/sandbox.sh claude my-art --graphics`. If the provider `replicate` exists, `sandbox.sh` attaches it. Without it, it prints a hint and Replicate stays off.
+
+What you get:
+* The MCP server `replicate` (`https://mcp.replicate.com/sse`), registered by `graphics-init` only when the token is present. Claude Code sends the placeholder in an `Authorization: Bearer` header and the proxy swaps in the real token, so the token never lives in the sandbox. Check it with `claude mcp list`.
+* The Replicate skills `find-models`, `compare-models`, `run-models`, `prompt-images` and `prompt-videos`, copied from [replicate/skills](https://github.com/replicate/skills) at a fixed commit (see `images/claude-graphics/skills/REPLICATE-SOURCE.md`). They are in `~/.claude/skills`, as for the other skills, with or without the token. They call the API at `api.replicate.com`, which only `claude` and `python3` can reach with the token (the image has no `curl`).
+* Read-only access to `replicate.delivery` for `python3`, where model output is downloaded from, without the token ([policies/graphics.yaml](../policies/graphics.yaml), rule `replicate-files`). Save results in `/sandbox` and they show up in the gallery.
+
+Things to know: the token can spend your Replicate credit, so use a token for this only and set a spending limit in your Replicate account. A manipulated agent can run models on your account but cannot read the token or send it to other hosts: the proxy refuses the placeholder on every host outside the profile (`credential_endpoint_mismatch`). Model output is generated content; check it before relying on it. Only the wiring was tested (placeholder, MCP registration, API reachable, other hosts refused); I could not test calls with a valid token.
+
 ### The policy
-[policies/graphics.yaml](../policies/graphics.yaml) is the terminal policy ([vscode-terminal.yaml](../policies/vscode-terminal.yaml)) plus one network rule: read-only (GET) access to PyPI, `pypi.org` and `files.pythonhosted.org`, for `/usr/bin/python3` (which also covers pip) and `/usr/local/bin/uv` and `uvx`. Both apps work on local files and need nothing else. Claude Code reaches its API through the provider, as in the other images. Any other host, e.g. `example.com` or a GitHub download, is denied.
+[policies/graphics.yaml](../policies/graphics.yaml) is the terminal policy ([vscode-terminal.yaml](../policies/vscode-terminal.yaml)) plus network rules. The first is read-only (GET) access to PyPI, `pypi.org` and `files.pythonhosted.org`, for `/usr/bin/python3` (which also covers pip) and `/usr/local/bin/uv` and `uvx`. The second, `replicate-files`, is described under [Replicate](#replicate-models-for-images-and-video). Both apps work on local files and need nothing else. Claude Code reaches its API through the provider, as in the other images. Any other host, e.g. `example.com` or a GitHub download, is denied.
 
 A GET to PyPI can carry data in its URL, and the setup scripts of a package the agent installs run with its rights, so this is less locked down than a policy without the rule. If the task needs no packages, delete the `pypi` rule from a copy of the policy. To add hosts (fonts or images to fetch), add rules and apply them to the running sandbox with `openshell policy set my-art --policy policies/graphics.yaml --wait`. See [Sandbox policies](customizing.md#sandbox-policies).
 

@@ -51,3 +51,14 @@ network_policies:
       - path: /usr/bin/python3.*
       - path: /usr/local/bin/uv
       - path: /usr/local/bin/uvx
+  # Replicate model output (images, video) is downloaded from replicate.delivery.
+  # Read-only and without the API token: that is added only for the hosts in
+  # providers/replicate.yaml.
+  replicate-files:
+    name: replicate-files
+    endpoints:
+      - { host: replicate.delivery, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+      - { host: "*.replicate.delivery", port: 443, protocol: rest, access: read-only, enforcement: enforce }
+    binaries:
+      - path: /usr/bin/python3
+      - path: /usr/bin/python3.*

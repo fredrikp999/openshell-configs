@@ -2,10 +2,11 @@
 # Import a provider profile and create the provider, with the credential from
 # the macOS Keychain (or, as a fallback, from .env).
 #
-#   bin/provider.sh [--update] <claude|opencode>
+#   bin/provider.sh [--update] <claude|opencode|replicate>
 #
 #   bin/provider.sh claude            # profile claude-code-oauth, provider claude
 #   bin/provider.sh opencode          # profile openrouter, provider openrouter
+#   bin/provider.sh replicate         # profile replicate, provider replicate (--graphics)
 #   bin/provider.sh --update claude   # put a new token in an existing provider
 #
 # The credential is taken from the first of these that has it:
@@ -22,7 +23,7 @@
 # never on a command line.
 set -eu
 
-usage() { sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 update=0
 if [ "${1:-}" = --update ]; then update=1; shift; fi
@@ -30,6 +31,7 @@ if [ "${1:-}" = --update ]; then update=1; shift; fi
 case $1 in
   claude)   profile=claude-code-oauth; provider=claude;     var=CLAUDE_CODE_OAUTH_TOKEN; file=providers/claude-code-oauth.yaml ;;
   opencode) profile=openrouter;        provider=openrouter; var=OPENROUTER_API_KEY;      file=providers/openrouter.yaml ;;
+  replicate) profile=replicate;        provider=replicate;  var=REPLICATE_API_TOKEN;  file=providers/replicate.yaml ;;
   *) usage ;;
 esac
 

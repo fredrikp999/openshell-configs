@@ -38,7 +38,11 @@
 # (a web page for the images, http://127.0.0.1:3102). It forwards port 3102 for
 # the gallery unless you give another --forward PORT, and only warns if that
 # port is taken. The policy lets python3 and uv reach PyPI; there is no other
-# network access.
+# network access, except for Replicate: if the provider `replicate` exists
+# (bin/provider.sh replicate) it is attached, which adds the Replicate MCP
+# server and lets Claude and python3 use the Replicate API with your token
+# (the token stays outside the sandbox). Without it the sandbox has no
+# Replicate access.
 #
 # --node (agy only) creates the sandbox from the agy-node image with
 # policies/agy-node.yaml, which lets node reach registry.npmjs.org so the agent
@@ -65,7 +69,7 @@
 # (bin/sandbox.sh agy <name>) before using --acp.
 set -eu
 
-usage() { sed -n "2,65p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n "2,69p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 [ $# -ge 1 ] || usage
 agent=$1; shift
@@ -102,6 +106,7 @@ acp=false
 browser=false
 hyperframes=false
 graphics=false
+extra_provider=
 node=false
 python=false
 forward=
@@ -157,6 +162,11 @@ if $graphics; then
   $browser || $hyperframes && { echo "Use only one of --graphics, --browser and --hyperframes." >&2; exit 1; }
   image=claude-graphics:latest
   policy=$(dirname "$0")/../policies/graphics.yaml
+  if openshell provider list 2>/dev/null | awk '$1=="replicate" {f=1} END {exit !f}'; then
+    extra_provider=replicate
+  else
+    echo "No provider 'replicate': Replicate is off. To turn it on: bin/provider.sh replicate" >&2
+  fi
 fi
 if $node; then
   [ "$agent" = agy ] || { echo "--node is only for agy." >&2; exit 1; }
@@ -186,11 +196,12 @@ phase() { openshell sandbox list 2>/dev/null | awk -v n="$1" '$1==n {print $NF}'
 p=$(phase "$name")
 case $p in
   '')
-    echo "Creating sandbox $name ($image, provider ${provider:-none})..." >&2
+    echo "Creating sandbox $name ($image, provider ${provider:-none}${extra_provider:+, $extra_provider})..." >&2
     openshell sandbox create \
       --name "$name" \
       --from "$image" \
       ${provider:+--provider "$provider"} \
+      ${extra_provider:+--provider "$extra_provider"} \
       --policy "$policy" \
       --detach \
       -- sleep infinity >/dev/null
