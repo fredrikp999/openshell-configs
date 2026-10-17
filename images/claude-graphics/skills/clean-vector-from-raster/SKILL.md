@@ -7,7 +7,7 @@ description: Turn a raster character/cartoon illustration (e.g. a sprite sheet o
 
 Proven workflow (about 100 cells from sprite sheets on a magenta key background: 6x2 grid sheets, and single-row framed sheets with 8 panels). Paths are relative to the PhotoCraft read/write roots (`/sandbox` in the claude-graphics image); VectorCraft opens files from the same working folder.
 
-`layout.py` and `edge_check.py` need numpy and Pillow. Once per sandbox, in the working folder: `uv venv && uv pip install numpy pillow`; the commands below use that `.venv/bin/python`.
+`layout.py`, `gaps.py` and `edge_check.py` need numpy and Pillow. Once per sandbox, in the working folder: `uv venv && uv pip install numpy pillow`; the commands below use that `.venv/bin/python`.
 
 Run one cell at a time in one session. Do not run several agents against the same PhotoCraft/VectorCraft instance: they close each other's documents and trace into the wrong one (seen in a 2-agent test).
 
@@ -25,7 +25,12 @@ PhotoCraft/VectorCraft tools are deferred: `ToolSearch select:` the ones you nee
   ```sh
   .venv/bin/python -I ~/.claude/skills/clean-vector-from-raster/layout.py SHEET.png
   ```
-  It finds the dark frame or grid lines from the pixels and prints one crop box per panel (`x= y= w= h=`), already set in from the frame. Use those boxes, then confirm the first cell of each new layout by eye.
+  It finds the dark frame or grid lines from the pixels and prints one crop box per panel (`x= y= w= h=`), already set in from the frame. **It only works on sheets with dark frame or grid lines** (sheets 8, 9, 10 and 17-style).
+- **Sheets with no lines** (figures on a plain background, in one or more rows): use `gaps.py`. It splits the sheet into rows, then finds each figure from the background gaps between figures, and prints a box per figure with a small pad:
+  ```sh
+  .venv/bin/python -I ~/.claude/skills/clean-vector-from-raster/gaps.py SHEET.png
+  ```
+  Use those boxes in step 2. Overlapping figures (walking strips, figures touching each other) have no gap and come out as one box: crop those by hand from a view of the sheet, one pose per crop, and say so in the summary.
 
 ## 2. Prepare the trace source (the step that decides quality)
 1. `doc_open` the original. In one `command_batch`: `layer.new.layerFromBackground`, `image.crop` to the one figure, `image.imageSize {percent:300, resample:"preserveDetails"}`, then `filter.blur.surfaceBlur {radius:8, threshold:30}` **twice**. This removes fabric/noise texture while keeping outlines crisp. Skipping it gives speckled jeans and 18k-anchor mush; tracing the 1x image gives blotchy results.

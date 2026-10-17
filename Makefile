@@ -33,7 +33,8 @@ SCRIPTS := bin/sandbox.sh bin/provider.sh bin/bundle.sh bin/watch-denied.sh bin/
 PYTHON := bin/acp_client.py bin/otel-export.py bin/otel-view.py bin/metrics-view.py bin/check-links.py bin/build-html.py images/claude-graphics/graphics-gallery \
          images/claude-graphics/graphics-key tests/graphics-key/test_graphics_key.py \
          images/claude-graphics/skills/clean-vector-from-raster/layout.py \
-         images/claude-graphics/skills/clean-vector-from-raster/edge_check.py
+         images/claude-graphics/skills/clean-vector-from-raster/edge_check.py \
+         images/claude-graphics/skills/clean-vector-from-raster/gaps.py
 
 .PHONY: images $(IMAGES) update test lint doctor html
 
