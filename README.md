@@ -114,6 +114,13 @@ Not needed for the basic steps above. Each one gives the agent more reach, so ad
 * **What limits it:** [policies/graphics.yaml](policies/graphics.yaml) is the terminal policy plus read-only access to PyPI for `python3` and `uv`, and the MCP servers can only read and write below `/sandbox`. For Replicate (`bin/provider.sh replicate`) the token goes only to `api.replicate.com`, plus read-only rules for its output, streaming and docs hosts.
 * See [Graphics](docs/extras.md#graphics-vectorcraft-and-photocraft).
 
+#### Kiro Crew (persistent agent workspace over ACP)
+* **What:** [Kiro Crew](https://kiro.dev) runs its own gateway and web dashboard inside the sandbox, driving Claude Code over the Agent Client Protocol as its agent harness. Apps from its app store (todo lists, dashboards, and so on) run their own backends in the sandbox and render in your browser.
+* **How:** `make claude-kirocrew`, then `bin/sandbox.sh kirocrew`, open the dashboard link it prints with `127.0.0.1` in place of `localhost`. `bin/sandbox.sh kirocrew-readonly` is the same image with no network access, for work that doesn't need the app store.
+* **What limits it:** [policies/kirocrew.yaml](policies/kirocrew.yaml) allows Kiro Crew's updates, its app store, clone-only GitHub access and the PyPI/npm registries. Apps are third-party code that runs in the sandbox.
+* **Known gaps:** Kiro Crew's Remote Crew (reaching this sandbox from another Kiro Crew over SSH) does not work under OpenShell. See [Kiro Crew](docs/extras.md#kiro-crew-with-claude-code-over-acp) for why and the workaround.
+* See [Kiro Crew](docs/extras.md#kiro-crew-with-claude-code-over-acp).
+
 #### Logs and OpenTelemetry
 * **What:** keep the sandboxes' security events (every allowed and denied connection, HTTP request and SSH session), or send them to a log backend, as OpenTelemetry logs.
 * **How:** turn on OpenShell's structured log once, then export to a file or push to an OTLP endpoint, and look at the events with the small terminal viewer:

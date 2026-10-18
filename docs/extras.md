@@ -353,3 +353,40 @@ Open the sign-in link that Kiro Crew prints on start, but with `127.0.0.1` inste
 * **Patched path pinning:** Kiro Crew opens `/` and then each path component to pin a path, but OpenShell's Landlock baseline never grants `/` itself, so app backends, project skills and the pycache sweep failed with `Permission denied: '/'`. [patch-unreadable-root.py](../images/claude-kirocrew/patch-unreadable-root.py) makes those walks start at the first readable component, and fails the image build if Kiro Crew's code changes. Remove it once Kiro Crew or OpenShell fixes this.
 * **Still blocked:** Kiro Crew's telemetry endpoint (`d175o3ylxqum0e.cloudfront.net`), which you can leave blocked, and the Kiro CLI check, which logs `kiro_prerequisite_required` for some dashboard calls.
 
+### Remote Crew over SSH does not work
+
+A sandbox running `kirocrew` cannot be the remote end of Kiro Crew's own
+[Remote Crew](https://github.com/kirodotdev/KiroCrew/blob/main/docs/remote-crew.md) feature (another Kiro Crew's **Settings → Remote Crew**, connected over SSH).
+`openshell sandbox ssh-config <name>` gives a working, non-interactive SSH entry
+(through `openshell ssh-proxy`, so no port opens on the sandbox), and Remote
+Crew's hub uses exactly that kind of entry to tunnel to the remote's loopback
+gateway and mint a dashboard token there. The mint step fails every time:
+
+```
+❌ Gateway refused the token request (HTTP 403): The gateway could not verify
+this process as the local owner. Open the dashboard using its CLI login link
+on the gateway host.
+```
+
+The gate (`local_owner_bootstrap_allowed` in Kiro Crew's `member_memory_auth.py`)
+requires the process asking for a token to share the gateway process's Linux
+user and mount namespace, or be a backend the gateway itself spawned. An SSH
+session into an OpenShell sandbox runs in a different namespace from the
+sandboxed `kirocrew gateway` process, so it is always refused — confirmed by
+testing `kirocrew token` over `openshell sandbox ssh-config`'s entry, and by
+Kiro Crew's own `pod` feature, which hits the identical gate when a pod child
+tries to mint its own token and documents the same namespace rule verbatim.
+There is no config flag to relax it: a pod's version of this error says
+plainly that recreating anything does not change the verdict, and the only
+sanctioned fix is a caller running in the gateway's own namespace (`pod up`
+works around it by skipping the mint and having the gateway mint in-process
+instead — an option Remote Crew's SSH hub does not have).
+
+**Use the dashboard directly instead of Remote Crew:** forward 5476 from
+wherever the hub lives to the sandbox — `openshell forward start -d 5476
+<name>` run on that machine, or an SSH `-L` tunnel through `openshell
+ssh-proxy` — then open the sign-in link Kiro Crew prints on start with
+`127.0.0.1` in place of `localhost` (see the session-expired note above). You
+lose the Remote Crew switcher and cross-machine search, but the dashboard
+itself works the same.
+
