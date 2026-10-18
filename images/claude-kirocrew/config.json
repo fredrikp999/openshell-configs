@@ -1,0 +1,10 @@
+{
+  "agent": {
+    "acp_backend": "claude",
+    "approval_mode": "auto",
+    "sandbox_allow_unsandboxed_exec": true
+  },
+  "dashboard": {
+    "restore_sessions": false
+  }
+}

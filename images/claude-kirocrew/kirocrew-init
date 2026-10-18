@@ -1,0 +1,17 @@
+#!/bin/sh
+# Initialize Kiro Crew and Claude Code configurations on sandbox first-start.
+set -eu
+
+# Ensure KIROCREW_HOME uses the writable sandbox workdir
+unset KIROCREW_HOME
+
+# Kiro Crew cannot create user namespaces under the OpenShell sandbox, so it has no
+# inner sandbox of its own. The OpenShell sandbox is the isolation boundary.
+export KIROCREW_ALLOW_UNSANDBOXED=1
+
+# Skip Claude Code onboarding check on first start
+[ -f "$HOME/.claude.json" ] || cp /etc/claude-start.json "$HOME/.claude.json"
+
+# Seed Kiro Crew default configuration with Claude Code over ACP harness
+mkdir -p "$HOME/.kiro/crew"
+[ -f "$HOME/.kiro/crew/config.json" ] || cp /etc/kirocrew/config.json "$HOME/.kiro/crew/config.json"

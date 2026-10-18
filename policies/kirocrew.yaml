@@ -1,0 +1,71 @@
+# Sandbox policy for the claude-kirocrew image (Kiro Crew with Claude Code over ACP):
+# the terminal policy (vscode-terminal.yaml) plus read-only filesystem access
+# to /opt (where Kiro Crew and Python 3.12 reside) and network rules for Kiro Crew
+# updates and package registries.
+#
+#   openshell sandbox create --from claude-kirocrew:latest --policy policies/kirocrew.yaml ...
+#   bin/sandbox.sh claude my-crew --kirocrew       # does the same and forwards port 5476
+#
+# Kiro Crew serves its web dashboard inside the sandbox on port 5476 (http://127.0.0.1:5476).
+# Pages on the sandbox itself need no network egress rule. Access the dashboard from your
+# browser by forwarding the port:
+#   openshell forward start 5476 <sandbox>
+# or automatically via `bin/sandbox.sh claude my-crew --kirocrew`.
+#
+# Claude Code reaches api.anthropic.com and platform.claude.com through the attached
+# provider (`--provider claude`), not through this file.
+#
+# Change the network rules on a running sandbox with
+#   openshell policy set <sandbox> --policy policies/kirocrew.yaml --wait
+version: 1
+filesystem_policy:
+  include_workdir: true        # the workdir (/sandbox, also $HOME) is read-write
+  read_only:
+    - /bin
+    - /usr                     # Node, Claude Code, claude-agent-acp, kirocrew symlink, Python
+    - /lib
+    - /proc
+    - /dev/urandom
+    - /etc
+    - /var/log
+    - /opt                     # Kiro Crew and managed Python 3.12 venv (/opt/kirocrew)
+  read_write:
+    - /tmp
+    - /dev/null
+    - /dev/pts                 # terminals, needed by interactive shells and child processes
+    - /dev/ptmx
+landlock:
+  compatibility: best_effort
+network_policies:
+  # Kiro Crew update and release feeds: read-only access to download manifests and wheels.
+  kirocrew_updates:
+    name: kirocrew-updates
+    endpoints:
+      - { host: updates.crew.kiro.dev, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+      - { host: download.crew.kiro.dev, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+      - { host: d3j0sthz5doyui.cloudfront.net, port: 443, protocol: rest, access: read-only, enforcement: enforce }  # embedding model download
+    binaries:
+      - path: /opt/kirocrew/python/**
+      - path: /opt/kirocrew/venv/**
+      - path: /usr/local/bin/python
+      - path: /usr/local/bin/python3
+
+  # Python packages: pypi.org for package index and files.pythonhosted.org for wheels.
+  pypi:
+    name: pypi
+    endpoints:
+      - { host: pypi.org, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+      - { host: files.pythonhosted.org, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+    binaries:
+      - path: /opt/kirocrew/python/**
+      - path: /opt/kirocrew/venv/**
+      - path: /usr/local/bin/python
+      - path: /usr/local/bin/python3
+
+  # npm registry for tool installs or updates by Node.js.
+  npm_registry:
+    name: npm-registry
+    endpoints:
+      - { host: registry.npmjs.org, port: 443, protocol: rest, access: read-only, enforcement: enforce }
+    binaries:
+      - path: /usr/local/bin/node

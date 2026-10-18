@@ -1,7 +1,7 @@
 #!/bin/sh
 # Start an agent sandbox, either in the terminal or in VS Code.
 #
-#   bin/sandbox.sh <claude|opencode|agy> [name] [--vscode|--acp] [--browser|--hyperframes|--graphics|--node|--python]
+#   bin/sandbox.sh <claude|opencode|agy> [name] [--vscode|--acp] [--browser|--hyperframes|--graphics|--kirocrew|--node|--python]
 #                  [--forward PORT] [--workdir DIR] [-- agent args...]
 #
 #   bin/sandbox.sh claude                      # Claude in this terminal, sandbox claude-agent1
@@ -13,6 +13,7 @@
 #   bin/sandbox.sh claude web-task --browser   # Claude with a headless browser
 #   bin/sandbox.sh claude my-video --hyperframes --forward 3102   # HyperFrames
 #   bin/sandbox.sh claude my-art --graphics # Claude with VectorCraft and PhotoCraft
+#   bin/sandbox.sh claude my-crew --kirocrew   # Claude with Kiro Crew (web dashboard on 5476)
 #
 # --acp runs the agent's Agent Client Protocol server (JSON-RPC over stdin and
 # stdout) instead of the terminal UI. A client spawns this script as its agent
@@ -43,6 +44,12 @@
 # server and lets Claude and python3 use the Replicate API with your token
 # (the token stays outside the sandbox). Without it the sandbox has no
 # Replicate access.
+#
+# --kirocrew (Claude only) creates the sandbox from the claude-kirocrew image
+# with policies/kirocrew.yaml: Kiro Crew (https://kiro.dev) with Claude Code
+# over ACP as its agent harness and its web dashboard on port 5476. It forwards
+# port 5476 by default unless you give another --forward PORT. The policy allows
+# access to Kiro Crew updates and package registries.
 #
 # --node (agy only) creates the sandbox from the agy-node image with
 # policies/agy-node.yaml, which lets node reach registry.npmjs.org so the agent
@@ -106,6 +113,7 @@ acp=false
 browser=false
 hyperframes=false
 graphics=false
+kirocrew=false
 extra_provider=
 node=false
 python=false
@@ -118,6 +126,7 @@ while [ $# -gt 0 ]; do
     --browser) browser=true; shift ;;
     --hyperframes) hyperframes=true; shift ;;
     --graphics) graphics=true; shift ;;
+    --kirocrew) kirocrew=true; shift ;;
     --node) node=true; shift ;;
     --python) python=true; shift ;;
     --forward) forward=$2; shift 2 ;;
@@ -168,6 +177,13 @@ if $graphics; then
     echo "No provider 'replicate': Replicate is off. To turn it on: bin/provider.sh replicate" >&2
   fi
 fi
+if $kirocrew; then
+  [ "$agent" = claude ] || { echo "--kirocrew is only for claude." >&2; exit 1; }
+  $browser || $hyperframes || $graphics && { echo "Use only one of --kirocrew, --graphics, --browser and --hyperframes." >&2; exit 1; }
+  image=claude-kirocrew:latest
+  policy=$(dirname "$0")/../policies/kirocrew.yaml
+  $acp || cmd="kirocrew-start"
+fi
 if $node; then
   [ "$agent" = agy ] || { echo "--node is only for agy." >&2; exit 1; }
   $hyperframes && { echo "Use either --node or --hyperframes, not both." >&2; exit 1; }
@@ -180,10 +196,13 @@ if $python; then
   image=agy-python:latest
   policy=$(dirname "$0")/../policies/agy-python.yaml
 fi
-# --graphics forwards the gallery's port by default; failing to is only a warning.
+# --graphics forwards the gallery's port by default; --kirocrew forwards Kiro Crew dashboard (5476).
 forward_soft=false
 if $graphics && [ -z "$forward" ]; then
   forward=3102
+  forward_soft=true
+elif $kirocrew && [ -z "$forward" ]; then
+  forward=5476
   forward_soft=true
 fi
 case $forward in

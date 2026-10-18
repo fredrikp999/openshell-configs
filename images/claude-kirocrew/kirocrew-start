@@ -1,0 +1,13 @@
+#!/bin/sh
+# Start Kiro Crew gateway with Claude Code over ACP harness.
+set -eu
+
+unset KIROCREW_HOME
+export KIROCREW_ALLOW_UNSANDBOXED=1
+kirocrew-init
+
+if [ $# -gt 0 ]; then
+  exec kirocrew "$@"
+else
+  exec kirocrew gateway --no-open
+fi

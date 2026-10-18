@@ -1,0 +1,5 @@
+#!/bin/sh
+# Initialize configs, then run Claude Code CLI.
+set -eu
+kirocrew-init
+exec claude "$@"

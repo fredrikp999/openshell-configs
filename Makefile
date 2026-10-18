@@ -1,7 +1,7 @@
 # Build the images, run the tests and check the files.
 #
 #   make images     build all images (claude-sandbox, then claude-browser, then claude-hyperframes)
-#   make claude-sandbox | claude-browser | claude-hyperframes | claude-graphics | opencode-sandbox | agy-sandbox | agy-hyperframes | agy-node | agy-python
+#   make claude-sandbox | claude-browser | claude-hyperframes | claude-graphics | claude-kirocrew | opencode-sandbox | agy-sandbox | agy-hyperframes | agy-node | agy-python
 #                   one image
 #   make update     rebuild all images from scratch, with the latest agents and base images
 #   make test       run all tests (needs the images and the claude provider)
@@ -17,7 +17,7 @@ ENGINE ?= podman
 # works when the Podman machine can't see this folder (docs/isolation.md).
 SHELLCHECK ?= $(shell command -v shellcheck)
 SHELLCHECK_IMAGE := docker.io/koalaman/shellcheck-alpine:stable
-IMAGES := claude-sandbox claude-browser claude-hyperframes claude-graphics opencode-sandbox agy-sandbox agy-hyperframes agy-node agy-python
+IMAGES := claude-sandbox claude-browser claude-hyperframes claude-graphics claude-kirocrew opencode-sandbox agy-sandbox agy-hyperframes agy-node agy-python
 # Images built FROM a registry image, as opposed to FROM one of ours.
 BASE_IMAGES := claude-sandbox opencode-sandbox agy-sandbox agy-node
 SCRIPTS := bin/sandbox.sh bin/provider.sh bin/bundle.sh bin/watch-denied.sh bin/vm-clock.sh bin/doctor.sh \
@@ -26,6 +26,8 @@ SCRIPTS := bin/sandbox.sh bin/provider.sh bin/bundle.sh bin/watch-denied.sh bin/
            images/claude-browser/playwright-mcp-start \
            images/claude-graphics/graphics-init images/claude-graphics/claude-start \
            images/claude-graphics/claude-acp-start \
+           images/claude-kirocrew/kirocrew-init images/claude-kirocrew/kirocrew-start \
+           images/claude-kirocrew/claude-start images/claude-kirocrew/claude-acp-start \
            images/claude-hyperframes/hyperframes-init images/claude-hyperframes/claude-start \
            images/claude-hyperframes/claude-acp-start \
            images/agy-sandbox/agy-acp-start images/agy-node/agy-acp-start images/agy-hyperframes/agy-init images/agy-hyperframes/agy-start \
@@ -46,10 +48,12 @@ $(IMAGES):
 	$(ENGINE) build $(BUILD_FLAGS) $(if $(filter $@,$(BASE_IMAGES)),$(PULL_FLAGS)) -t $@:latest images/$@
 
 # claude-browser is built FROM claude-sandbox, claude-hyperframes FROM claude-browser,
-# claude-graphics FROM claude-sandbox, agy-hyperframes FROM claude-hyperframes, agy-python FROM agy-sandbox.
+# claude-graphics FROM claude-sandbox, claude-kirocrew FROM claude-sandbox,
+# agy-hyperframes FROM claude-hyperframes, agy-python FROM agy-sandbox.
 claude-browser: claude-sandbox
 claude-hyperframes: claude-browser
 claude-graphics: claude-sandbox
+claude-kirocrew: claude-sandbox
 agy-hyperframes: claude-hyperframes
 agy-python: agy-sandbox
 

@@ -1,0 +1,5 @@
+#!/bin/sh
+# Initialize configs, then run the ACP adapter for Claude Code.
+set -eu
+kirocrew-init
+exec claude-agent-acp "$@"

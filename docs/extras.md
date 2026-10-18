@@ -1,4 +1,4 @@
-# Extras: MCP servers, ACP, a headless browser, HyperFrames, VectorCraft and PhotoCraft
+# Extras: MCP servers, ACP, a headless browser, HyperFrames, VectorCraft, PhotoCraft and Kiro Crew
 Optional additions to the basic setup. Each one gives the agent more reach, so add it when a task needs it.
 
 ## MCP servers in containers on the host
@@ -321,3 +321,28 @@ Anything not listed follows Claude Code's defaults (it asks). The list is a star
 * **Size:** the two CLI binaries are about 90 MB each, plus Python and uv.
 * **Wheels only.** A package with no wheel for arm64 or x86_64 and Debian's Python 3.11 can't be installed; see [Installing Python packages](#installing-python-packages).
 * **Only PyPI, and Replicate if you set it up.** `npm`, `git clone` from GitHub and other downloads are denied. A package that downloads something else when it installs or runs (a model, a binary) fails the same way.
+
+## Kiro Crew with Claude Code over ACP
+[Kiro Crew](https://kiro.dev) is an open-source persistent development workspace and agent orchestrator. In this setup, Kiro Crew runs its gateway service inside the sandbox and drives **Claude Code over the Agent Client Protocol (ACP)** as its agent harness (`claude-agent-acp`).
+
+### What it provides
+* **Persistent Web Interface:** A web dashboard served on port `5476` inside the sandbox (`http://127.0.0.1:5476`).
+* **Claude Code via ACP:** Kiro Crew communicates with Claude Code over the standardized Agent Client Protocol, keeping sessions, tools, and permissions governed inside the sandbox.
+* **OpenShell Isolation:** Claude Code API calls (`api.anthropic.com` and `platform.claude.com`) route through the attached `claude` provider with bearer token injection outside the sandbox.
+* **Port Forwarding:** Port 5476 is exposed in the container and automatically forwarded to `http://127.0.0.1:5476/` on your host when started with `bin/sandbox.sh claude my-crew --kirocrew`.
+
+### Build and Run
+1. **Build the image:**
+```bash
+make claude-kirocrew
+# or: podman build -t claude-kirocrew:latest images/claude-kirocrew
+```
+2. **Start the sandbox:**
+```bash
+bin/sandbox.sh claude my-crew --kirocrew
+```
+This creates the sandbox using [images/claude-kirocrew](../images/claude-kirocrew/Dockerfile) and [policies/kirocrew.yaml](../policies/kirocrew.yaml), forwards port 5476 to your local machine, and starts the Kiro Crew gateway.
+
+3. **Access the Dashboard:**
+Open [http://127.0.0.1:5476](http://127.0.0.1:5476) in your browser.
+
