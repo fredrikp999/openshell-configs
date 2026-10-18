@@ -8,7 +8,7 @@
 # finds the global install, so it needs no registry). Adds agy, installed like in images/agy-sandbox, and its
 # community ACP adapter, and registers Playwright MCP with agy. Claude Code is
 # still in the image but has no provider here.
-# Use it with policies/agy-hyperframes.yaml (bin/sandbox.sh agy NAME --hyperframes).
+# Use it with policies/agy-hyperframes.yaml (bin/sandbox.sh agy-hyperframes).
 FROM localhost/claude-hyperframes:latest
 
 RUN apt-get update \

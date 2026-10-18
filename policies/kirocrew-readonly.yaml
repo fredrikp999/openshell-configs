@@ -2,7 +2,7 @@
 # egress rules at all. Nothing in the sandbox can reach updates, package registries or
 # the embedding model download; only the provider (Claude API) is reachable.
 # Use it for tasks that only read and write files in the sandbox:
-#   bin/sandbox.sh claude research --kirocrew --policy kirocrew-readonly
+#   bin/sandbox.sh kirocrew-readonly
 # Open it up later on a running sandbox with
 #   openshell policy set <sandbox> --policy policies/kirocrew.yaml --wait
 #
@@ -10,7 +10,7 @@
 # Pages on the sandbox itself need no network egress rule. Access the dashboard from your
 # browser by forwarding the port:
 #   openshell forward start 5476 <sandbox>
-# or automatically via `bin/sandbox.sh claude my-crew --kirocrew`.
+# or automatically via `bin/sandbox.sh kirocrew-readonly`.
 #
 # Claude Code reaches api.anthropic.com and platform.claude.com through the attached
 # provider (`--provider claude`), not through this file.

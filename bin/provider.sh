@@ -6,7 +6,7 @@
 #
 #   bin/provider.sh claude            # profile claude-code-oauth, provider claude
 #   bin/provider.sh opencode          # profile openrouter, provider openrouter
-#   bin/provider.sh replicate         # profile replicate, provider replicate (--graphics)
+#   bin/provider.sh replicate         # profile replicate, provider replicate (graphics profile)
 #   bin/provider.sh --update claude   # put a new token in an existing provider
 #
 # The credential is taken from the first of these that has it:

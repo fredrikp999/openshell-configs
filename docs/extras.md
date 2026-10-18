@@ -57,7 +57,7 @@ openshell sandbox exec my-task --no-tty --no-login-shell --workdir /sandbox -- c
 * **OpenCode:** `opencode acp` is built in, so the image needs no changes. It has no `-m` flag, so the script sets the model (`OPENCODE_MODEL`, same default as above) through the `OPENCODE_CONFIG_CONTENT` env var. Without a model, OpenCode picks an `opencode/...` one and fails with "Cannot connect to API", because `opencode.ai` is blocked.
 * **Claude Code:** has no native ACP mode, so the image includes the adapter [`@agentclientprotocol/claude-agent-acp`](https://www.npmjs.com/package/@agentclientprotocol/claude-agent-acp). `--acp` runs `claude-acp-start`, which skips onboarding (like `claude-start`) and starts `claude-agent-acp`. The adapter runs Claude Code through the Claude Agent SDK, which by default uses its own bundled `claude` binary deep in the adapter's `node_modules`. That path is not in the profile's `binaries`, so its requests would go out without the token. The image sets `CLAUDE_CODE_EXECUTABLE` to the globally installed `claude.exe` instead, which the profile already allows. Rebuild the image and create a new sandbox after updating; existing sandboxes keep the old image.
 * **Antigravity CLI:** `agy` has no ACP mode, so the image includes the community adapter [`google-antigravity-acp`](https://github.com/sibbl/google-antigravity-acp) (Node.js, pinned in the Dockerfile). `--acp` runs `agy-acp-start`, which starts it with `/usr/local/bin/agy`, the binary the policy lets reach Google. Log in once first (`bin/sandbox.sh agy my-task`); without a login the session fails with "agy process exited before emitting init event". The adapter has no `loadSession`, and auto-approves tool permissions unless `AGY_ACP_ASK=1`.
-* **All images:** every image has its agent's ACP command, because the variants are built on the base images: `claude-browser` and `claude-hyperframes` have `claude-acp-start`, and `agy-hyperframes`, `agy-node` and `agy-python` have `agy-acp-start` (`agy-hyperframes` and `claude-hyperframes` run `hyperframes-init` first; `agy-hyperframes` also registers Playwright MCP). `--acp` works with `--browser`, `--hyperframes`, `--node` and `--python`. `agy-hyperframes` also contains Claude's command, so `acp_client.py` takes it for `agy`.
+* **All images:** every image has its agent's ACP command, because the variants are built on the base images: `claude-browser` and `claude-hyperframes` have `claude-acp-start`, and `agy-hyperframes`, `agy-node` and `agy-python` have `agy-acp-start` (`agy-hyperframes` and `claude-hyperframes` run `hyperframes-init` first; `agy-hyperframes` also registers Playwright MCP). `--acp` works with every profile (`browser`, `hyperframes`, `kirocrew`, `agy-node`, `agy-python`, and so on). `agy-hyperframes` also contains Claude's command, so `acp_client.py` takes it for `agy`.
 * **Network:** egress rules are unchanged; ACP doesn't open anything.
 * **Fallback:** if the gRPC exec stream misbehaves, use the SSH route (see [By hand](working-in-sandboxes.md#by-hand)): `ssh openshell-my-task.default opencode acp` or `... claude-acp-start` (add `-T` to disable the pty).
 * **Example client:** [bin/acp_client.py](../bin/acp_client.py) is a minimal client (Python 3, no dependencies) that lists sandboxes and chats with the agent in one:
@@ -94,7 +94,7 @@ podman build -t claude-browser:latest images/claude-browser
 ```
 3. **Create the sandbox** with the script, or by hand:
 ```bash
-bin/sandbox.sh claude web-task --browser
+bin/sandbox.sh browser
 
 openshell sandbox create --name web-task --from claude-browser:latest --provider claude \
   --policy policies/browser.yaml --detach -- sleep infinity
@@ -139,9 +139,9 @@ podman build -t claude-sandbox:latest     images/claude-sandbox
 podman build -t claude-browser:latest     images/claude-browser
 podman build -t claude-hyperframes:latest images/claude-hyperframes
 ```
-2. **Create the sandbox and forward the preview port.** `--hyperframes` uses the image and [policies/hyperframes.yaml](../policies/hyperframes.yaml), `--forward` starts the port forward in the background:
+2. **Create the sandbox and forward the preview port.** The `hyperframes` profile ([profiles/hyperframes.env](../profiles/hyperframes.env)) uses the image and [policies/hyperframes.yaml](../policies/hyperframes.yaml) and starts the port forward for 3102 in the background:
 ```bash
-bin/sandbox.sh claude my-video --hyperframes --forward 3102
+bin/sandbox.sh hyperframes
 ```
 3. **Ask Claude for a video**, and to serve the preview on that port, e.g. "Make a 10-second launch video for our CLI in /sandbox/launch. When it passes `hyperframes check`, start the preview with `npx hyperframes preview --background --no-open --port 3102`."
 4. **Open http://127.0.0.1:3102** on your machine. This is HyperFrames Studio: play, scrub, edit, and see the agent's changes as it works.
@@ -175,7 +175,7 @@ openshell sandbox exec my-video --workdir /sandbox -- claude-start
 The preview on `127.0.0.1` in the sandbox needs no rule. A composition that loads something else (an image from a website, another CDN) shows it as DENIED in `openshell logs my-video`. Add the host and apply it to the running sandbox with `openshell policy set my-video --policy policies/hyperframes.yaml --wait`.
 
 ### With Antigravity CLI
-`bin/sandbox.sh agy my-video --hyperframes --forward 3102` does the same with `agy` instead of Claude Code, using the `agy-hyperframes` image (built on `claude-hyperframes`, plus `agy` and the ACP adapter) and [policies/agy-hyperframes.yaml](../policies/agy-hyperframes.yaml). Playwright MCP is registered with `agy` on first start, so it can use the headless browser. The skills are still copied to `~/.claude/skills`, where `agy` doesn't look for them. Because `agy`'s login tokens sit in the sandbox, read the warning in [agents.md](agents.md#antigravity-cli-with-a-google-account) first.
+`bin/sandbox.sh agy-hyperframes` does the same with `agy` instead of Claude Code, using the `agy-hyperframes` image (built on `claude-hyperframes`, plus `agy` and the ACP adapter) and [policies/agy-hyperframes.yaml](../policies/agy-hyperframes.yaml). Playwright MCP is registered with `agy` on first start, so it can use the headless browser. The skills are still copied to `~/.claude/skills`, where `agy` doesn't look for them. Because `agy`'s login tokens sit in the sandbox, read the warning in [agents.md](agents.md#antigravity-cli-with-a-google-account) first.
 
 ### Things to watch for
 * **Port in use on your machine:** `openshell forward` uses the same port number on both sides, and `--forward` fails if the port is taken (`lsof -i :3102`). HyperFrames' default preview port 3002 is often in use if you also run HyperFrames on the host, so pick another, as above.
@@ -200,9 +200,9 @@ make claude-graphics
 podman build -t claude-sandbox:latest   images/claude-sandbox
 podman build -t claude-graphics:latest  images/claude-graphics
 ```
-2. **Create the sandbox.** `--graphics` uses the image and [policies/graphics.yaml](../policies/graphics.yaml):
+2. **Create the sandbox.** The `graphics` profile ([profiles/graphics.env](../profiles/graphics.env)) uses the image and [policies/graphics.yaml](../policies/graphics.yaml):
 ```bash
-bin/sandbox.sh claude my-art --graphics
+bin/sandbox.sh graphics
 ```
    This also forwards port 3102 for the gallery (step 5). If that port is in use on your machine (e.g. by a HyperFrames sandbox), it only warns and goes on; `--forward PORT` forwards another port, and then the gallery must run on it too (`graphics-gallery --port PORT`).
 3. **Upload what Claude should work on** (photos, a PSD), if any:
@@ -222,7 +222,7 @@ openshell sandbox create --name my-art --from claude-graphics:latest --provider 
   --policy policies/graphics.yaml --detach -- sleep infinity
 openshell sandbox exec my-art --workdir /sandbox -- claude-start
 ```
-`--graphics` is only for Claude, and can't be combined with `--browser` or `--hyperframes`. `--acp` and `--vscode` work with it.
+`--acp` and `--vscode` work with it.
 
 ### What the image adds
 [images/claude-graphics](../images/claude-graphics) builds on `claude-sandbox`. It adds:
@@ -239,7 +239,7 @@ The CLIs also work without MCP, e.g. `vectorcraft-cli run --in art.vectorcraft -
 ### The gallery
 `graphics-gallery [--dir /sandbox] [--port 3102] [--host 127.0.0.1] [--background]` serves a page with a grid of thumbnails of the images below `--dir` (PNG, JPEG, GIF, WebP, SVG, AVIF, BMP, TIFF), newest first. It checks for new files every three seconds, so images appear as Claude writes them. You can filter by name and folder, sort by date, name or size, and click an image for a large view (arrow keys move between images, Esc closes) or to open the original.
 * **It starts by itself.** `claude-start` and `claude-acp-start` (through `graphics-init`) run `graphics-gallery --background`, which detaches, logs to `/tmp/graphics-gallery.log` and does nothing if the port is already in use, so it keeps running after the agent quits and a second start doesn't make a second server. It starts when the agent starts, not when the sandbox is created, so with `--vscode` or a plain `sandbox exec` start it yourself (`graphics-gallery --background`). To use another port or folder, run `graphics-gallery --port N --dir D` yourself.
-* **Opening it:** you reach it through a port forward, which `bin/sandbox.sh claude my-art --graphics` starts for 3102 every time you run it (or `openshell forward start 3102 my-art -d` by hand). The forward goes through the gateway, so the sandbox opens no port and needs no network rule. Then open http://127.0.0.1:3102. Ask Claude to put its results in `/sandbox`, in folders if you like; the folder menu follows them.
+* **Opening it:** you reach it through a port forward, which `bin/sandbox.sh graphics` starts for 3102 every time you run it (or `openshell forward start 3102 graphics -d` by hand). The forward goes through the gateway, so the sandbox opens no port and needs no network rule. Then open http://127.0.0.1:3102. Ask Claude to put its results in `/sandbox`, in folders if you like; the folder menu follows them.
 * **Read-only:** GET only, and only image files below `--dir`. Hidden folders (`.claude`, `.venv` and the like), `node_modules` and any other file type, such as `.claude.json`, give 404, and so does a path that leaves `--dir`. Files are sent with `Content-Security-Policy: sandbox`, so scripts in an SVG don't run if you open one directly.
 * **Binding:** it listens on `127.0.0.1` in the sandbox, which is what the forward connects to. Don't use `--host 0.0.0.0` unless you know why.
 * **PDFs and PSDs** aren't shown, because browsers don't render them as images. Ask Claude to export PNG or SVG next to them.
@@ -274,7 +274,7 @@ The image can use [Replicate](https://replicate.com) to generate or edit images 
 
 1. Create an API token at [replicate.com/account/api-tokens](https://replicate.com/account/api-tokens). Use one for this only, and set a spending limit in your Replicate account.
 2. Create the provider: `bin/provider.sh replicate`. It takes `REPLICATE_API_TOKEN` from the environment, the Keychain or `.env` (see [Credentials](setup.md#credentials); in the Keychain: `security add-generic-password -U -s openshell -a REPLICATE_API_TOKEN -w`), imports [providers/replicate.yaml](../providers/replicate.yaml) and creates the provider `replicate`. Once is enough; a new token goes in with `bin/provider.sh --update replicate`.
-3. Create the sandbox: `bin/sandbox.sh claude my-art --graphics`. If the provider `replicate` exists, `sandbox.sh` attaches it, and only to `--graphics` sandboxes. Without it, it prints a hint and Replicate stays off.
+3. Create the sandbox: `bin/sandbox.sh graphics`. If the provider `replicate` exists, `sandbox.sh` attaches it, and only to the `graphics` profile. Without it, it prints a hint and Replicate stays off.
 
 What you get:
 * **The MCP server `replicate`**, registered by `graphics-init` only when the token is present. It is the local `replicate-mcp` package from the image (`mcp-server`, over stdio), not the hosted `mcp.replicate.com`: that one only accepts OAuth tokens and answers an API token with 401 `Invalid token format`. The local server sends the placeholder to `api.replicate.com` and the proxy swaps in the real token, so the token never lives in the sandbox. Check it with `claude mcp list`.
@@ -329,7 +329,8 @@ Anything not listed follows Claude Code's defaults (it asks). The list is a star
 * **Persistent Web Interface:** A web dashboard served on port `5476` inside the sandbox (`http://127.0.0.1:5476`).
 * **Claude Code via ACP:** Kiro Crew communicates with Claude Code over the standardized Agent Client Protocol, keeping sessions, tools, and permissions governed inside the sandbox.
 * **OpenShell Isolation:** Claude Code API calls (`api.anthropic.com` and `platform.claude.com`) route through the attached `claude` provider with bearer token injection outside the sandbox.
-* **Port Forwarding:** Port 5476 is exposed in the container and automatically forwarded to `http://127.0.0.1:5476/` on your host when started with `bin/sandbox.sh claude my-crew --kirocrew`.
+* **Port forwarding:** `bin/sandbox.sh kirocrew` forwards `5476` (the dashboard) and `9100` to `9102` to your host. Kiro Crew apps run a backend of their own on ports from 9100 up (the first app gets 9100, the next 9101), and their page loads it in an iframe from `127.0.0.1` in your browser, so those ports must be forwarded too. For a fourth app, run `openshell forward start -d 9103 kirocrew`.
+* **App store:** the policy allows the Kiro Crew app catalog (`apps.crew.kiro.dev`), clone-only access to GitHub and the PyPI and npm registries, so apps can be installed. Apps are third-party code that runs in the sandbox. For a sandbox with no network access, use the `kirocrew-readonly` profile (apps won't install or start).
 
 ### Build and Run
 1. **Build the image:**
@@ -339,10 +340,16 @@ make claude-kirocrew
 ```
 2. **Start the sandbox:**
 ```bash
-bin/sandbox.sh claude my-crew --kirocrew
+bin/sandbox.sh kirocrew
 ```
-This creates the sandbox using [images/claude-kirocrew](../images/claude-kirocrew/Dockerfile) and [policies/kirocrew.yaml](../policies/kirocrew.yaml), forwards port 5476 to your local machine, and starts the Kiro Crew gateway.
+This creates the sandbox `kirocrew` using [images/claude-kirocrew](../images/claude-kirocrew/Dockerfile) and [policies/kirocrew.yaml](../policies/kirocrew.yaml) (see [profiles/kirocrew.env](../profiles/kirocrew.env)), forwards the ports above, and starts the Kiro Crew gateway. Use `bin/sandbox.sh kirocrew-readonly` for the same image with [policies/kirocrew-readonly.yaml](../policies/kirocrew-readonly.yaml), which has no network access.
 
 3. **Access the Dashboard:**
-Open [http://127.0.0.1:5476](http://127.0.0.1:5476) in your browser.
+Open the sign-in link that Kiro Crew prints on start, but with `127.0.0.1` instead of `localhost` in it (`http://127.0.0.1:5476?token=...`). The forward is on `127.0.0.1` and the gateway doesn't redirect between the two names, so with `localhost` the session cookie doesn't match and you get "Session expired". `kirocrew token` doesn't work from `openshell sandbox exec`: the gateway doesn't accept that process as the local owner.
+
+### What the image does differently
+* **No inner sandbox:** Kiro Crew can't create user namespaces under OpenShell, so it has no sandbox of its own and the image sets `KIROCREW_ALLOW_UNSANDBOXED=1` (and `sandbox_allow_unsandboxed_exec` in its config). The OpenShell sandbox is the only isolation boundary.
+* **Proxy CA for git, pip and npm:** Kiro Crew runs them with a scrubbed environment, and OpenShell's proxy terminates TLS with its own CA, so installing apps failed with certificate errors. The image points the system trust files, `/etc/pip.conf` and `/usr/local/etc/npmrc` at the bundle the supervisor writes at sandbox start. Outside OpenShell those links dangle and TLS fails closed.
+* **Patched path pinning:** Kiro Crew opens `/` and then each path component to pin a path, but OpenShell's Landlock baseline never grants `/` itself, so app backends, project skills and the pycache sweep failed with `Permission denied: '/'`. [patch-unreadable-root.py](../images/claude-kirocrew/patch-unreadable-root.py) makes those walks start at the first readable component, and fails the image build if Kiro Crew's code changes. Remove it once Kiro Crew or OpenShell fixes this.
+* **Still blocked:** Kiro Crew's telemetry endpoint (`d175o3ylxqum0e.cloudfront.net`), which you can leave blocked, and the Kiro CLI check, which logs `kiro_prerequisite_required` for some dashboard calls.
 

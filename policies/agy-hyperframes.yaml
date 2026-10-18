@@ -2,7 +2,7 @@
 # HyperFrames. It is policies/antigravity.yaml (the four Google hosts, for the
 # agy binary only) plus the CDN and font rules of policies/hyperframes.yaml.
 #
-#   bin/sandbox.sh agy my-video --hyperframes --forward 3102
+#   bin/sandbox.sh agy-hyperframes
 #
 # The login tokens of agy (including the long-lived refresh token) live in
 # /sandbox and are readable by everything in the sandbox, including the node

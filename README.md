@@ -62,6 +62,7 @@ Or with the script, which creates the sandbox on first use. The first line start
 bin/sandbox.sh claude my-task
 bin/sandbox.sh claude my-task --vscode
 ```
+The first argument is a profile: `claude`, `opencode`, `agy`, or a variant such as `browser`, `hyperframes`, `graphics` or `kirocrew` (see [profiles/](profiles)). `bin/sandbox.sh` without arguments lists them.
 5. In VS Code, start the agent in the integrated terminal (`claude-start`, `opencode` or `agy`).
 6. Open a shell in the sandbox when you need one, with `sandbox exec` or plain SSH:
 ```bash
@@ -94,7 +95,7 @@ Not needed for the basic steps above. Each one gives the agent more reach, so ad
 
 #### Headless browser use
 * **What:** Claude Code uses a headless Chromium **inside the sandbox**, through Playwright MCP. The browser has none of your logins.
-* **How:** build the `claude-browser` image, list the sites the browser may open in [policies/browser.yaml](policies/browser.yaml), and start with `bin/sandbox.sh claude my-task --browser`.
+* **How:** build the `claude-browser` image, list the sites the browser may open in [policies/browser.yaml](policies/browser.yaml), and start with `bin/sandbox.sh browser`.
 * **What limits it:** OpenShell decides which sites the browser can reach, the same way as for any other program. Any page the browser opens can receive data in its URL, so the list of sites is what keeps data in.
 * **Local pages:** a dev server in the sandbox (`localhost`) works without a rule.
 * **Don't** let the agent use your own Chrome.
@@ -102,14 +103,14 @@ Not needed for the basic steps above. Each one gives the agent more reach, so ad
 
 #### HyperFrames (videos from HTML)
 * **What:** Claude Code makes videos with [HyperFrames](https://hyperframes.heygen.com) in the sandbox, with its skills, FFmpeg and headless Chromium, and you watch and edit in HyperFrames Studio in your own browser.
-* **How:** `make claude-hyperframes`, then `bin/sandbox.sh claude my-video --hyperframes --forward 3102`, ask for the preview on port 3102, and open http://127.0.0.1:3102.
+* **How:** `make claude-hyperframes`, then `bin/sandbox.sh hyperframes` (it forwards port 3102), ask for the preview on port 3102, and open http://127.0.0.1:3102.
 * **What limits it:** [policies/hyperframes.yaml](policies/hyperframes.yaml) allows only read-only access to the script and font CDNs and the HyperFrames registry. The Studio page runs in your browser, outside the sandbox (see below).
-* **With Antigravity CLI:** `bin/sandbox.sh agy my-video --hyperframes` uses the `agy-hyperframes` image (HyperFrames and a browser too). Its policy lets the processes that can read agy's login tokens reach the CDNs, so use it for that work only.
+* **With Antigravity CLI:** `bin/sandbox.sh agy-hyperframes` uses the `agy-hyperframes` image (HyperFrames and a browser too). Its policy lets the processes that can read agy's login tokens reach the CDNs, so use it for that work only.
 * See [HyperFrames](docs/extras.md#hyperframes).
 
 #### Graphics (vector art and photo editing)
 * **What:** Claude Code draws and exports SVG and PDF with [VectorCraft](https://getartcraft.com/apps/vectorcraft) and edits photos with [PhotoCraft](https://getartcraft.com/apps/photocraft), two open-source ArtCraft apps, through their headless CLIs and MCP servers in the sandbox. The image includes the `clean-vector-from-raster` skill (photo to print-ready SVG), Python 3 and uv (packages from PyPI), and `graphics-gallery`, a web page for browsing the images. With a Replicate token it can also generate images and video with hosted models (MCP server and skills).
-* **How:** `make claude-graphics`, then `bin/sandbox.sh claude my-art --graphics`, open http://127.0.0.1:3102 (the gallery starts with the agent, and the script forwards its port), and `openshell sandbox download` the results.
+* **How:** `make claude-graphics`, then `bin/sandbox.sh graphics`, open http://127.0.0.1:3102 (the gallery starts with the agent, and the script forwards its port), and `openshell sandbox download` the results.
 * **What limits it:** [policies/graphics.yaml](policies/graphics.yaml) is the terminal policy plus read-only access to PyPI for `python3` and `uv`, and the MCP servers can only read and write below `/sandbox`. For Replicate (`bin/provider.sh replicate`) the token goes only to `api.replicate.com`, plus read-only rules for its output, streaming and docs hosts.
 * See [Graphics](docs/extras.md#graphics-vectorcraft-and-photocraft).
 

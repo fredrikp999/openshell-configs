@@ -6,7 +6,7 @@
 # must cover them. Output goes to stderr, so stdout stays clean for ACP.
 set -e
 {
-  # The gallery page on port 3102 (bin/sandbox.sh --forward 3102); a no-op if it runs.
+  # The gallery page on port 3102 (bin/sandbox.sh graphics forwards it); a no-op if it runs.
   graphics-gallery --background || true
   mkdir -p "$HOME/.claude/skills"
   for d in /usr/local/share/graphics-skills/*/; do

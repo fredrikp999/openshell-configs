@@ -12,8 +12,8 @@
 # terminal policy plus read-only access to PyPI. The MCP servers may only read and write below /sandbox.
 # The image also has the skills in skills/ (clean-vector-from-raster), copied to
 # ~/.claude/skills on first start by graphics-init, Python 3, and
-# graphics-gallery, a web page for browsing the images (forward its port with
-# bin/sandbox.sh --forward PORT).
+# graphics-gallery, a web page for browsing the images (bin/sandbox.sh
+# graphics forwards its port).
 FROM localhost/claude-sandbox:latest
 
 # Python 3 from Debian with pip and venv (Debian's pip refuses system-wide

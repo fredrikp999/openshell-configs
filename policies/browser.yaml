@@ -3,7 +3,7 @@
 # may open.
 #
 #   openshell sandbox create --from claude-browser:latest --policy policies/browser.yaml ...
-#   ./sandbox.sh claude my-task --browser       # does the same
+#   bin/sandbox.sh browser       # does the same
 #
 # Pages on the sandbox itself (a dev server on localhost or 127.0.0.1) work
 # without a rule. Every other site must be listed under browser_sites, or it

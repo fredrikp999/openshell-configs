@@ -1,19 +1,27 @@
 #!/bin/sh
 # Start an agent sandbox, either in the terminal or in VS Code.
 #
-#   bin/sandbox.sh <claude|opencode|agy> [name] [--vscode|--acp] [--browser|--hyperframes|--graphics|--kirocrew|--node|--python]
-#                  [--forward PORT[,PORT...]] [--policy NAME|FILE] [--workdir DIR] [-- agent args...]
+#   bin/sandbox.sh <profile> [name] [--vscode|--acp] [--workdir DIR]
+#                  [--policy NAME|FILE] [--forward PORT[,PORT...]] [-- agent args...]
 #
-#   bin/sandbox.sh claude                      # Claude in this terminal, sandbox claude-agent1
+# A profile (profiles/<profile>.env) is a ready-made setup: which agent, image,
+# policy and ports to use. Run without arguments to list the profiles. To add a
+# variant, copy a profile file and change it. The sandbox is named after the
+# profile unless you give another name.
+#
+#   bin/sandbox.sh claude                      # Claude in this terminal, sandbox claude
 #   bin/sandbox.sh claude my-task --vscode     # open sandbox my-task in VS Code
 #   bin/sandbox.sh opencode oc-task            # OpenCode in this terminal
 #   bin/sandbox.sh agy ag-task                 # Antigravity CLI in this terminal
 #   bin/sandbox.sh claude my-task -- -p 'reply with OK'   # pass args to the agent
 #   bin/sandbox.sh opencode oc-task --acp      # ACP over stdio, for a UI/client
-#   bin/sandbox.sh claude web-task --browser   # Claude with a headless browser
-#   bin/sandbox.sh claude my-video --hyperframes --forward 3102   # HyperFrames
-#   bin/sandbox.sh claude my-art --graphics # Claude with VectorCraft and PhotoCraft
-#   bin/sandbox.sh claude my-crew --kirocrew   # Claude with Kiro Crew (web dashboard on 5476)
+#   bin/sandbox.sh browser                     # Claude with a headless browser
+#   bin/sandbox.sh hyperframes                 # Claude with HyperFrames (preview on 3102)
+#   bin/sandbox.sh graphics                    # Claude with VectorCraft and PhotoCraft
+#   bin/sandbox.sh kirocrew                    # Claude with Kiro Crew (dashboard on 5476)
+#   bin/sandbox.sh kirocrew-readonly           # the same with no network access
+#
+# --vscode opens the sandbox in VS Code instead of running the agent here.
 #
 # --acp runs the agent's Agent Client Protocol server (JSON-RPC over stdin and
 # stdout) instead of the terminal UI. A client spawns this script as its agent
@@ -22,57 +30,16 @@
 # ACP adapter claude-agent-acp, started by claude-acp-start; for agy the image
 # has the community adapter google-antigravity-acp, started by agy-acp-start.
 #
-# --browser (Claude only) creates the sandbox from the claude-browser image
-# with policies/browser.yaml, which lists the sites the browser may open. It
-# only matters when the sandbox is created.
+# --policy NAME|FILE replaces the profile's policy, with a file path or NAME for
+# policies/NAME.yaml. The image decides which tools exist; the policy decides
+# what the sandbox may reach. It only matters when the sandbox is created; change
+# a running one with `openshell policy set`.
 #
-# --hyperframes (Claude and agy) is the same with the claude-hyperframes image
-# and policies/hyperframes.yaml: HyperFrames, FFmpeg and its skills on top of the
-# browser. For agy it is the agy-hyperframes image (HyperFrames and Python) with
-# policies/agy-hyperframes.yaml, which lets node and Chromium reach the CDNs
-# while agy's login tokens are in the sandbox; see docs/agents.md.
-#
-# --graphics (Claude only) creates the sandbox from the claude-graphics image
-# with policies/graphics.yaml: the CLIs and MCP servers of VectorCraft and
-# PhotoCraft (registered as `vectorcraft` and `photocraft`), so Claude can draw
-# SVG and PDF and edit photos in /sandbox, with Python, uv and graphics-gallery
-# (a web page for the images, http://127.0.0.1:3102). It forwards port 3102 for
-# the gallery unless you give another --forward PORT, and only warns if that
-# port is taken. The policy lets python3 and uv reach PyPI; there is no other
-# network access, except for Replicate: if the provider `replicate` exists
-# (bin/provider.sh replicate) it is attached, which adds the Replicate MCP
-# server and lets Claude and python3 use the Replicate API with your token
-# (the token stays outside the sandbox). Without it the sandbox has no
-# Replicate access.
-#
-# --kirocrew (Claude only) creates the sandbox from the claude-kirocrew image
-# with policies/kirocrew.yaml: Kiro Crew (https://kiro.dev) with Claude Code
-# over ACP as its agent harness and its web dashboard on port 5476. Kiro Crew
-# apps run a backend of their own that their page loads from 127.0.0.1 in your
-# browser (the first app gets 9100, the next 9101, and so on). So by default it
-# forwards 5476,9100,9101,9102 unless you give your own --forward list. Only
-# the ports that something listens on matter; forward more with
-# `openshell forward start -d PORT <sandbox>`. The policy allows access to
-# Kiro Crew updates, the app store, GitHub clones and package registries.
-#
-# --policy NAME|FILE (any agent) replaces the policy that the other flags chose,
-# with a file path or NAME for policies/NAME.yaml. The image decides which tools
-# exist; the policy decides what the sandbox may reach. For example:
-#   bin/sandbox.sh claude research --kirocrew --policy kirocrew-readonly
-#
-# --node (agy only) creates the sandbox from the agy-node image with
-# policies/agy-node.yaml, which lets node reach registry.npmjs.org so the agent
-# can `npm install`. agy's login tokens are in the sandbox and node can read
-# them, so use it only for work that needs npm; see docs/agents.md.
-#
-# --python (agy only) is the same with the agy-python image and
-# policies/agy-python.yaml: Python and pip, with read-only access to PyPI. The
-# same warning applies; see docs/agents.md.
-#
-# --forward PORT[,PORT...] forwards 127.0.0.1:PORT on this machine to the same
-# port in the sandbox (in the background, if not already forwarded), so you can
-# open what the agent serves there, e.g. the HyperFrames preview. Give a list
-# separated by commas, or repeat the option, to forward several ports.
+# --forward PORT[,PORT...] replaces the profile's ports. Each is forwarded from
+# 127.0.0.1 on this machine to the same port in the sandbox (in the background, if
+# not already forwarded), so you can open what the agent serves there. Give a
+# list separated by commas, or repeat the option. A port from the profile only
+# warns if it is taken; one you ask for with --forward stops the script.
 #
 # The sandbox is created on first use, and reused after that. It runs
 # `sleep infinity` as its main process, so it keeps running when you quit the
@@ -86,17 +53,57 @@
 # (bin/sandbox.sh agy <name>) before using --acp.
 set -eu
 
-usage() { sed -n "2,86p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+here=$(dirname "$0")
+
+usage() {
+  sed -n '2,/^set -eu/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//'
+  echo
+  list_profiles
+  exit 1
+}
+
+list_profiles() {
+  echo "Profiles:"
+  for f in "$here"/../profiles/*.env; do
+    [ -f "$f" ] || continue
+    printf '  %-18s %s\n' "$(basename "$f" .env)" "$(sed -n '1s/^# *//p' "$f")"
+  done
+}
+
+# NAME|FILE -> path of the policy file
+resolve_policy() {
+  if [ -f "$1" ]; then echo "$1"
+  elif [ -f "$here/../policies/$1.yaml" ]; then echo "$here/../policies/$1.yaml"
+  else echo "No policy file '$1' (or policies/$1.yaml)." >&2; exit 1; fi
+}
 
 [ $# -ge 1 ] || usage
-agent=$1; shift
+profile=$1; shift
+case $profile in
+  ''|-*|*[!a-z0-9-]*) usage ;;
+esac
+profile_file=$here/../profiles/$profile.env
+if [ ! -f "$profile_file" ]; then
+  echo "No profile '$profile' (profiles/$profile.env)." >&2
+  list_profiles >&2
+  exit 1
+fi
+
+agent=; image=; policy=; cmd=; forward=; optional_provider=
+# shellcheck disable=SC1090
+. "$profile_file"
+case $agent in
+  claude|opencode|agy) ;;
+  *) echo "profiles/$profile.env: agent must be claude, opencode or agy (got '$agent')." >&2; exit 1 ;;
+esac
+[ -n "$image" ] && [ -n "$policy" ] || { echo "profiles/$profile.env needs image and policy." >&2; exit 1; }
+
 case $agent in
   claude)
-    image=claude-sandbox:latest
     provider=claude
-    set_cmd() { cmd="claude-start"; } ;;
+    term_cmd="claude-start"
+    acp_cmd="claude-acp-start" ;;
   opencode)
-    image=opencode-sandbox:latest
     provider=openrouter
     model=${OPENCODE_MODEL:-openrouter/nvidia/nemotron-3.5-lightning:free}
     # The model goes into a command line and a JSON config, so only allow the
@@ -106,43 +113,29 @@ case $agent in
       ''|*[!A-Za-z0-9._:/@~+-]*)
         echo "OPENCODE_MODEL '$model' is not a valid model id." >&2; exit 1 ;;
     esac
-    set_cmd() { cmd="opencode -m $model"; } ;;
+    term_cmd="opencode -m $model"
+    acp_cmd="opencode acp" ;;
   agy)
-    image=agy-sandbox:latest
     provider=
-    set_cmd() { cmd="agy"; } ;;
-  *) usage ;;
+    term_cmd="agy"
+    acp_cmd="agy-acp-start" ;;
 esac
-set_cmd
 
-name=$agent-agent1
+name=$profile
 case ${1:-} in ''|-*) ;; *) name=$1; shift ;; esac
 
 vscode=false
 acp=false
-browser=false
-hyperframes=false
-graphics=false
-kirocrew=false
-extra_provider=
-node=false
-python=false
-forward=
+forward_given=
 policy_override=
 workdir=/sandbox
 while [ $# -gt 0 ]; do
   case $1 in
     --vscode) vscode=true; shift ;;
     --acp) acp=true; shift ;;
-    --browser) browser=true; shift ;;
-    --hyperframes) hyperframes=true; shift ;;
-    --graphics) graphics=true; shift ;;
-    --kirocrew) kirocrew=true; shift ;;
-    --node) node=true; shift ;;
-    --python) python=true; shift ;;
-    --policy) policy_override=$2; shift 2 ;;
-    --forward) forward=${forward:+$forward,}$2; shift 2 ;;
-    --workdir|-w) workdir=$2; shift 2 ;;
+    --policy) [ $# -ge 2 ] || usage; policy_override=$2; shift 2 ;;
+    --forward) [ $# -ge 2 ] || usage; forward_given=${forward_given:+$forward_given,}$2; shift 2 ;;
+    --workdir|-w) [ $# -ge 2 ] || usage; workdir=$2; shift 2 ;;
     --) shift; break ;;
     *) usage ;;
   esac
@@ -150,83 +143,32 @@ done
 
 $vscode && $acp && { echo "Use either --vscode or --acp, not both." >&2; exit 1; }
 if $acp; then
-  case $agent in
-    claude) cmd="claude-acp-start" ;;
-    opencode) cmd="opencode acp" ;;
-    agy) cmd="agy-acp-start" ;;
-  esac
+  cmd=$acp_cmd
+else
+  cmd=${cmd:-$term_cmd}
 fi
 
-policy=$(dirname "$0")/../policies/vscode-terminal.yaml
-if [ "$agent" = agy ]; then
-  policy=$(dirname "$0")/../policies/antigravity.yaml
-fi
-if $browser; then
-  [ "$agent" = claude ] || { echo "--browser is only for claude." >&2; exit 1; }
-  image=claude-browser:latest
-  policy=$(dirname "$0")/../policies/browser.yaml
-fi
-if $hyperframes; then
-  case $agent in claude|agy) ;; *) echo "--hyperframes is only for claude and agy." >&2; exit 1 ;; esac
-  $browser && { echo "Use either --browser or --hyperframes, not both." >&2; exit 1; }
-  if [ "$agent" = agy ]; then
-    image=agy-hyperframes:latest
-    policy=$(dirname "$0")/../policies/agy-hyperframes.yaml
-    $acp || cmd="agy-start"
-  else
-    image=claude-hyperframes:latest
-    policy=$(dirname "$0")/../policies/hyperframes.yaml
-  fi
-fi
-if $graphics; then
-  [ "$agent" = claude ] || { echo "--graphics is only for claude." >&2; exit 1; }
-  $browser || $hyperframes && { echo "Use only one of --graphics, --browser and --hyperframes." >&2; exit 1; }
-  image=claude-graphics:latest
-  policy=$(dirname "$0")/../policies/graphics.yaml
-  if openshell provider list 2>/dev/null | awk '$1=="replicate" {f=1} END {exit !f}'; then
-    extra_provider=replicate
-  else
-    echo "No provider 'replicate': Replicate is off. To turn it on: bin/provider.sh replicate" >&2
-  fi
-fi
-if $kirocrew; then
-  [ "$agent" = claude ] || { echo "--kirocrew is only for claude." >&2; exit 1; }
-  $browser || $hyperframes || $graphics && { echo "Use only one of --kirocrew, --graphics, --browser and --hyperframes." >&2; exit 1; }
-  image=claude-kirocrew:latest
-  policy=$(dirname "$0")/../policies/kirocrew.yaml
-  $acp || cmd="kirocrew-start"
-fi
-if $node; then
-  [ "$agent" = agy ] || { echo "--node is only for agy." >&2; exit 1; }
-  $hyperframes && { echo "Use either --node or --hyperframes, not both." >&2; exit 1; }
-  image=agy-node:latest
-  policy=$(dirname "$0")/../policies/agy-node.yaml
-fi
-if $python; then
-  [ "$agent" = agy ] || { echo "--python is only for agy." >&2; exit 1; }
-  $hyperframes || $node && { echo "Use only one of --python, --node and --hyperframes." >&2; exit 1; }
-  image=agy-python:latest
-  policy=$(dirname "$0")/../policies/agy-python.yaml
-fi
-# --policy NAME|FILE replaces the policy the flags above picked: a file path, or NAME for policies/NAME.yaml.
-if [ -n "$policy_override" ]; then
-  if [ -f "$policy_override" ]; then policy=$policy_override
-  elif [ -f "$(dirname "$0")/../policies/$policy_override.yaml" ]; then policy=$(dirname "$0")/../policies/$policy_override.yaml
-  else echo "No policy file '$policy_override' (or policies/$policy_override.yaml)." >&2; exit 1; fi
-fi
-# --graphics forwards the gallery's port by default; --kirocrew forwards Kiro Crew dashboard (5476).
-forward_soft=false
-if $graphics && [ -z "$forward" ]; then
-  forward=3102
-  forward_soft=true
-elif $kirocrew && [ -z "$forward" ]; then
-  forward=5476,9100,9101,9102
-  forward_soft=true
+policy=$(resolve_policy "${policy_override:-$policy}")
+
+# Ports from the profile only warn when they can't be forwarded; ports you ask for stop the script.
+forward_soft=true
+if [ -n "$forward_given" ]; then
+  forward=$forward_given
+  forward_soft=false
 fi
 case $forward in
   '') ;;
   *[!0-9,]*|,*|*,|*,,*) echo "--forward needs port numbers, separated by commas." >&2; exit 1 ;;
 esac
+
+extra_provider=
+if [ -n "$optional_provider" ]; then
+  if openshell provider list 2>/dev/null | awk -v p="$optional_provider" '$1==p {f=1} END {exit !f}'; then
+    extra_provider=$optional_provider
+  else
+    echo "No provider '$optional_provider': it is off. To turn it on: bin/provider.sh $optional_provider" >&2
+  fi
+fi
 
 phase() { openshell sandbox list 2>/dev/null | awk -v n="$1" '$1==n {print $NF}'; }
 

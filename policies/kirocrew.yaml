@@ -4,13 +4,13 @@
 # updates and package registries.
 #
 #   openshell sandbox create --from claude-kirocrew:latest --policy policies/kirocrew.yaml ...
-#   bin/sandbox.sh claude my-crew --kirocrew       # does the same and forwards port 5476
+#   bin/sandbox.sh kirocrew       # does the same and forwards the ports
 #
 # Kiro Crew serves its web dashboard inside the sandbox on port 5476 (http://127.0.0.1:5476).
 # Pages on the sandbox itself need no network egress rule. Access the dashboard from your
 # browser by forwarding the port:
 #   openshell forward start 5476 <sandbox>
-# or automatically via `bin/sandbox.sh claude my-crew --kirocrew`.
+# or automatically via `bin/sandbox.sh kirocrew`.
 #
 # Claude Code reaches api.anthropic.com and platform.claude.com through the attached
 # provider (`--provider claude`), not through this file.

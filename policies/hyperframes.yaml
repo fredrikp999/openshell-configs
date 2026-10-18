@@ -2,7 +2,7 @@
 # filesystem rules, plus what HyperFrames compositions and the CLI load.
 #
 #   openshell sandbox create --from claude-hyperframes:latest --policy policies/hyperframes.yaml ...
-#   bin/sandbox.sh claude my-video --hyperframes       # does the same
+#   bin/sandbox.sh hyperframes       # does the same
 #
 # Compositions load GSAP and other libraries from CDNs and fonts from Google
 # Fonts. Headless Chromium (render, check, snapshots, Playwright MCP) loads

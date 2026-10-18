@@ -8,7 +8,7 @@
 # look at what it builds) and adds the HyperFrames CLI, FFmpeg, fonts and the
 # HyperFrames skills. Use it with policies/hyperframes.yaml, which allows the
 # CDNs that compositions load from, and watch the preview from your browser
-# with `openshell forward` (bin/sandbox.sh --hyperframes --forward PORT).
+# with `openshell forward` (bin/sandbox.sh hyperframes).
 FROM localhost/claude-browser:latest
 
 ARG HYPERFRAMES_VERSION=0.8.147

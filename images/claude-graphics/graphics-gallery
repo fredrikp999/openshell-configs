@@ -7,7 +7,7 @@
 nothing if something already listens on the port. claude-start runs it that way.
 
 Open the port from your machine with `openshell forward` (bin/sandbox.sh
---forward PORT does that). The page checks for new files every few seconds, so
+graphics does that). The page checks for new files every few seconds, so
 images show up as the agent writes them. Click one for a large view and
 the arrow keys to move between them.
 

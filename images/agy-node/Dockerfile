@@ -6,7 +6,7 @@
 # install script, and the community ACP adapter, started by agy-acp-start), but
 # on node:22-slim, so Node.js is /usr/local/bin/node: the binary that
 # policies/agy-node.yaml lets reach registry.npmjs.org. Use it with that policy
-# (bin/sandbox.sh agy NAME --node). Python is not included.
+# (bin/sandbox.sh agy-node). Python is not included.
 FROM node:22-slim
 RUN apt-get update \
  && apt-get install -y --no-install-recommends git ca-certificates ripgrep curl \

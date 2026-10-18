@@ -3,7 +3,7 @@
 # binary only) plus read-only access to registry.npmjs.org for node, the
 # process that npm runs as.
 #
-#   bin/sandbox.sh agy my-task --node
+#   bin/sandbox.sh agy-node
 #
 # agy's login tokens (including the long-lived refresh token) live in /sandbox
 # and are readable by everything in the sandbox, including node and the install

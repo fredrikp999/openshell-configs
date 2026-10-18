@@ -19,7 +19,7 @@
 #   openshell policy set <sandbox> --policy policies/graphics.yaml --wait
 #
 #   openshell sandbox create --from claude-graphics:latest --policy policies/graphics.yaml ...
-#   bin/sandbox.sh claude my-art --graphics       # does the same
+#   bin/sandbox.sh graphics       # does the same
 version: 1
 filesystem_policy:
   include_workdir: true

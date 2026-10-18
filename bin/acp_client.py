@@ -113,7 +113,7 @@ def list_sandboxes():
     out = run_openshell("sandbox", "list")
     print(out, end="")
     if len(out.strip().splitlines()) <= 1:
-        info("No sandboxes. Create one with bin/sandbox.sh <claude|opencode|agy> [name].")
+        info("No sandboxes. Create one with bin/sandbox.sh <claude|opencode|agy> [name] (or another profile; run bin/sandbox.sh to list them).")
     else:
         info("Connect with: bin/acp_client.py connect <name>")
 
@@ -122,7 +122,7 @@ def check_sandbox(name):
     found = dict(sandboxes())
     if name not in found:
         names = ", ".join(sorted(found)) or "none"
-        die("no sandbox named '%s' (existing: %s).\nCreate it with bin/sandbox.sh <agent> %s"
+        die("no sandbox named '%s' (existing: %s).\nCreate it with bin/sandbox.sh <profile> %s"
             % (name, names, name))
     if found[name] != "Ready":
         die("sandbox '%s' is %s, not Ready. Wait for it, or delete it with "

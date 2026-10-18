@@ -19,7 +19,7 @@ Follow the repo's docs (`docs/setup.md` and `docs/agents.md`) and use the repo's
 3. **Credentials**: skip if the provider already exists (`openshell provider list`). Otherwise check, without showing the value, that the key is in the Keychain: `security find-generic-password -s openshell -a CLAUDE_CODE_OAUTH_TOKEN >/dev/null` (or `OPENROUTER_API_KEY`), or else in `.env`: `grep -q '^CLAUDE_CODE_OAUTH_TOKEN=.' .env`. If neither has it, tell the user how to store it (see Rules) and wait.
 4. **Provider**: `bin/provider.sh claude` or `bin/provider.sh opencode`. It imports the profile and creates the provider; it skips both when they exist. For a new token: `bin/provider.sh --update claude`.
 5. **Image**: skip if `podman image exists claude-sandbox:latest` (or `opencode-sandbox:latest`, `agy-sandbox:latest`) succeeds. Otherwise `make claude-sandbox` (or `make opencode-sandbox`, `make agy-sandbox`), which runs `podman build` on the image's folder in `images/`.
-6. **Sandbox**: offer `bin/sandbox.sh <agent> [name]`, or `--vscode`. It is interactive, so give the user the command rather than running it, unless they ask to run a non-interactive check such as `bin/sandbox.sh claude test -- -p 'reply with OK'`.
+6. **Sandbox**: offer `bin/sandbox.sh <profile> [name]` (`claude`, `opencode`, `agy`; `bin/sandbox.sh` lists the variants), or `--vscode`. It is interactive, so give the user the command rather than running it, unless they ask to run a non-interactive check such as `bin/sandbox.sh claude test -- -p 'reply with OK'`.
 
 ## Finish
 Report each step as done, skipped (already in place) or failed, with the failing command's output. On failure, look up the symptom in `docs/troubleshooting.md` before guessing.

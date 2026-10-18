@@ -2,7 +2,7 @@
 # Python packages. It is policies/antigravity.yaml (the four Google hosts, for
 # the agy binary only) plus read-only access to PyPI for Python (pip).
 #
-#   bin/sandbox.sh agy my-task --python
+#   bin/sandbox.sh agy-python
 #
 # agy's login tokens (including the long-lived refresh token) live in /sandbox
 # and are readable by everything in the sandbox, including Python and the

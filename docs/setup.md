@@ -87,7 +87,7 @@ It tells you which one it used, never prints the value, and passes it to `opensh
 |---|---|---|
 | Claude Code | `CLAUDE_CODE_OAUTH_TOKEN` | `claude setup-token` on the host, see [Create an OAuth token](agents.md#create-an-oauth-token-on-the-host) |
 | OpenCode | `OPENROUTER_API_KEY` | [openrouter.ai/keys](https://openrouter.ai/keys) |
-| Replicate (`--graphics`, optional) | `REPLICATE_API_TOKEN` | [replicate.com/account/api-tokens](https://replicate.com/account/api-tokens), see [Replicate](extras.md#replicate-models-for-images-and-video) |
+| Replicate (`graphics` profile, optional) | `REPLICATE_API_TOKEN` | [replicate.com/account/api-tokens](https://replicate.com/account/api-tokens), see [Replicate](extras.md#replicate-models-for-images-and-video) |
 
 ### In the Keychain (recommended)
 Store the key as a generic password with service `openshell` and the variable name as account. `-w` without a value makes `security` prompt for it, so it doesn't end up in your shell history, and `-U` replaces an existing one:

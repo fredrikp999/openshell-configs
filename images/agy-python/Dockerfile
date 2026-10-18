@@ -6,7 +6,7 @@
 # adapter, agy-acp-start) and adds Python 3 from Debian with pip and venv.
 # Debian's pip refuses system-wide installs, so packages go in a venv:
 # python -m venv .venv. Use it with policies/agy-python.yaml, which lets
-# Python reach PyPI read-only (bin/sandbox.sh agy NAME --python).
+# Python reach PyPI read-only (bin/sandbox.sh agy-python).
 FROM localhost/agy-sandbox:latest
 RUN apt-get update \
  && apt-get install -y --no-install-recommends python3 python3-pip python3-venv python-is-python3 \

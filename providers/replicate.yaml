@@ -1,5 +1,5 @@
 # Replicate provider profile, used by the claude-graphics sandboxes
-# (bin/sandbox.sh claude NAME --graphics).
+# (bin/sandbox.sh graphics).
 #
 # Credential:  a Replicate API token (replicate.com/account/api-tokens) in
 #              REPLICATE_API_TOKEN, sent as `Authorization: Bearer <token>` to

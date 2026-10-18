@@ -81,23 +81,25 @@ openshell sandbox delete my-task
 ### With the script
 [bin/sandbox.sh](../bin/sandbox.sh) does steps 1 to 3 in one command. It creates the sandbox on first use and reuses it after that:
 ```bash
-bin/sandbox.sh <claude|opencode|agy> [name] [--vscode|--acp] [--browser] [--workdir DIR] [-- agent args...]
+bin/sandbox.sh <profile> [name] [--vscode|--acp] [--workdir DIR] [--policy NAME|FILE] [--forward PORT[,PORT...]] [-- agent args...]
 ```
 | Command | What happens |
 |---|---|
-| `bin/sandbox.sh claude` | Claude in this terminal, in sandbox `claude-agent1` |
+| `bin/sandbox.sh claude` | Claude in this terminal, in sandbox `claude` |
 | `bin/sandbox.sh claude my-task` | Claude in this terminal, in sandbox `my-task` |
 | `bin/sandbox.sh claude my-task --vscode` | Opens sandbox `my-task` in VS Code; start Claude in its terminal |
-| `bin/sandbox.sh opencode` | OpenCode in this terminal, in sandbox `opencode-agent1` |
-| `bin/sandbox.sh agy` | Antigravity CLI in this terminal, in sandbox `agy-agent1`; log in on first start (see [Antigravity CLI](agents.md#antigravity-cli-with-a-google-account)) |
+| `bin/sandbox.sh opencode` | OpenCode in this terminal, in sandbox `opencode` |
+| `bin/sandbox.sh agy` | Antigravity CLI in this terminal, in sandbox `agy`; log in on first start (see [Antigravity CLI](agents.md#antigravity-cli-with-a-google-account)) |
 | `bin/sandbox.sh claude my-task -w /sandbox/myrepo` | Claude starts in `/sandbox/myrepo` |
 | `bin/sandbox.sh claude my-task -- -p 'reply with OK'` | Passes arguments to the agent (here: a non-interactive smoke test) |
 | `bin/sandbox.sh opencode my-task --acp` | Runs OpenCode's ACP server on stdin/stdout, for a UI (see [ACP](extras.md#acp-agent-client-protocol)) |
 | `bin/sandbox.sh claude my-task --acp` | The same for Claude Code, through the ACP adapter |
 | `bin/sandbox.sh agy my-task --acp` | The same for Antigravity CLI, through a community ACP adapter (log in first) |
-| `bin/sandbox.sh claude my-task --browser` | Claude with a headless browser: image `claude-browser`, policy [policies/browser.yaml](../policies/browser.yaml) (see [Browser](extras.md#headless-browser-use)). Only matters when the sandbox is created |
+| `bin/sandbox.sh browser` | Claude with a headless browser: image `claude-browser`, policy [policies/browser.yaml](../policies/browser.yaml) (see [Browser](extras.md#headless-browser-use)) |
+| `bin/sandbox.sh kirocrew` | Claude with Kiro Crew and its dashboard (see [Kiro Crew](extras.md#kiro-crew-with-claude-code-over-acp)); the other variants are in the list below |
 
-* The script uses the image, provider and agent command from the table above. Set the OpenCode model with `OPENCODE_MODEL=...`.
+* **Profiles:** the first argument is a profile, a file in [profiles/](../profiles) that sets the agent, image, policy and ports. The sandbox is named after the profile unless you give a name. Run `bin/sandbox.sh` without arguments to list them: `claude`, `opencode`, `agy`, `browser`, `hyperframes`, `graphics`, `kirocrew`, `kirocrew-readonly`, `agy-hyperframes`, `agy-node` and `agy-python`. For a new variant, copy a profile file and change it. Set the OpenCode model with `OPENCODE_MODEL=...`.
+* **`--policy` and `--forward`** replace the profile's policy and ports for one run (`bin/sandbox.sh kirocrew --policy kirocrew-readonly`). The policy only matters when the sandbox is created; change a running sandbox with `openshell policy set`.
 * **Requirements:** the provider and image from the agent's chapter must exist.
 * **A stopped sandbox** (`Completed` or `Error`) isn't reused. The script says so; delete it with `openshell sandbox delete <name>` and run the script again.
 * For a shell, checking status and deleting, use steps 4 to 6 above.
