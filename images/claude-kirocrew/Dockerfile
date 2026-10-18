@@ -7,7 +7,7 @@
 # adapter) and adds Kiro Crew with Python 3.12. Kiro Crew uses Claude Code
 # over the Agent Client Protocol (ACP) as its agent harness and serves a web
 # dashboard on port 5476. `bin/sandbox.sh kirocrew` forwards it
-# (and the app backend ports 9100-9102): open http://127.0.0.1:5476.
+# (and the app backend ports 9100-9109): open http://127.0.0.1:5476.
 FROM localhost/claude-sandbox:latest
 
 # Runtime dependencies for Kiro Crew and Python 3.12

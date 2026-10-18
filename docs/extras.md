@@ -329,7 +329,7 @@ Anything not listed follows Claude Code's defaults (it asks). The list is a star
 * **Persistent Web Interface:** A web dashboard served on port `5476` inside the sandbox (`http://127.0.0.1:5476`).
 * **Claude Code via ACP:** Kiro Crew communicates with Claude Code over the standardized Agent Client Protocol, keeping sessions, tools, and permissions governed inside the sandbox.
 * **OpenShell Isolation:** Claude Code API calls (`api.anthropic.com` and `platform.claude.com`) route through the attached `claude` provider with bearer token injection outside the sandbox.
-* **Port forwarding:** `bin/sandbox.sh kirocrew` forwards `5476` (the dashboard) and `9100` to `9102` to your host. Kiro Crew apps run a backend of their own on ports from 9100 up (the first app gets 9100, the next 9101), and their page loads it in an iframe from `127.0.0.1` in your browser, so those ports must be forwarded too. For a fourth app, run `openshell forward start -d 9103 kirocrew`.
+* **Port forwarding:** `bin/sandbox.sh kirocrew` forwards `5476` (the dashboard) and `9100` to `9109` to your host. Kiro Crew apps run a backend of their own on ports from 9100 up (the first app gets 9100, the next 9101), and their page loads it in an iframe from `127.0.0.1` in your browser, so those ports must be forwarded too. For an eleventh backend, run `openshell forward start -d 9110 kirocrew`.
 * **App store:** the policy allows the Kiro Crew app catalog (`apps.crew.kiro.dev`), clone-only access to GitHub and the PyPI and npm registries, so apps can be installed. Apps are third-party code that runs in the sandbox. For a sandbox with no network access, use the `kirocrew-readonly` profile (apps won't install or start).
 
 ### Build and Run
