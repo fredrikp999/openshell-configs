@@ -2,7 +2,7 @@
 # Start an agent sandbox, either in the terminal or in VS Code.
 #
 #   bin/sandbox.sh <claude|opencode|agy> [name] [--vscode|--acp] [--browser|--hyperframes|--graphics|--kirocrew|--node|--python]
-#                  [--forward PORT] [--workdir DIR] [-- agent args...]
+#                  [--forward PORT[,PORT...]] [--policy NAME|FILE] [--workdir DIR] [-- agent args...]
 #
 #   bin/sandbox.sh claude                      # Claude in this terminal, sandbox claude-agent1
 #   bin/sandbox.sh claude my-task --vscode     # open sandbox my-task in VS Code
@@ -47,9 +47,18 @@
 #
 # --kirocrew (Claude only) creates the sandbox from the claude-kirocrew image
 # with policies/kirocrew.yaml: Kiro Crew (https://kiro.dev) with Claude Code
-# over ACP as its agent harness and its web dashboard on port 5476. It forwards
-# port 5476 by default unless you give another --forward PORT. The policy allows
-# access to Kiro Crew updates and package registries.
+# over ACP as its agent harness and its web dashboard on port 5476. Kiro Crew
+# apps run a backend of their own that their page loads from 127.0.0.1 in your
+# browser (the first app gets 9100, the next 9101, and so on). So by default it
+# forwards 5476,9100,9101,9102 unless you give your own --forward list. Only
+# the ports that something listens on matter; forward more with
+# `openshell forward start -d PORT <sandbox>`. The policy allows access to
+# Kiro Crew updates, the app store, GitHub clones and package registries.
+#
+# --policy NAME|FILE (any agent) replaces the policy that the other flags chose,
+# with a file path or NAME for policies/NAME.yaml. The image decides which tools
+# exist; the policy decides what the sandbox may reach. For example:
+#   bin/sandbox.sh claude research --kirocrew --policy kirocrew-readonly
 #
 # --node (agy only) creates the sandbox from the agy-node image with
 # policies/agy-node.yaml, which lets node reach registry.npmjs.org so the agent
@@ -60,9 +69,10 @@
 # policies/agy-python.yaml: Python and pip, with read-only access to PyPI. The
 # same warning applies; see docs/agents.md.
 #
-# --forward PORT forwards 127.0.0.1:PORT on this machine to the same port in
-# the sandbox (in the background, if not already forwarded), so you can open
-# what the agent serves there, e.g. the HyperFrames preview.
+# --forward PORT[,PORT...] forwards 127.0.0.1:PORT on this machine to the same
+# port in the sandbox (in the background, if not already forwarded), so you can
+# open what the agent serves there, e.g. the HyperFrames preview. Give a list
+# separated by commas, or repeat the option, to forward several ports.
 #
 # The sandbox is created on first use, and reused after that. It runs
 # `sleep infinity` as its main process, so it keeps running when you quit the
@@ -76,7 +86,7 @@
 # (bin/sandbox.sh agy <name>) before using --acp.
 set -eu
 
-usage() { sed -n "2,69p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n "2,86p" "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 [ $# -ge 1 ] || usage
 agent=$1; shift
@@ -118,6 +128,7 @@ extra_provider=
 node=false
 python=false
 forward=
+policy_override=
 workdir=/sandbox
 while [ $# -gt 0 ]; do
   case $1 in
@@ -129,7 +140,8 @@ while [ $# -gt 0 ]; do
     --kirocrew) kirocrew=true; shift ;;
     --node) node=true; shift ;;
     --python) python=true; shift ;;
-    --forward) forward=$2; shift 2 ;;
+    --policy) policy_override=$2; shift 2 ;;
+    --forward) forward=${forward:+$forward,}$2; shift 2 ;;
     --workdir|-w) workdir=$2; shift 2 ;;
     --) shift; break ;;
     *) usage ;;
@@ -196,18 +208,24 @@ if $python; then
   image=agy-python:latest
   policy=$(dirname "$0")/../policies/agy-python.yaml
 fi
+# --policy NAME|FILE replaces the policy the flags above picked: a file path, or NAME for policies/NAME.yaml.
+if [ -n "$policy_override" ]; then
+  if [ -f "$policy_override" ]; then policy=$policy_override
+  elif [ -f "$(dirname "$0")/../policies/$policy_override.yaml" ]; then policy=$(dirname "$0")/../policies/$policy_override.yaml
+  else echo "No policy file '$policy_override' (or policies/$policy_override.yaml)." >&2; exit 1; fi
+fi
 # --graphics forwards the gallery's port by default; --kirocrew forwards Kiro Crew dashboard (5476).
 forward_soft=false
 if $graphics && [ -z "$forward" ]; then
   forward=3102
   forward_soft=true
 elif $kirocrew && [ -z "$forward" ]; then
-  forward=5476
+  forward=5476,9100,9101,9102
   forward_soft=true
 fi
 case $forward in
   '') ;;
-  *[!0-9]*) echo "--forward needs a port number." >&2; exit 1 ;;
+  *[!0-9,]*|,*|*,|*,,*) echo "--forward needs port numbers, separated by commas." >&2; exit 1 ;;
 esac
 
 phase() { openshell sandbox list 2>/dev/null | awk -v n="$1" '$1==n {print $NF}'; }
@@ -241,16 +259,19 @@ case $p in
 esac
 
 if [ -n "$forward" ]; then
-  if openshell forward list 2>/dev/null | awk -v n="$name" -v p="$forward" '$2==n && $4==p {f=1} END {exit !f}'; then
-    echo "Port $forward is already forwarded to $name: http://127.0.0.1:$forward/" >&2
-  # Its output is closed so the background forward doesn't hold this script's
-  # stdout open (which matters for --acp, where stdout is the protocol).
-  elif openshell forward start "$forward" "$name" -d </dev/null >/dev/null 2>&1; then
-    echo "Forwarding http://127.0.0.1:$forward/ to port $forward in $name." >&2
-  else
-    echo "Could not forward port $forward; is it in use on this machine? (lsof -i :$forward)" >&2
-    $forward_soft || exit 1
-  fi
+  fwd_list=$(openshell forward list 2>/dev/null || true)
+  for port in $(echo "$forward" | tr ',' ' '); do
+    if echo "$fwd_list" | awk -v n="$name" -v p="$port" '$2==n && $4==p {f=1} END {exit !f}'; then
+      echo "Port $port is already forwarded to $name: http://127.0.0.1:$port/" >&2
+    # Its output is closed so the background forward doesn't hold this script's
+    # stdout open (which matters for --acp, where stdout is the protocol).
+    elif openshell forward start "$port" "$name" -d </dev/null >/dev/null 2>&1; then
+      echo "Forwarding http://127.0.0.1:$port/ to port $port in $name." >&2
+    else
+      echo "Could not forward port $port; is it in use on this machine? (lsof -i :$port)" >&2
+      $forward_soft || exit 1
+    fi
+  done
 fi
 
 if $vscode; then

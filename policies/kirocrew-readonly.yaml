@@ -1,0 +1,39 @@
+# Least-privilege variant of kirocrew.yaml: the same filesystem rules, but no network
+# egress rules at all. Nothing in the sandbox can reach updates, package registries or
+# the embedding model download; only the provider (Claude API) is reachable.
+# Use it for tasks that only read and write files in the sandbox:
+#   bin/sandbox.sh claude research --kirocrew --policy kirocrew-readonly
+# Open it up later on a running sandbox with
+#   openshell policy set <sandbox> --policy policies/kirocrew.yaml --wait
+#
+# Kiro Crew serves its web dashboard inside the sandbox on port 5476 (http://127.0.0.1:5476).
+# Pages on the sandbox itself need no network egress rule. Access the dashboard from your
+# browser by forwarding the port:
+#   openshell forward start 5476 <sandbox>
+# or automatically via `bin/sandbox.sh claude my-crew --kirocrew`.
+#
+# Claude Code reaches api.anthropic.com and platform.claude.com through the attached
+# provider (`--provider claude`), not through this file.
+#
+# Change the network rules on a running sandbox with
+#   openshell policy set <sandbox> --policy policies/kirocrew.yaml --wait
+version: 1
+filesystem_policy:
+  include_workdir: true        # the workdir (/sandbox, also $HOME) is read-write
+  read_only:
+    - /bin
+    - /usr                     # Node, Claude Code, claude-agent-acp, kirocrew symlink, Python
+    - /lib
+    - /proc
+    - /dev/urandom
+    - /etc
+    - /var/log
+    - /opt                     # Kiro Crew and managed Python 3.12 venv (/opt/kirocrew)
+  read_write:
+    - /tmp
+    - /dev/null
+    - /dev/pts                 # terminals, needed by interactive shells and child processes
+    - /dev/ptmx
+landlock:
+  compatibility: best_effort
+network_policies: {}
