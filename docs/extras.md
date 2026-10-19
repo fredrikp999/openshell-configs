@@ -102,6 +102,44 @@ Switching `KIROCREW_ACP_PROFILE` away from `kirocrew-backend` loses all of this 
 
 `agent.acp_backend` and `CLAUDE_AGENT_ACP_BIN` are both read once at startup (the adapter path is cached after its first resolution), so a change needs `kirocrew restart`, and `agent.acp_backend` is one setting for the whole gateway — every session uses the same sandbox.
 
+**Kiro Crew's own built-in tools (`kirocrew-core`, `kirocrew-cron`) fail with `ENOENT ... posix_spawn`.** They can't be fixed; see [Choosing which MCP servers an agent can reach, case by case](#choosing-which-mcp-servers-an-agent-can-reach-case-by-case) below for why, and for the general mechanism that does work for any other MCP server.
+
+### Choosing which MCP servers an agent can reach, case by case
+"Reach" means something different depending on what kind of MCP server it is, so there are two separate controls, not one.
+
+**A remote MCP server (HTTP)** is one the agent dials out to itself — Claude Code connects to it directly, the same as any other outbound connection. This is governed by a `protocol: mcp` network policy rule: OpenShell reads every MCP request at L7 and checks the method and, for `tools/call`, the tool name, down to individual tools. [policies/example.yaml](../policies/example.yaml)'s `context7_mcp` and `huggingface_mcp` blocks are the full worked syntax, explained in [Example policy with network rules](customizing.md#example-policy-with-network-rules); [policies/kirocrew-backend.yaml](../policies/kirocrew-backend.yaml) has a ready-to-fill-in, commented-out copy of the same shape. The short version:
+```yaml
+network_policies:
+  some_mcp_server:
+    name: some-mcp-server
+    endpoints:
+      - host: mcp.example.com
+        port: 443
+        path: /mcp
+        protocol: mcp
+        enforcement: enforce
+        mcp:
+          versions: ["2025-03-26", "2025-06-18", "2025-11-25"]
+        rules:
+          - allow:
+              method: initialize
+          - allow:
+              method: notifications/initialized
+          - allow:
+              method: tools/list
+          - allow:
+              method: tools/call
+              tool:
+                any: [tool_one, tool_two]   # only these tools, by name
+    binaries:
+      - path: /usr/local/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe
+```
+Add it per profile's policy file, one block per server, and add the server in Claude Code as usual (`claude mcp add --transport http <name> https://mcp.example.com/mcp`). `binaries:` is the per-agent scoping — Claude's own binary dials remote MCP servers itself, so that's the entry for any Claude profile.
+
+**A local MCP server (stdio)** is spawned as a child process inside the sandbox — there's no network connection to filter, since it's a pipe, not a socket. Its "reach" is simply **whether its binary exists in the image at all**: leave it out of a profile's image and it can never be spawned, no policy needed. If that local process then makes its *own* outbound network calls, *that* call is governed exactly like case one — a `binaries:` entry scoped to its specific path, in whichever profile's policy it runs under.
+
+**Where this hits a hard wall:** `kirocrew-core` and `kirocrew-cron` (the two built-in MCP servers [Claude Code as an ACP backend for an external Kiro Crew](#claude-code-as-an-acp-backend-for-an-external-kiro-crew) runs into as `ENOENT ... posix_spawn`) are local MCP servers whose command is a macOS app binary that doesn't exist in the Linux sandbox at all — not fixable by any policy, since the binary itself is the problem, not what it's allowed to reach. Worse, even installing an equivalent Linux binary wouldn't help: `kiro_crew`'s `mcp_core.py` and `mcp_cron.py` dial `http://127.0.0.1:<port>` — the *gateway's own* loopback — and check a local-secret file for same-machine ownership, the identical check that blocks [Remote Crew over SSH](#remote-crew-over-ssh-does-not-work). Inside the sandbox, `127.0.0.1` is the sandbox's own loopback; nothing is listening there, and the local-secret check would refuse a non-local caller regardless. Disabling them for a sandboxed session (dropping `@kirocrew-cron`/`@kirocrew-core` from the agent spec Kiro Crew uses) is the only real fix, not a network rule.
+
 ## Headless browser use
 Claude Code can use a headless Chromium that runs **inside the sandbox**, through [Playwright MCP](https://github.com/microsoft/playwright-mcp). Because the browser runs in the sandbox, OpenShell's network rules decide which sites it may reach, the same way as for any other program. The browser starts with an empty profile in memory, so it has none of your cookies or logins.
 

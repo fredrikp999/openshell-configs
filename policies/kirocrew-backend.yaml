@@ -30,3 +30,36 @@ filesystem_policy:
     - /dev/ptmx
 landlock:
   compatibility: best_effort
+
+# To let Claude reach a remote (HTTP) MCP server from this sandbox, uncomment and
+# fill in a block like this one per server -- case by case, down to the method
+# and tool name. See docs/extras.md#choosing-which-mcp-servers-an-agent-can-reach-case-by-case
+# and policies/example.yaml's context7_mcp/huggingface_mcp for the full syntax.
+# This does NOT apply to a local (stdio) MCP server such as kirocrew-core/
+# kirocrew-cron: those are a child process, not a network connection, so no
+# policy rule can reach them -- see the doc section above for why.
+#
+# network_policies:
+#   some_mcp_server:
+#     name: some-mcp-server
+#     endpoints:
+#       - host: mcp.example.com
+#         port: 443
+#         path: /mcp
+#         protocol: mcp
+#         enforcement: enforce
+#         mcp:
+#           versions: ["2025-03-26", "2025-06-18", "2025-11-25"]
+#         rules:
+#           - allow:
+#               method: initialize
+#           - allow:
+#               method: notifications/initialized
+#           - allow:
+#               method: tools/list
+#           - allow:
+#               method: tools/call
+#               tool:
+#                 any: [tool_one, tool_two]   # only these tools, by name
+#     binaries:
+#       - path: /usr/local/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe
