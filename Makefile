@@ -21,6 +21,7 @@ IMAGES := claude-sandbox claude-browser claude-hyperframes claude-graphics claud
 # Images built FROM a registry image, as opposed to FROM one of ours.
 BASE_IMAGES := claude-sandbox opencode-sandbox agy-sandbox agy-node
 SCRIPTS := bin/sandbox.sh bin/provider.sh bin/bundle.sh bin/watch-denied.sh bin/vm-clock.sh bin/doctor.sh \
+           bin/kirocrew-acp-backend.sh \
            tests/*/run.sh \
            images/claude-sandbox/claude-start images/claude-sandbox/claude-acp-start \
            images/claude-browser/playwright-mcp-start \
@@ -57,6 +58,14 @@ claude-kirocrew: claude-sandbox
 agy-hyperframes: claude-hyperframes
 agy-python: agy-sandbox
 
+# claude-kirocrew-backend takes a personal Mac path as a build arg (see
+# images/claude-kirocrew-backend/Dockerfile), so it is built only on request,
+# not part of $(IMAGES)/`make images`:
+#   make claude-kirocrew-backend KIROCREW_WORKSPACE_ROOT=/Users/you/dev/kirocrew
+claude-kirocrew-backend: claude-sandbox
+	@[ -n "$(KIROCREW_WORKSPACE_ROOT)" ] || { echo "Usage: make claude-kirocrew-backend KIROCREW_WORKSPACE_ROOT=/Users/you/dev/kirocrew" >&2; exit 1; }
+	$(ENGINE) build $(BUILD_FLAGS) --build-arg KIROCREW_WORKSPACE_ROOT=$(KIROCREW_WORKSPACE_ROOT) -t claude-kirocrew-backend:latest images/claude-kirocrew-backend
+
 # Without the cache, so `npm install` and the like fetch the latest versions,
 # and with a newer base image if the registry has one. The variables are passed
 # on to the image targets.
@@ -77,6 +86,7 @@ endif
 	python3 -m py_compile $(PYTHON)
 	node --check tests/browser/browser_probe.js
 	node --check tests/host-mcp/mcp_probe.js
+	node --check images/claude-sandbox/claude-acp-mkcwd.js
 	@for f in images/*/*.json; do python3 -m json.tool $$f >/dev/null || { echo "invalid JSON: $$f"; exit 1; }; done
 	@for f in policies/*.yaml providers/*.yaml tests/*/*.yaml observability/*.yaml; do \
 	  ruby -ryaml -e 'YAML.load_file(ARGV[0])' $$f || { echo "invalid YAML: $$f"; exit 1; }; done

@@ -89,7 +89,7 @@ if [ ! -f "$profile_file" ]; then
   exit 1
 fi
 
-agent=; image=; policy=; cmd=; forward=; optional_provider=
+agent=; image=; policy=; cmd=; acp_cmd=; forward=; optional_provider=
 # shellcheck disable=SC1090
 . "$profile_file"
 case $agent in
@@ -102,7 +102,7 @@ case $agent in
   claude)
     provider=claude
     term_cmd="claude-start"
-    acp_cmd="claude-acp-start" ;;
+    acp_cmd=${acp_cmd:-claude-acp-start} ;;
   opencode)
     provider=openrouter
     model=${OPENCODE_MODEL:-openrouter/nvidia/nemotron-3.5-lightning:free}
@@ -114,15 +114,21 @@ case $agent in
         echo "OPENCODE_MODEL '$model' is not a valid model id." >&2; exit 1 ;;
     esac
     term_cmd="opencode -m $model"
-    acp_cmd="opencode acp" ;;
+    acp_cmd=${acp_cmd:-"opencode acp"} ;;
   agy)
     provider=
     term_cmd="agy"
-    acp_cmd="agy-acp-start" ;;
+    acp_cmd=${acp_cmd:-agy-acp-start} ;;
 esac
 
 name=$profile
 case ${1:-} in ''|-*) ;; *) name=$1; shift ;; esac
+# OpenShell rejects a sandbox name over 19 characters; caught here with the name
+# attached, instead of surfacing later as an opaque gateway argument error.
+if [ ${#name} -gt 19 ]; then
+  echo "Sandbox name '$name' is ${#name} characters; OpenShell allows at most 19." >&2
+  exit 1
+fi
 
 vscode=false
 acp=false

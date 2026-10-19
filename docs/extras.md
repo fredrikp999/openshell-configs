@@ -68,6 +68,40 @@ bin/acp_client.py connect <sandbox> [--agent opencode|claude|agy] [--model M] [-
   Type a prompt and press Enter; `/help` lists the commands, `/models [FILTER]` lists the models the agent offers, `/model ID` switches model for the session, `/commands` lists the agent's own slash commands (e.g. `/init`, `/review`), `/quit` or Ctrl-D exits, and Ctrl-C cancels a running prompt. It checks that the sandbox exists and is `Ready`, prints the agent's text and tool calls, asks permission requests on the terminal, and refuses any `fs/*` or `terminal/*` request from the agent. If the agent fails or exits, it shows the agent's last output with a hint (missing adapter, blocked API host, wrong model). Options: `--timeout SEC` for startup, `-v` for the JSON-RPC traffic and the agent's stderr. Exit codes: 0 ok, 1 agent error, 2 bad usage or sandbox. Without `--agent`, it picks the agent by which ACP command the sandbox has (`claude-acp-start`, `agy-acp-start` or `opencode`). Use it as a starting point for your UI.
 * **Test it** before building the UI: `printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{}}}' | bin/sandbox.sh opencode my-task --acp` (or `claude` instead of `opencode`) should print one JSON response.
 
+### Claude Code as an ACP backend for an external Kiro Crew
+This is the other direction from [Kiro Crew with Claude Code over ACP](#kiro-crew-with-claude-code-over-acp): there, Kiro Crew's gateway runs **inside** the sandbox and drives Claude Code there too. Here, an existing Kiro Crew install stays **outside** any sandbox — on this same Mac — and uses a sandbox purely as Claude Code's execution environment. No Kiro Crew runs inside that sandbox.
+
+Kiro Crew's `agent.acp_backend = claude` setting spawns one local executable, named by the `CLAUDE_AGENT_ACP_BIN` environment variable on the gateway process, and runs it directly — not through a shell, so it can't be a command line with arguments, only a single file. [bin/kirocrew-acp-backend.sh](../bin/kirocrew-acp-backend.sh) is that file: it execs `bin/sandbox.sh <profile> <name> --acp`, the same thing VS Code or [bin/acp_client.py](../bin/acp_client.py) use, which prints nothing but the ACP protocol to stdout (see [ACP](#acp-agent-client-protocol)).
+
+```bash
+export CLAUDE_AGENT_ACP_BIN=/path/to/openshell-configs/bin/kirocrew-acp-backend.sh
+export KIROCREW_ACP_SANDBOX=my-backend     # optional, defaults to kirocrew-claude; OpenShell sandbox names are max 19 characters
+export KIROCREW_ACP_PROFILE=hyperframes    # optional, a different profile (loses the cwd auto-create below)
+kirocrew config set agent.acp_backend claude
+kirocrew restart
+```
+Set the two `KIROCREW_ACP_*` variables (or leave them at their defaults) in the same environment the `CLAUDE_AGENT_ACP_BIN` export lands in — a shell profile, or wherever Kiro Crew's launchd/systemd service reads its environment from — since the wrapper reads them at spawn time, once per session. The sandbox is created on first use and reused after that, exactly as `bin/sandbox.sh` always does; delete it with `openshell sandbox delete <name>` to start over. Claude's provider token still comes from the sandbox's attached `claude` provider, unchanged from any other use.
+
+**Create the sandbox once before the first chat.** Kiro Crew's ACP spawn expects a near-instant local process start. The first time this wrapper runs for a name OpenShell has no sandbox for, it has to create one and poll until it's `Ready` (up to 3 minutes), which reads as `⟳ Connection lost — retrying…` to a session that gave up waiting. Avoid it by running the wrapper's underlying command yourself first, so the sandbox already exists and is `Ready` by the time Kiro Crew's first session reaches it:
+```bash
+bin/sandbox.sh claude kirocrew-claude -- -p 'reply with OK'
+```
+(swap `claude` and `kirocrew-claude` for your `KIROCREW_ACP_PROFILE`/`KIROCREW_ACP_SANDBOX`, if set).
+
+**The working directory Kiro Crew asks for doesn't exist in the sandbox, and can't be created there from inside it.** Kiro Crew assumes its ACP backend shares its own filesystem, the way a literal local subprocess would, and sends `session/new`'s `cwd` as a path on *its own* machine (e.g. `/Users/you/dev/kirocrew/<workspace>`). `claude-agent-acp` validates that path on the machine actually running the agent — the sandbox — and refuses it there with `Invalid params: cwd does not exist on the machine running the agent`. The sandbox can't simply create it either: `/Users/...` doesn't exist in the sandbox's filesystem, and creating it needs write access to `/`, which Landlock must never grant (that's the sandbox's actual boundary, not an oversight).
+
+Fixing it needs two parts, both already wired into [`profiles/kirocrew-backend.env`](../profiles/kirocrew-backend.env), the default `KIROCREW_ACP_PROFILE`:
+- **[images/claude-kirocrew-backend](../images/claude-kirocrew-backend)**, built on `claude-sandbox`, bakes a symlink for your Mac's Kiro Crew workspace root into the sandbox's own writable home (`<your root> -> /sandbox/kirocrew-workspace`) at *build* time, as root, with no Landlock involved — the only place that path can be created at all. Build it with your own workspace root as a build arg (find yours from the `cwd` Kiro Crew's error names, or `kirocrew config get agent.workspace_dir`):
+```bash
+make claude-kirocrew-backend KIROCREW_WORKSPACE_ROOT=/Users/you/dev/kirocrew
+```
+- **[policies/kirocrew-backend.yaml](../policies/kirocrew-backend.yaml)** adds read-only access to `/Users` so the symlink is visible at all — Landlock denies even reading an unlisted path. No write access to `/Users` is needed: once the kernel follows the symlink, writes land under `/sandbox`, already read-write via `include_workdir`.
+- **`acp_cmd=claude-acp-mkcwd-start`** (a profile field like `agent`, `image`, `policy` and `cmd`, overriding the agent's own ACP command) runs the real adapter behind [claude-acp-mkcwd.js](../images/claude-sandbox/claude-acp-mkcwd.js), a transparent line-by-line proxy (ACP over stdio is newline-delimited JSON) that creates any `cwd` it sees in a request before forwarding the message unchanged. It walks the path itself rather than using a plain recursive `mkdir`, because `fs.mkdirSync(cwd, {recursive: true})` treats an existing symlink as proof its target is already there and never creates what the symlink actually points to — the exact case the baked-in symlink is. A path the sandbox's filesystem policy would refuse anyway still fails exactly as before; this only pre-creates directories the sandbox could already write to, following a symlink chain the image controls.
+
+Switching `KIROCREW_ACP_PROFILE` away from `kirocrew-backend` loses all of this and brings the original error back.
+
+`agent.acp_backend` and `CLAUDE_AGENT_ACP_BIN` are both read once at startup (the adapter path is cached after its first resolution), so a change needs `kirocrew restart`, and `agent.acp_backend` is one setting for the whole gateway — every session uses the same sandbox.
+
 ## Headless browser use
 Claude Code can use a headless Chromium that runs **inside the sandbox**, through [Playwright MCP](https://github.com/microsoft/playwright-mcp). Because the browser runs in the sandbox, OpenShell's network rules decide which sites it may reach, the same way as for any other program. The browser starts with an empty profile in memory, so it has none of your cookies or logins.
 
@@ -323,7 +357,7 @@ Anything not listed follows Claude Code's defaults (it asks). The list is a star
 * **Only PyPI, and Replicate if you set it up.** `npm`, `git clone` from GitHub and other downloads are denied. A package that downloads something else when it installs or runs (a model, a binary) fails the same way.
 
 ## Kiro Crew with Claude Code over ACP
-[Kiro Crew](https://kiro.dev) is an open-source persistent development workspace and agent orchestrator. In this setup, Kiro Crew runs its gateway service inside the sandbox and drives **Claude Code over the Agent Client Protocol (ACP)** as its agent harness (`claude-agent-acp`).
+[Kiro Crew](https://kiro.dev) is an open-source persistent development workspace and agent orchestrator. In this setup, Kiro Crew runs its gateway service inside the sandbox and drives **Claude Code over the Agent Client Protocol (ACP)** as its agent harness (`claude-agent-acp`). For the other direction — an existing Kiro Crew outside the sandbox using Claude Code inside one as its ACP backend — see [Claude Code as an ACP backend for an external Kiro Crew](#claude-code-as-an-acp-backend-for-an-external-kiro-crew).
 
 ### What it provides
 * **Persistent Web Interface:** A web dashboard served on port `5476` inside the sandbox (`http://127.0.0.1:5476`).

@@ -1,0 +1,32 @@
+# Sandbox policy for Claude Code as an ACP backend for an external Kiro Crew
+# (see docs/extras.md#claude-code-as-an-acp-backend-for-an-external-kiro-crew).
+#
+# Same as vscode-terminal.yaml, plus read access to /Users so the claude-kirocrew-backend
+# image's symlink (Kiro Crew's host workspace root -> somewhere under /sandbox,
+# see images/claude-kirocrew-backend/Dockerfile) is visible. No write access to
+# /Users is needed: once the kernel follows the symlink, writes land under
+# /sandbox, already read-write via include_workdir below. Creating /Users itself
+# at runtime is never possible under this or any policy -- it needs write access
+# to /, the one thing Landlock must never grant -- which is why the symlink has
+# to be baked into the image instead.
+#
+#   bin/sandbox.sh kirocrew-backend       # uses this policy (profiles/kirocrew-backend.env)
+version: 1
+filesystem_policy:
+  include_workdir: true
+  read_only:
+    - /bin
+    - /usr
+    - /lib
+    - /proc
+    - /dev/urandom
+    - /etc
+    - /var/log
+    - /Users
+  read_write:
+    - /tmp
+    - /dev/null
+    - /dev/pts
+    - /dev/ptmx
+landlock:
+  compatibility: best_effort

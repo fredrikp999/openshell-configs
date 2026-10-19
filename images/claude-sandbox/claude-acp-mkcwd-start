@@ -1,0 +1,7 @@
+#!/bin/sh
+# Same as claude-acp-start, but through claude-acp-mkcwd.js: for a client (an
+# external Kiro Crew) that sends a cwd from its own machine, create that path
+# here first instead of failing "cwd does not exist on the machine running the
+# agent". See docs/extras.md#claude-code-as-an-acp-backend-for-an-external-kiro-crew.
+[ -f "$HOME/.claude.json" ] || cp /etc/claude-start.json "$HOME/.claude.json"
+exec node /usr/local/bin/claude-acp-mkcwd.js claude-agent-acp "$@"

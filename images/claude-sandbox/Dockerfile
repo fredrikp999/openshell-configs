@@ -23,4 +23,5 @@ ENV CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
 # own node_modules.
 ENV CLAUDE_CODE_EXECUTABLE=/usr/local/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe
 COPY claude-start.json /etc/claude-start.json
-COPY --chmod=755 claude-start claude-acp-start /usr/local/bin/
+COPY --chmod=755 claude-start claude-acp-start claude-acp-mkcwd-start /usr/local/bin/
+COPY --chmod=644 claude-acp-mkcwd.js /usr/local/bin/claude-acp-mkcwd.js
